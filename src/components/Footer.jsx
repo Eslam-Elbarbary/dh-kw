@@ -56,15 +56,15 @@ function IconFacebook({ className }) {
 
 export default function Footer() {
   return (
-    <div className="bg-[#0e1c47] content-stretch flex flex-col gap-[20px] items-start justify-center pb-[16px] pt-[24px] sm:pt-[32px] md:pt-[40px] px-0 relative shrink-0 w-full overflow-hidden" data-name="Footer" data-node-id="35:5022">
-      <div className="content-stretch flex flex-col items-start px-[12px] sm:px-[16px] md:px-[24px] lg:px-[80px] xl:px-[120px] py-0 relative shrink-0 w-full max-w-full overflow-hidden" data-node-id="35:5023">
-        <div className="content-stretch flex flex-col lg:flex-row items-start lg:items-center justify-between relative shrink-0 w-full gap-[32px] sm:gap-[36px] md:gap-[40px]" data-node-id="35:5024">
+    <div className="bg-[#0e1c47] content-stretch flex flex-col gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] items-start justify-center pb-[16px] lg:pb-[20px] xl:pb-[24px] 2xl:pb-[28px] pt-[24px] sm:pt-[32px] md:pt-[40px] lg:pt-[48px] xl:pt-[56px] 2xl:pt-[64px] px-0 relative shrink-0 w-full overflow-hidden" data-name="Footer" data-node-id="35:5022">
+      <div className="content-stretch flex flex-col items-start px-[12px] sm:px-[16px] md:px-[24px] lg:px-[80px] xl:px-[120px] 2xl:px-[140px] py-0 relative shrink-0 w-full max-w-full overflow-hidden" data-node-id="35:5023">
+        <div className="content-stretch flex flex-col lg:flex-row items-start lg:items-center justify-between relative shrink-0 w-full gap-[32px] sm:gap-[36px] md:gap-[40px] lg:gap-[48px] xl:gap-[56px] 2xl:gap-[64px]" data-node-id="35:5024">
           <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0" data-node-id="35:5025">
             <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0" data-node-id="35:5026">
-              <div className="relative shrink-0 size-[80px] sm:size-[90px] md:size-[100px]" data-name="Untitled-1[1] 1" data-node-id="35:5027">
+              <div className="relative shrink-0 size-[80px] sm:size-[90px] md:size-[100px] lg:size-[110px] xl:size-[120px] 2xl:size-[130px]" data-name="Untitled-1[1] 1" data-node-id="35:5027">
                 <img alt="" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgUntitled111} />
               </div>
-              <div className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-white w-full sm:w-[280px] md:w-[303px]" data-node-id="35:5028">
+              <div className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] lg:text-[17px] xl:text-[18px] 2xl:text-[20px] text-white w-full sm:w-[280px] md:w-[303px] lg:w-[320px] xl:w-[340px] 2xl:w-[360px]" data-node-id="35:5028">
                 <p className="leading-[1.35] whitespace-pre-wrap">{`A premium store offering a curated selection from top international brands. `}</p>
               </div>
             </div>
@@ -75,7 +75,7 @@ export default function Footer() {
               <IconLinkedin className="overflow-clip relative shrink-0 size-[24px]" />
             </div>
           </div>
-          <div className="content-stretch flex flex-col sm:flex-row gap-[32px] sm:gap-[40px] md:gap-[60px] lg:gap-[99px] items-start justify-center relative shrink-0 w-full sm:w-auto" data-node-id="35:5034">
+          <div className="content-stretch flex flex-col sm:flex-row gap-[32px] sm:gap-[40px] md:gap-[60px] lg:gap-[99px] xl:gap-[120px] 2xl:gap-[140px] items-start justify-center relative shrink-0 w-full sm:w-auto" data-node-id="35:5034">
             <div className="content-stretch flex flex-col gap-[16px] sm:gap-[18px] md:gap-[20px] items-start relative shrink-0 w-full sm:w-[180px] md:w-[200px]" data-node-id="35:5035">
               <div className="flex flex-col font-['Poppins'] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-white whitespace-nowrap" data-node-id="35:5036">
                 <p className="leading-[19.5px]">Links</p>

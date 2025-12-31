@@ -63,7 +63,7 @@ export default function Header() {
   return (
     <>
       {/* Top bar */}
-      <div className="bg-[#0e1c47] border-[#4b505e] border-b border-l-0 border-r-0 border-solid border-t-0 content-stretch flex flex-col sm:flex-row items-start sm:items-center justify-between px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] py-[10px] sm:py-[12px] md:py-[14px] lg:py-[16px] relative shrink-0 w-full max-w-full overflow-hidden" data-node-id="39:5520">
+      <div className="bg-[#0e1c47] border-[#4b505e] border-b border-l-0 border-r-0 border-solid border-t-0 content-stretch flex flex-col sm:flex-row items-start sm:items-center justify-between px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] xl:px-[120px] 2xl:px-[140px] py-[10px] sm:py-[12px] md:py-[14px] lg:py-[16px] xl:py-[18px] 2xl:py-[20px] relative shrink-0 w-full max-w-full overflow-hidden" data-node-id="39:5520">
         <div className="content-stretch flex gap-[6px] sm:gap-[8px] md:gap-[12px] lg:gap-[16px] items-center relative shrink-0 flex-wrap w-full sm:w-auto" data-node-id="39:5521">
           <div className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0" data-name="new-next-logo-gold 4" data-node-id="39:5522">
             <div className="relative shrink-0 size-[16px]" data-name="call" data-node-id="39:5523">
@@ -186,12 +186,12 @@ export default function Header() {
         </div>
       </div>
       {/* Search bar and logo */}
-      <div className="bg-[#0e1c47] content-stretch flex flex-col items-start px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] py-[12px] sm:py-[14px] md:py-[16px] relative shrink-0 w-full max-w-full overflow-hidden">
-        <div className="content-stretch flex flex-col sm:flex-row items-center justify-between relative shrink-0 w-full max-w-[1240px] mx-auto gap-[12px] sm:gap-[16px]">
-          <div className="relative shrink-0 size-[36px] sm:size-[40px] md:size-[44px] lg:size-[48px] self-start sm:self-center">
+      <div className="bg-[#0e1c47] content-stretch flex flex-col items-start px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] xl:px-[120px] 2xl:px-[140px] py-[12px] sm:py-[14px] md:py-[16px] lg:py-[18px] xl:py-[20px] 2xl:py-[22px] relative shrink-0 w-full max-w-full overflow-hidden">
+        <div className="content-stretch flex flex-col sm:flex-row items-center justify-between relative shrink-0 w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto gap-[12px] sm:gap-[16px] lg:gap-[20px] xl:gap-[24px]">
+          <div className="relative shrink-0 size-[36px] sm:size-[40px] md:size-[44px] lg:size-[48px] xl:size-[52px] 2xl:size-[56px] self-start sm:self-center">
             <img alt="" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgUntitled111} />
           </div>
-          <div className="border border-[rgba(255,255,255,0.2)] border-solid content-stretch flex h-[42px] sm:h-[44px] md:h-[48px] items-center justify-between overflow-hidden pl-[10px] sm:pl-[12px] md:pl-[16px] pr-0 py-0 relative rounded-[4px] shrink-0 w-full sm:w-[500px] md:w-[550px] sm:max-w-full sm:flex-1 sm:min-w-0">
+          <div className="border border-[rgba(255,255,255,0.2)] border-solid content-stretch flex h-[42px] sm:h-[44px] md:h-[48px] lg:h-[52px] xl:h-[56px] 2xl:h-[60px] items-center justify-between overflow-hidden pl-[10px] sm:pl-[12px] md:pl-[16px] lg:pl-[20px] xl:pl-[24px] pr-0 py-0 relative rounded-[4px] shrink-0 w-full sm:w-[500px] md:w-[550px] lg:w-[600px] xl:w-[650px] 2xl:w-[700px] sm:max-w-full sm:flex-1 sm:min-w-0">
             <input type="text" className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[13px] sm:text-[14px] md:text-[16px] text-white bg-transparent border-none outline-none flex-1 min-w-0" placeholder="Search for products" />
             <div className="content-stretch flex gap-[16px] h-full items-center relative shrink-0">
               <div className="content-stretch flex gap-[8px] items-center relative shrink-0">
@@ -225,7 +225,7 @@ export default function Header() {
         </div>
       </div>
       {/* Navigation menu */}
-      <div className="bg-[#0e1c47] content-stretch flex flex-col sm:flex-row gap-[12px] sm:gap-[16px] md:gap-[20px] items-center justify-center px-[12px] sm:px-[16px] md:px-[40px] lg:px-[80px] py-[12px] sm:py-[16px] md:py-[20px] lg:py-[24px] relative shrink-0 w-full max-w-full overflow-x-auto">
+      <div className="bg-[#0e1c47] content-stretch flex flex-col sm:flex-row gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] items-center justify-center px-[12px] sm:px-[16px] md:px-[40px] lg:px-[80px] xl:px-[100px] 2xl:px-[120px] py-[12px] sm:py-[16px] md:py-[20px] lg:py-[24px] xl:py-[28px] 2xl:py-[32px] relative shrink-0 w-full max-w-full overflow-x-auto">
         <div className="bg-[#eea137] content-stretch flex gap-[6px] sm:gap-[8px] h-[36px] sm:h-[40px] items-center px-[12px] sm:px-[16px] md:px-[20px] lg:px-[24px] py-[8px] relative rounded-[4px] shrink-0 w-full sm:w-auto">
           <p className="flex flex-col font-['Poppins'] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[16px] sm:text-[17px] md:text-[18px] text-white whitespace-nowrap">
             Category

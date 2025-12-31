@@ -28,7 +28,7 @@ const imgCustomer = "https://www.figma.com/api/mcp/asset/541fca88-180f-4ff9-8d8d
 // Hero Banner Component
 function HeroBanner() {
   return (
-    <div className="relative w-full h-[300px] sm:h-[400px] md:h-[499px]" data-node-id="35:560">
+    <div className="relative w-full h-[300px] sm:h-[400px] md:h-[499px] lg:h-[550px] xl:h-[600px] 2xl:h-[650px]" data-node-id="35:560">
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
         <div className="absolute inset-0 overflow-hidden">
           <img className="absolute h-[152.5%] left-[-9.55%] max-w-none top-[-25.77%] w-[118.93%]" alt="" src={imgHeroBackground} />
@@ -42,24 +42,24 @@ function HeroBanner() {
 // Product Category Card Component
 function ProductCategoryCard({ title, mainImage, mainImageAlt, linkText, subCategories }) {
   return (
-    <div className="bg-white border border-[#e6e6e6] border-solid flex items-center overflow-hidden p-[10px] sm:p-[12px] md:p-[16px] lg:p-[20px] relative rounded-[4px] shrink-0 w-full max-w-full sm:max-w-[368px]">
+    <div className="bg-white border border-[#e6e6e6] border-solid flex items-center overflow-hidden p-[10px] sm:p-[12px] md:p-[16px] lg:p-[20px] xl:p-[24px] 2xl:p-[28px] relative rounded-[4px] shrink-0 w-full max-w-full sm:max-w-[368px] lg:max-w-[380px] xl:max-w-[400px] 2xl:max-w-[420px]">
       <div className="flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-center relative shrink-0 w-full">
-        <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[18px] sm:text-[20px] md:text-[24px] text-black text-center" dir="auto">
+        <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[26px] xl:text-[28px] 2xl:text-[30px] text-black text-center" dir="auto">
           {title}
         </p>
         <div className="flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-start relative shrink-0 w-full">
           {/* Main Category */}
           <div className="flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-start relative shrink-0 w-full">
-            <div className="bg-[#0e1c47] flex flex-col h-[120px] sm:h-[140px] md:h-[168px] items-center justify-center overflow-clip px-[40px] sm:px-[50px] md:px-[67px] py-[12px] sm:py-[16px] md:py-[20px] relative rounded-[4px] shrink-0 w-full">
+            <div className="bg-[#0e1c47] flex flex-col h-[120px] sm:h-[140px] md:h-[168px] lg:h-[180px] xl:h-[200px] 2xl:h-[220px] items-center justify-center overflow-clip px-[40px] sm:px-[50px] md:px-[67px] lg:px-[75px] xl:px-[85px] 2xl:px-[95px] py-[12px] sm:py-[16px] md:py-[20px] lg:py-[24px] xl:py-[28px] relative rounded-[4px] shrink-0 w-full">
               <div className="flex items-center relative shrink-0">
-                <img alt={mainImageAlt} className="h-[70px] w-[120px] sm:h-[85px] sm:w-[150px] md:h-[102px] md:w-[180px] object-contain" src={mainImage} />
+                <img alt={mainImageAlt} className="h-[70px] w-[120px] sm:h-[85px] sm:w-[150px] md:h-[102px] md:w-[180px] lg:h-[110px] lg:w-[200px] xl:h-[120px] xl:w-[220px] 2xl:h-[130px] 2xl:w-[240px] object-contain" src={mainImage} />
               </div>
             </div>
             <div className="flex gap-[12px] sm:gap-[14px] md:gap-[16px] items-center justify-center relative shrink-0 w-full">
-              <p className="capitalize font-['Poppins'] font-medium leading-[normal] not-italic relative shrink-0 text-[16px] sm:text-[18px] md:text-[20px] text-black text-center" dir="auto">
+              <p className="capitalize font-['Poppins'] font-medium leading-[normal] not-italic relative shrink-0 text-[16px] sm:text-[18px] md:text-[20px] lg:text-[22px] xl:text-[24px] text-black text-center" dir="auto">
                 {linkText}
               </p>
-              <div className="relative shrink-0 size-[20px] sm:size-[22px] md:size-[24px]">
+              <div className="relative shrink-0 size-[20px] sm:size-[22px] md:size-[24px] lg:size-[26px] xl:size-[28px]">
                 <img alt="" className="block max-w-none size-full" src={imgArrowRight} />
               </div>
             </div>
@@ -74,10 +74,10 @@ function ProductCategoryCard({ title, mainImage, mainImageAlt, linkText, subCate
                   </div>
                 </div>
                 <div className="flex gap-[12px] sm:gap-[14px] md:gap-[16px] items-center justify-center relative shrink-0 w-full">
-                  <p className="capitalize font-['Poppins'] font-medium leading-[normal] not-italic relative shrink-0 text-[14px] sm:text-[16px] md:text-[20px] text-black text-center" dir="auto">
+                  <p className="capitalize font-['Poppins'] font-medium leading-[normal] not-italic relative shrink-0 text-[14px] sm:text-[16px] md:text-[20px] lg:text-[22px] xl:text-[24px] text-black text-center" dir="auto">
                     {sub.linkText}
                   </p>
-                  <div className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[24px]">
+                  <div className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[24px] lg:size-[26px] xl:size-[28px]">
                     <img alt="" className="block max-w-none size-full" src={imgArrowRight} />
                   </div>
                 </div>
@@ -105,6 +105,8 @@ function BlogsSection() {
   // Determine how many blogs to show based on screen size
   const getVisibleCount = () => {
     if (typeof window !== 'undefined') {
+      if (window.innerWidth >= 1536) return 4; // 2xl: 4 blogs
+      if (window.innerWidth >= 1280) return 4; // xl: 4 blogs
       if (window.innerWidth >= 1024) return 3; // lg: 3 blogs
       if (window.innerWidth >= 640) return 2;  // sm: 2 blogs
       return 1; // mobile: 1 blog
@@ -166,13 +168,13 @@ function BlogsSection() {
   };
 
   return (
-    <div className="flex flex-col gap-[20px] sm:gap-[24px] md:gap-[28px] lg:gap-[32px] items-center justify-center relative w-full max-w-[1240px] mx-auto px-[12px] sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[100px]" data-node-id="35:772">
+    <div className="flex flex-col gap-[20px] sm:gap-[24px] md:gap-[28px] lg:gap-[32px] xl:gap-[36px] 2xl:gap-[40px] items-center justify-center relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-[12px] sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[100px] 2xl:px-[120px]" data-node-id="35:772">
       <div className="flex items-start justify-between relative shrink-0 w-full">
         <div className="flex gap-[6px] sm:gap-[8px] items-center relative shrink-0">
           <div className="h-[32px] sm:h-[36px] md:h-[40px] relative shrink-0 w-[8px] sm:w-[9px] md:w-[10px]">
             <div className="absolute bg-[#eea137] inset-0 rounded-[4px]" />
           </div>
-          <p className="capitalize font-['Poppins'] font-semibold leading-[20px] not-italic relative shrink-0 text-[#eea137] text-[16px] sm:text-[18px] md:text-[20px]">
+          <p className="capitalize font-['Poppins'] font-semibold leading-[20px] not-italic relative shrink-0 text-[#eea137] text-[16px] sm:text-[18px] md:text-[20px] lg:text-[22px] xl:text-[24px] 2xl:text-[26px]">
             blogs
           </p>
         </div>
@@ -290,17 +292,17 @@ function FeaturesSection() {
   ];
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-center gap-[24px] sm:gap-[20px] md:gap-[24px] lg:justify-between relative w-full max-w-[1240px] mx-auto px-[12px] sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[100px]" data-node-id="35:814">
+    <div className="flex flex-col sm:flex-row items-center justify-center gap-[24px] sm:gap-[20px] md:gap-[24px] lg:gap-[28px] xl:gap-[32px] 2xl:gap-[36px] lg:justify-between relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-[12px] sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[100px] 2xl:px-[120px]" data-node-id="35:814">
       {features.map((feature, index) => (
-        <div key={index} className="flex flex-col gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] items-center p-[8px] sm:p-[12px] relative shrink-0 w-full sm:w-auto sm:flex-1">
-          <div className="overflow-clip relative shrink-0 size-[40px] sm:size-[44px] md:size-[48px]">
+        <div key={index} className="flex flex-col gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] items-center p-[8px] sm:p-[12px] lg:p-[16px] xl:p-[20px] relative shrink-0 w-full sm:w-auto sm:flex-1">
+          <div className="overflow-clip relative shrink-0 size-[40px] sm:size-[44px] md:size-[48px] lg:size-[52px] xl:size-[56px] 2xl:size-[60px]">
             <img alt="" className="block max-w-none size-full object-contain" src={feature.icon} />
           </div>
-          <div className="flex flex-col gap-[8px] sm:gap-[10px] md:gap-[12px] items-center justify-center leading-[normal] not-italic relative shrink-0 text-center w-full">
-            <p className="font-['Poppins'] font-medium relative shrink-0 text-[#0f0f0f] text-[16px] sm:text-[18px] md:text-[20px] whitespace-nowrap" dir="auto">
+          <div className="flex flex-col gap-[8px] sm:gap-[10px] md:gap-[12px] lg:gap-[14px] xl:gap-[16px] items-center justify-center leading-[normal] not-italic relative shrink-0 text-center w-full">
+            <p className="font-['Poppins'] font-medium relative shrink-0 text-[#0f0f0f] text-[16px] sm:text-[18px] md:text-[20px] lg:text-[22px] xl:text-[24px] 2xl:text-[26px] whitespace-nowrap" dir="auto">
               {feature.title}
             </p>
-            <p className="font-['Poppins'] font-normal relative shrink-0 text-[#666] text-[14px] sm:text-[15px] md:text-[16px] leading-[1.4] break-words w-full" dir="auto">
+            <p className="font-['Poppins'] font-normal relative shrink-0 text-[#666] text-[14px] sm:text-[15px] md:text-[16px] lg:text-[17px] xl:text-[18px] 2xl:text-[20px] leading-[1.4] break-words w-full" dir="auto">
               {feature.description}
             </p>
           </div>
@@ -353,23 +355,23 @@ export default function Home() {
         </div>
 
         {/* Product Categories Section */}
-        <div className="flex flex-col gap-[20px] sm:gap-[24px] md:gap-[28px] lg:gap-[32px] items-center relative w-full px-[12px] sm:px-[16px] md:px-[24px] lg:px-0" data-node-id="35:561">
+        <div className="flex flex-col gap-[20px] sm:gap-[24px] md:gap-[28px] lg:gap-[32px] xl:gap-[36px] 2xl:gap-[40px] items-center relative w-full px-[12px] sm:px-[16px] md:px-[24px] lg:px-0" data-node-id="35:561">
           {/* First Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] relative w-full max-w-[1240px] mx-auto lg:px-[100px] md:px-[60px] sm:px-[40px] px-[12px]" data-node-id="35:9481">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto lg:px-[100px] xl:px-[120px] 2xl:px-[140px] md:px-[60px] sm:px-[40px] px-[12px]" data-node-id="35:9481">
             {productCategories.map((category, index) => (
               <ProductCategoryCard key={index} {...category} />
             ))}
           </div>
 
           {/* Second Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] relative w-full max-w-[1240px] mx-auto lg:px-[100px] md:px-[60px] sm:px-[40px] px-[12px]" data-node-id="35:9604">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto lg:px-[100px] xl:px-[120px] 2xl:px-[140px] md:px-[60px] sm:px-[40px] px-[12px]" data-node-id="35:9604">
             {productCategories.map((category, index) => (
               <ProductCategoryCard key={index} {...category} />
             ))}
           </div>
 
           {/* Third Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] relative w-full max-w-[1240px] mx-auto lg:px-[100px] md:px-[60px] sm:px-[40px] px-[12px]" data-node-id="35:9358">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto lg:px-[100px] xl:px-[120px] 2xl:px-[140px] md:px-[60px] sm:px-[40px] px-[12px]" data-node-id="35:9358">
             {productCategories.map((category, index) => (
               <ProductCategoryCard key={index} {...category} />
             ))}
@@ -377,12 +379,12 @@ export default function Home() {
         </div>
 
         {/* Blogs Section */}
-        <div className="flex flex-col gap-[24px] sm:gap-[28px] md:gap-[32px] items-center relative w-full py-[24px] sm:py-[32px] md:py-[40px]">
+        <div className="flex flex-col gap-[24px] sm:gap-[28px] md:gap-[32px] lg:gap-[36px] xl:gap-[40px] 2xl:gap-[44px] items-center relative w-full py-[24px] sm:py-[32px] md:py-[40px] lg:py-[48px] xl:py-[56px] 2xl:py-[64px]">
           <BlogsSection />
         </div>
 
         {/* Features Section */}
-        <div className="w-full max-w-[1240px] mx-auto lg:px-[100px] md:px-[60px] sm:px-[40px] px-[12px] py-[24px] sm:py-[32px] md:py-[40px] lg:py-[48px]" data-node-id="35:814">
+        <div className="w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto lg:px-[100px] xl:px-[120px] 2xl:px-[140px] md:px-[60px] sm:px-[40px] px-[12px] py-[24px] sm:py-[32px] md:py-[40px] lg:py-[48px] xl:py-[56px] 2xl:py-[64px]" data-node-id="35:814">
           <FeaturesSection />
         </div>
       </div>
