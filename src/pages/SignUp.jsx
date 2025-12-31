@@ -1,7 +1,17 @@
+import { Link, useNavigate } from 'react-router-dom';
+
 const imgLayer1 = "https://www.figma.com/api/mcp/asset/de64766a-0d46-408c-b008-d7cbe8e9063d";
 const imgGroup = "https://www.figma.com/api/mcp/asset/c0c5ec1d-0e03-4766-a653-1f1fb48c6fcc";
 
 export default function SignUp() {
+  const navigate = useNavigate();
+
+  const handleSignUp = () => {
+    // Navigate to verification page after sign up
+    // User data will be saved after verification is complete
+    navigate('/verification');
+  };
+
   return (
     <div className="bg-[#fafafa] border border-[#e6e6e6] border-solid content-stretch flex flex-col items-start justify-center px-[64px] py-[48px] relative rounded-[4px] shadow-[0px_0px_44px_0px_rgba(142,9,9,0.1)] size-full min-h-screen" data-name="Sign / Phone" data-node-id="35:4736">
       <div className="content-stretch flex flex-col gap-[40px] items-start relative shrink-0 w-[382px] mx-auto" data-name="form" data-node-id="35:4737">
@@ -121,14 +131,19 @@ export default function SignUp() {
             </div>
           </div>
         </div>
-        <div className="content-stretch flex flex-col items-start relative shrink-0 w-full" data-name="cta" data-node-id="35:4790">
-          <button className="bg-[#0e1c47] content-stretch cursor-pointer flex h-[56px] items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full" data-name="btn-01" data-node-id="35:4791">
+        <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full" data-name="cta" data-node-id="35:4790">
+          <button onClick={handleSignUp} className="bg-[#0e1c47] content-stretch cursor-pointer flex h-[56px] items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:opacity-90 transition-opacity" data-name="btn-01" data-node-id="35:4791">
             <div className="capitalize flex flex-col font-['Poppins'] font-semibold justify-center leading-[0] not-italic relative shrink-0 text-[18px] text-left text-white tracking-[-0.18px] whitespace-nowrap" data-node-id="35:4792">
               <p className="leading-[1.2]" dir="auto">
                 Sign up
               </p>
             </div>
           </button>
+          <Link to="/sign-in" className="content-stretch flex items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:opacity-80 transition-opacity">
+            <div className="capitalize flex flex-col font-['Poppins'] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[#0e1c47] text-[16px] tracking-[-0.16px] whitespace-nowrap">
+              <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-solid leading-[1.2] underline">Already have an account? Sign in</p>
+            </div>
+          </Link>
         </div>
       </div>
     </div>

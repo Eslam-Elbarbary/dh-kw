@@ -2,6 +2,7 @@
 // Based on node 35:497
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 // Hero Banner Assets
 const imgHeroBackground = "https://www.figma.com/api/mcp/asset/13ca6eee-fe0a-48f0-b246-80f0d10fd5ba";
@@ -40,9 +41,9 @@ function HeroBanner() {
 }
 
 // Product Category Card Component
-function ProductCategoryCard({ title, mainImage, mainImageAlt, linkText, subCategories }) {
+function ProductCategoryCard({ title, mainImage, mainImageAlt, linkText, subCategories, linkTo = "/" }) {
   return (
-    <div className="bg-white border border-[#e6e6e6] border-solid flex items-center overflow-hidden p-[10px] sm:p-[12px] md:p-[16px] lg:p-[20px] xl:p-[24px] 2xl:p-[28px] relative rounded-[4px] shrink-0 w-full max-w-full sm:max-w-[368px] lg:max-w-[380px] xl:max-w-[400px] 2xl:max-w-[420px]">
+    <Link to={linkTo} className="bg-white border border-[#e6e6e6] border-solid flex items-center overflow-hidden p-[10px] sm:p-[12px] md:p-[16px] lg:p-[20px] xl:p-[24px] 2xl:p-[28px] relative rounded-[4px] shrink-0 w-full max-w-full sm:max-w-[368px] lg:max-w-[380px] xl:max-w-[400px] 2xl:max-w-[420px] cursor-pointer hover:shadow-lg transition-shadow">
       <div className="flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-center relative shrink-0 w-full">
         <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[26px] xl:text-[28px] 2xl:text-[30px] text-black text-center" dir="auto">
           {title}
@@ -86,7 +87,7 @@ function ProductCategoryCard({ title, mainImage, mainImageAlt, linkText, subCate
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -254,14 +255,14 @@ function BlogsSection() {
         </div>
       </div>
 
-      <div className="flex gap-[8px] items-center px-0 py-[6px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
+      <Link to="/" className="flex gap-[8px] items-center px-0 py-[6px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
         <p className="capitalize font-['Poppins'] font-semibold leading-[20px] not-italic relative shrink-0 text-[#0e1c47] text-[14px]">
           Browse All blogs
         </p>
         <div className="relative shrink-0 size-[18px]">
           <img alt="" className="block max-w-none size-full" src={imgArrowRightSmall} />
         </div>
-      </div>
+      </Link>
     </div>
   );
 }
@@ -319,6 +320,7 @@ export default function Home() {
       mainImage: img69694768AmazonEchoPngClipartTransparentAmazonEchoPng1,
       mainImageAlt: "Digital E-Cards",
       linkText: "Digital E-Cards",
+      linkTo: "/digital-e-cards",
       subCategories: [
         { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" },
         { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" }
@@ -329,6 +331,7 @@ export default function Home() {
       mainImage: imgElectronicCollectionComputerMotherboardWithCpuCooler1,
       mainImageAlt: "PC Components",
       linkText: "PC Components",
+      linkTo: "/",
       subCategories: [
         { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" },
         { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" }
@@ -339,6 +342,7 @@ export default function Home() {
       mainImage: imgLaptopTabletPcTvMobilePhone3D1,
       mainImageAlt: "Mobiles & Tablets",
       linkText: "Digital E-Cards",
+      linkTo: "/digital-e-cards",
       subCategories: [
         { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" },
         { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" }
@@ -359,21 +363,21 @@ export default function Home() {
           {/* First Row */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto lg:px-[100px] xl:px-[120px] 2xl:px-[140px] md:px-[60px] sm:px-[40px] px-[12px]" data-node-id="35:9481">
             {productCategories.map((category, index) => (
-              <ProductCategoryCard key={index} {...category} />
+              <ProductCategoryCard key={index} {...category} linkTo={category.linkTo} />
             ))}
           </div>
 
           {/* Second Row */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto lg:px-[100px] xl:px-[120px] 2xl:px-[140px] md:px-[60px] sm:px-[40px] px-[12px]" data-node-id="35:9604">
             {productCategories.map((category, index) => (
-              <ProductCategoryCard key={index} {...category} />
+              <ProductCategoryCard key={index} {...category} linkTo={category.linkTo} />
             ))}
           </div>
 
           {/* Third Row */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto lg:px-[100px] xl:px-[120px] 2xl:px-[140px] md:px-[60px] sm:px-[40px] px-[12px]" data-node-id="35:9358">
             {productCategories.map((category, index) => (
-              <ProductCategoryCard key={index} {...category} />
+              <ProductCategoryCard key={index} {...category} linkTo={category.linkTo} />
             ))}
           </div>
         </div>

@@ -1,4 +1,26 @@
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+
 export default function VerificationCode() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
+  const handleVerify = () => {
+    // Simulate user data - in real app, this would come from API response
+    const userData = {
+      firstName: 'User',
+      lastName: 'Name',
+      email: 'user@example.com',
+      phone: '+965 XXX XXXX'
+    };
+    
+    // Log user in
+    login(userData);
+    
+    // Navigate to home after verification
+    navigate('/');
+  };
+
   return (
     <div className="bg-[#fafafa] content-stretch flex flex-col items-start justify-center px-[64px] py-[48px] relative rounded-[4px] shadow-[0px_0px_44px_0px_rgba(142,9,9,0.1)] size-full min-h-screen" data-name="Container" data-node-id="35:4793">
       <div className="content-stretch flex flex-col gap-[40px] items-start relative shrink-0 mx-auto" data-name="form" data-node-id="35:4794">
@@ -27,7 +49,7 @@ export default function VerificationCode() {
             <input type="text" maxLength={1} className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col items-center justify-center min-h-px min-w-px px-[32px] py-[16px] relative rounded-[16px] shrink-0 capitalize font-['Cairo'] font-normal text-[#999] text-[24px] text-center" data-node-id="35:4807" />
           </div>
         </div>
-        <button className="bg-[#0e1c47] content-stretch cursor-pointer flex h-[56px] items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full" data-name="cta" data-node-id="35:4809">
+        <button onClick={handleVerify} className="bg-[#0e1c47] content-stretch cursor-pointer flex h-[56px] items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:opacity-90 transition-opacity" data-name="cta" data-node-id="35:4809">
           <div className="capitalize flex flex-col font-['Poppins'] font-semibold justify-center leading-[0] not-italic relative shrink-0 text-[18px] text-left text-white tracking-[-0.18px] whitespace-nowrap" data-node-id="35:4811">
             <p className="leading-[1.2]" dir="auto">{`Verify `}</p>
           </div>

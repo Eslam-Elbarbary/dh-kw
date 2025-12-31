@@ -1,7 +1,16 @@
+import { Link, useNavigate } from 'react-router-dom';
+
 const imgLayer1 = "https://www.figma.com/api/mcp/asset/797940c1-404d-484b-917a-4de758fc18c1";
 const imgGroup = "https://www.figma.com/api/mcp/asset/ce098739-ba83-42a4-9756-79645750c548";
 
 export default function SignIn() {
+  const navigate = useNavigate();
+
+  const handleSignIn = () => {
+    // Navigate to verification or home after sign in
+    navigate('/verification');
+  };
+
   return (
     <div className="bg-[#fafafa] border border-[#e6e6e6] border-solid content-stretch flex flex-col items-start justify-center px-[64px] py-[48px] relative rounded-[4px] shadow-[0px_0px_44px_0px_rgba(142,9,9,0.1)] size-full min-h-screen" data-name="Sign / Phone" data-node-id="35:4702">
       <div className="content-stretch flex flex-col gap-[40px] items-start relative shrink-0 w-[382px] mx-auto" data-name="form" data-node-id="35:4703">
@@ -57,18 +66,18 @@ export default function SignIn() {
           </div>
         </div>
         <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full" data-name="cta" data-node-id="35:4731">
-          <button className="bg-[#0e1c47] content-stretch cursor-pointer flex h-[56px] items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full" data-name="btn-01" data-node-id="35:4732">
+          <button onClick={handleSignIn} className="bg-[#0e1c47] content-stretch cursor-pointer flex h-[56px] items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:opacity-90 transition-opacity" data-name="btn-01" data-node-id="35:4732">
             <div className="capitalize flex flex-col font-['Poppins'] font-semibold justify-center leading-[0] not-italic relative shrink-0 text-[18px] text-left text-white tracking-[-0.18px] whitespace-nowrap" data-node-id="35:4733">
               <p className="leading-[1.2]" dir="auto">
                 Sign in
               </p>
             </div>
           </button>
-          <button className="content-stretch flex items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full" data-name="btn-02" data-node-id="35:4734">
+          <Link to="/sign-up" className="content-stretch flex items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:opacity-80 transition-opacity" data-name="btn-02" data-node-id="35:4734">
             <div className="capitalize flex flex-col font-['Poppins'] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[#0e1c47] text-[16px] tracking-[-0.16px] whitespace-nowrap" data-node-id="35:4735">
-              <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-solid leading-[1.2] underline">Sign in with Email</p>
+              <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-solid leading-[1.2] underline">Don't have an account? Sign up</p>
             </div>
-          </button>
+          </Link>
         </div>
       </div>
     </div>

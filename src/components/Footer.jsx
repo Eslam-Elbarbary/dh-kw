@@ -1,6 +1,8 @@
 // Shared Footer Component used across pages
 // Based on Figma design
 
+import { Link } from 'react-router-dom';
+
 const imgUntitled111 = "https://www.figma.com/api/mcp/asset/f31432a1-167d-4d8b-9ee7-b251ce43e5b4";
 const imgVector = "https://www.figma.com/api/mcp/asset/d295f00c-f727-4394-ada2-0cca08982b3d";
 const imgGroup = "https://www.figma.com/api/mcp/asset/644d434a-e4ac-4929-a260-3720902310b7";
@@ -61,9 +63,9 @@ export default function Footer() {
         <div className="content-stretch flex flex-col lg:flex-row items-start lg:items-center justify-between relative shrink-0 w-full gap-[32px] sm:gap-[36px] md:gap-[40px] lg:gap-[48px] xl:gap-[56px] 2xl:gap-[64px]" data-node-id="35:5024">
           <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0" data-node-id="35:5025">
             <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0" data-node-id="35:5026">
-              <div className="relative shrink-0 size-[80px] sm:size-[90px] md:size-[100px] lg:size-[110px] xl:size-[120px] 2xl:size-[130px]" data-name="Untitled-1[1] 1" data-node-id="35:5027">
-                <img alt="" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgUntitled111} />
-              </div>
+              <Link to="/" className="relative shrink-0 size-[80px] sm:size-[90px] md:size-[100px] lg:size-[110px] xl:size-[120px] 2xl:size-[130px] cursor-pointer hover:opacity-80 transition-opacity" data-name="Untitled-1[1] 1" data-node-id="35:5027">
+                <img alt="Logo" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgUntitled111} />
+              </Link>
               <div className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] lg:text-[17px] xl:text-[18px] 2xl:text-[20px] text-white w-full sm:w-[280px] md:w-[303px] lg:w-[320px] xl:w-[340px] 2xl:w-[360px]" data-node-id="35:5028">
                 <p className="leading-[1.35] whitespace-pre-wrap">{`A premium store offering a curated selection from top international brands. `}</p>
               </div>
@@ -81,18 +83,18 @@ export default function Footer() {
                 <p className="leading-[19.5px]">Links</p>
               </div>
               <div className="content-stretch flex flex-col font-['Poppins'] font-medium gap-[10px] sm:gap-[12px] items-start leading-[0] not-italic relative shrink-0 text-[#f2f2f2] text-[13px] sm:text-[14px] w-full whitespace-nowrap" data-node-id="35:5037">
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5038">
+                <Link to="/" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5038">
                   <p className="leading-[19.5px]">About us</p>
-                </div>
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5039">
+                </Link>
+                <Link to="/" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5039">
                   <p className="leading-[19.5px]">FAQs</p>
-                </div>
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5040">
+                </Link>
+                <Link to="/" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5040">
                   <p className="leading-[19.5px]">Contact Us</p>
-                </div>
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5041">
+                </Link>
+                <Link to="/" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5041">
                   <p className="leading-[19.5px]">{`Delivery & Return`}</p>
-                </div>
+                </Link>
               </div>
             </div>
             <div className="content-stretch flex flex-col gap-[16px] sm:gap-[18px] md:gap-[20px] items-start relative shrink-0 w-full sm:w-[180px] md:w-[200px]" data-node-id="35:5042">
@@ -100,18 +102,18 @@ export default function Footer() {
                 <p className="leading-[19.5px]">My Account</p>
               </div>
               <div className="content-stretch flex flex-col font-['Poppins'] font-medium gap-[10px] sm:gap-[12px] items-start leading-[0] not-italic relative shrink-0 text-[#f2f2f2] text-[13px] sm:text-[14px] w-full whitespace-nowrap" data-node-id="35:5044">
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5045">
+                <Link to="/" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5045">
                   <p className="leading-[19.5px]">Brands</p>
-                </div>
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5046">
+                </Link>
+                <Link to="/" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5046">
                   <p className="leading-[19.5px]">Returns</p>
-                </div>
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5047">
+                </Link>
+                <Link to="/" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5047">
                   <p className="leading-[19.5px]">Site Map</p>
-                </div>
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5048">
+                </Link>
+                <Link to="/sign-in" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5048">
                   <p className="leading-[19.5px]">My Account</p>
-                </div>
+                </Link>
               </div>
             </div>
             <div className="content-stretch flex flex-col gap-[16px] sm:gap-[18px] md:gap-[20px] items-start relative shrink-0 w-full sm:w-[180px] md:w-[200px]" data-node-id="35:5049">

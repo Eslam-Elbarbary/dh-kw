@@ -2,6 +2,8 @@
 // Based on node 35:5064
 // Note: This page includes header/footer - consider using shared components
 
+import { Link } from 'react-router-dom';
+
 const imgUntitled111 = "https://www.figma.com/api/mcp/asset/df5d6222-1573-4ea9-b067-dc2c7b1f9115";
 const imgImage9 = "https://www.figma.com/api/mcp/asset/065b0989-0180-4e06-bf87-6449dfed7b45";
 const imgImage = "https://www.figma.com/api/mcp/asset/a2844135-1c3e-49c3-ae4d-7a53f5cfc231";
@@ -139,9 +141,21 @@ export default function Checkout() {
       <div className="absolute content-stretch flex flex-col gap-[40px] items-center left-0 top-0 w-full max-w-full" data-node-id="35:5065">
         {/* Breadcrumb */}
         <div className="content-stretch flex gap-[8px] items-center px-[120px] py-0 relative shrink-0 w-full max-w-full" data-name="Breadcumb" data-node-id="35:5125">
-          <p className="font-['Poppins'] font-normal leading-[20px] not-italic relative shrink-0 text-[#666] text-[14px]" data-node-id="35:5126">
+          <Link to="/" className="font-['Poppins'] font-normal leading-[20px] not-italic relative shrink-0 text-[#666] text-[14px] hover:text-[#eea137] transition-colors cursor-pointer" data-node-id="35:5126">
             Home
-          </p>
+          </Link>
+          <div className="flex items-center justify-center relative shrink-0 size-[18px]">
+            <div className="flex-none rotate-[270deg]">
+              <div className="relative size-[18px]" data-name="arrow-down" data-node-id="35:5127">
+                <div className="absolute contents inset-0" data-name="vuesax/linear/arrow-down" data-node-id="I35:5127;166:15267">
+                  <img alt="" className="block max-w-none size-full" src={img7} />
+                </div>
+              </div>
+            </div>
+          </div>
+          <Link to="/shopping-cart" className="font-['Poppins'] font-medium leading-[20px] not-italic relative shrink-0 text-[#eea137] text-[14px] hover:opacity-80 transition-opacity cursor-pointer" data-node-id="35:5136">
+            Shopping Cart
+          </Link>
           <div className="flex items-center justify-center relative shrink-0 size-[18px]">
             <div className="flex-none rotate-[270deg]">
               <div className="relative size-[18px]" data-name="arrow-down" data-node-id="35:5127">
@@ -152,7 +166,7 @@ export default function Checkout() {
             </div>
           </div>
           <p className="font-['Poppins'] font-medium leading-[20px] not-italic relative shrink-0 text-[#eea137] text-[14px]" data-node-id="35:5136">
-            Shopping Card
+            Checkout
           </p>
         </div>
         

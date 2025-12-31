@@ -1,6 +1,10 @@
 // Shared Header Component used across pages
 // This will be a reusable component based on the Figma design
 
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import React, { useState, useRef, useEffect } from 'react';
+
 const imgUntitled111 = "https://www.figma.com/api/mcp/asset/f31432a1-167d-4d8b-9ee7-b251ce43e5b4";
 const img = "https://www.figma.com/api/mcp/asset/4d564cb0-8338-4267-86a3-dfd6078c6d49";
 const imgLine1 = "https://www.figma.com/api/mcp/asset/3d13583c-17cc-49fa-9981-7ac0daee5848";
@@ -60,6 +64,45 @@ function ArrowSwapHorizontal({ className }) {
 }
 
 export default function Header() {
+  const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside or pressing Escape
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    }
+
+    function handleEscapeKey(event) {
+      if (event.key === 'Escape' && showDropdown) {
+        setShowDropdown(false);
+      }
+    }
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscapeKey);
+      // Prevent body scroll when dropdown is open on mobile
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
+      document.body.style.overflow = 'unset';
+    };
+  }, [showDropdown]);
+
+  const handleLogout = () => {
+    logout();
+    setShowDropdown(false);
+    navigate('/');
+  };
+
   return (
     <>
       {/* Top bar */}
@@ -86,7 +129,7 @@ export default function Header() {
               </div>
             </div>
           </div>
-          <div className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0" data-name="new-next-logo-gold 3">
+          <Link to="/track-order" className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-name="new-next-logo-gold 3">
             <div className="relative shrink-0 size-[16px]">
               <div className="absolute contents inset-0">
                 <img alt="" className="block max-w-none size-full" src={img1} />
@@ -95,7 +138,7 @@ export default function Header() {
             <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[14px] md:text-[16px] text-center hidden sm:block" dir="auto">
               Track Order
             </p>
-          </div>
+          </Link>
           <div className="hidden sm:flex h-[24px] items-center justify-center relative shrink-0 w-0">
             <div className="flex-none rotate-[270deg]">
               <div className="h-0 relative w-[24px]">
@@ -124,7 +167,7 @@ export default function Header() {
               </div>
             </div>
           </div>
-          <div className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0">
+          <Link to="/report-fraud" className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
             <div className="relative shrink-0 size-[16px]">
               <div className="absolute contents inset-0">
                 <img alt="" className="block max-w-none size-full" src={img2} />
@@ -133,7 +176,7 @@ export default function Header() {
             <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[14px] md:text-[16px] text-center hidden lg:block" dir="auto">
               Report Fraud
             </p>
-          </div>
+          </Link>
           <div className="hidden sm:flex h-[24px] items-center justify-center relative shrink-0 w-0">
             <div className="flex-none rotate-[270deg]">
               <div className="h-0 relative w-[24px]">
@@ -186,13 +229,23 @@ export default function Header() {
         </div>
       </div>
       {/* Search bar and logo */}
-      <div className="bg-[#0e1c47] content-stretch flex flex-col items-start px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] xl:px-[120px] 2xl:px-[140px] py-[12px] sm:py-[14px] md:py-[16px] lg:py-[18px] xl:py-[20px] 2xl:py-[22px] relative shrink-0 w-full max-w-full overflow-hidden">
+      <div className="bg-[#0e1c47] content-stretch flex flex-col items-start px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] xl:px-[120px] 2xl:px-[140px] py-[12px] sm:py-[14px] md:py-[16px] lg:py-[18px] xl:py-[20px] 2xl:py-[22px] relative shrink-0 w-full max-w-full overflow-visible">
         <div className="content-stretch flex flex-col sm:flex-row items-center justify-between relative shrink-0 w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto gap-[12px] sm:gap-[16px] lg:gap-[20px] xl:gap-[24px]">
-          <div className="relative shrink-0 size-[36px] sm:size-[40px] md:size-[44px] lg:size-[48px] xl:size-[52px] 2xl:size-[56px] self-start sm:self-center">
-            <img alt="" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgUntitled111} />
-          </div>
-          <div className="border border-[rgba(255,255,255,0.2)] border-solid content-stretch flex h-[42px] sm:h-[44px] md:h-[48px] lg:h-[52px] xl:h-[56px] 2xl:h-[60px] items-center justify-between overflow-hidden pl-[10px] sm:pl-[12px] md:pl-[16px] lg:pl-[20px] xl:pl-[24px] pr-0 py-0 relative rounded-[4px] shrink-0 w-full sm:w-[500px] md:w-[550px] lg:w-[600px] xl:w-[650px] 2xl:w-[700px] sm:max-w-full sm:flex-1 sm:min-w-0">
-            <input type="text" className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[13px] sm:text-[14px] md:text-[16px] text-white bg-transparent border-none outline-none flex-1 min-w-0" placeholder="Search for products" />
+          <Link to="/" className="relative shrink-0 size-[36px] sm:size-[40px] md:size-[44px] lg:size-[48px] xl:size-[52px] 2xl:size-[56px] self-start sm:self-center cursor-pointer hover:opacity-80 transition-opacity">
+            <img alt="Logo" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgUntitled111} />
+          </Link>
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              navigate('/search');
+            }}
+            className="border border-[rgba(255,255,255,0.2)] border-solid content-stretch flex h-[42px] sm:h-[44px] md:h-[48px] lg:h-[52px] xl:h-[56px] 2xl:h-[60px] items-center justify-between overflow-hidden pl-[10px] sm:pl-[12px] md:pl-[16px] lg:pl-[20px] xl:pl-[24px] pr-0 py-0 relative rounded-[4px] shrink-0 w-full sm:w-[500px] md:w-[550px] lg:w-[600px] xl:w-[650px] 2xl:w-[700px] sm:max-w-full sm:flex-1 sm:min-w-0"
+          >
+            <input 
+              type="text" 
+              className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[13px] sm:text-[14px] md:text-[16px] text-white bg-transparent border-none outline-none flex-1 min-w-0" 
+              placeholder="Search for products" 
+            />
             <div className="content-stretch flex gap-[16px] h-full items-center relative shrink-0">
               <div className="content-stretch flex gap-[8px] items-center relative shrink-0">
                 <p className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
@@ -204,23 +257,160 @@ export default function Header() {
                   </div>
                 </div>
               </div>
-              <button className="bg-[#eea137] content-stretch flex h-full items-center justify-center px-[12px] sm:px-[16px] md:px-[20px] lg:px-[24px] py-[8px] relative rounded-br-[4px] rounded-tr-[4px] shrink-0">
+              <button 
+                type="submit"
+                className="bg-[#eea137] content-stretch flex h-full items-center justify-center px-[12px] sm:px-[16px] md:px-[20px] lg:px-[24px] py-[8px] relative rounded-br-[4px] rounded-tr-[4px] shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+              >
                 <p className="flex flex-col font-['Poppins'] font-semibold justify-center leading-[0] not-italic relative shrink-0 text-[12px] sm:text-[13px] md:text-[14px] lg:text-[16px] text-white whitespace-nowrap">
                   Search
                 </p>
               </button>
             </div>
-          </div>
+          </form>
           <div className="content-stretch flex gap-[10px] sm:gap-[12px] md:gap-[14px] lg:gap-[16px] items-center justify-end relative shrink-0 w-full sm:w-auto">
             <ArrowSwapHorizontal className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[24px] hidden sm:block" />
-            <More className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[24px]" />
-            <ShoppingBasket className="overflow-clip relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[24px]" />
+            <Link to="/favorite" className="cursor-pointer hover:opacity-80 transition-opacity">
+              <More className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[24px]" />
+            </Link>
+            <Link to="/shopping-cart" className="cursor-pointer hover:opacity-80 transition-opacity">
+              <ShoppingBasket className="overflow-clip relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[24px]" />
+            </Link>
             <div className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[24px] hidden sm:block">
               <div className="absolute contents inset-0">
                 <img alt="" className="block max-w-none size-full" src={img6} />
               </div>
             </div>
-            <User className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[24px]" />
+            
+            {/* User Authentication Button */}
+            {isAuthenticated ? (
+              <div className="relative z-[100]" ref={dropdownRef}>
+                <button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="bg-[#eea137] content-stretch cursor-pointer flex gap-[6px] sm:gap-[8px] h-[40px] sm:h-[44px] md:h-[48px] items-center justify-center px-[10px] sm:px-[12px] md:px-[16px] lg:px-[20px] py-[8px] sm:py-[10px] relative rounded-[4px] shrink-0 hover:opacity-90 transition-all duration-200 active:scale-[0.98]"
+                  aria-expanded={showDropdown}
+                  aria-haspopup="true"
+                  aria-label="User account menu"
+                >
+                  <User className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[24px]" />
+                  <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[12px] sm:text-[14px] md:text-[16px] text-white whitespace-nowrap hidden sm:block">
+                    {user?.firstName || user?.name || 'User'}
+                  </p>
+                  <div className={`relative shrink-0 size-[12px] sm:size-[14px] transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`}>
+                    <svg className="w-full h-full text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </button>
+                
+                {/* Professional Dropdown Menu */}
+                {showDropdown && (
+                  <>
+                    {/* Backdrop overlay for mobile */}
+                    <div 
+                      className="fixed inset-0 z-40 sm:hidden"
+                      onClick={() => setShowDropdown(false)}
+                      aria-hidden="true"
+                    ></div>
+                    
+                    {/* Dropdown Content */}
+                    <div className="absolute right-0 top-full mt-[8px] sm:mt-[10px] bg-white border border-[#e6e6e6] rounded-[8px] shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-[calc(100vw-32px)] max-w-[280px] sm:w-auto sm:min-w-[220px] md:min-w-[240px] z-[9999] overflow-hidden animate-[dropdownFadeIn_0.2s_ease-out] sm:right-0">
+                      {/* User Info Section */}
+                      <div className="bg-gradient-to-r from-[#0e1c47] to-[#1a2d5a] px-[16px] sm:px-[18px] py-[14px] sm:py-[16px] border-b border-[#e6e6e6]">
+                        <div className="flex items-center gap-[12px]">
+                          <div className="bg-[#eea137] rounded-full p-[8px] sm:p-[10px] flex items-center justify-center shrink-0">
+                            <User className="relative shrink-0 size-[18px] sm:size-[20px] text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-['Poppins'] font-semibold text-[14px] sm:text-[15px] md:text-[16px] text-white truncate leading-tight">
+                              {user?.firstName && user?.lastName 
+                                ? `${user.firstName} ${user.lastName}` 
+                                : user?.firstName || user?.name || 'User Account'}
+                            </p>
+                            {user?.email && (
+                              <p className="font-['Poppins'] font-normal text-[12px] sm:text-[13px] text-[#f2f2f2] truncate mt-[2px] leading-tight">
+                                {user.email}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Menu Items */}
+                      <div className="py-[4px]">
+                        <Link
+                          to="/"
+                          onClick={() => setShowDropdown(false)}
+                          className="flex items-center gap-[12px] px-[16px] sm:px-[18px] py-[10px] sm:py-[12px] text-[14px] sm:text-[15px] font-['Poppins'] font-medium text-[#0e1c47] hover:bg-[#f8f9fa] transition-colors duration-150 group cursor-pointer"
+                        >
+                          <svg className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] text-[#666] group-hover:text-[#eea137] transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          <span className="whitespace-nowrap">My Profile</span>
+                        </Link>
+                        
+                        <Link
+                          to="/shopping-cart"
+                          onClick={() => setShowDropdown(false)}
+                          className="flex items-center gap-[12px] px-[16px] sm:px-[18px] py-[10px] sm:py-[12px] text-[14px] sm:text-[15px] font-['Poppins'] font-medium text-[#0e1c47] hover:bg-[#f8f9fa] transition-colors duration-150 group cursor-pointer"
+                        >
+                          <svg className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] text-[#666] group-hover:text-[#eea137] transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                          </svg>
+                          <span className="whitespace-nowrap">My Orders</span>
+                        </Link>
+                        
+                        <Link
+                          to="/favorite"
+                          onClick={() => setShowDropdown(false)}
+                          className="flex items-center gap-[12px] px-[16px] sm:px-[18px] py-[10px] sm:py-[12px] text-[14px] sm:text-[15px] font-['Poppins'] font-medium text-[#0e1c47] hover:bg-[#f8f9fa] transition-colors duration-150 group cursor-pointer"
+                        >
+                          <svg className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] text-[#666] group-hover:text-[#eea137] transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                          </svg>
+                          <span className="whitespace-nowrap">Favorites</span>
+                        </Link>
+                        
+                        <Link
+                          to="/track-order"
+                          onClick={() => setShowDropdown(false)}
+                          className="flex items-center gap-[12px] px-[16px] sm:px-[18px] py-[10px] sm:py-[12px] text-[14px] sm:text-[15px] font-['Poppins'] font-medium text-[#0e1c47] hover:bg-[#f8f9fa] transition-colors duration-150 group cursor-pointer"
+                        >
+                          <svg className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] text-[#666] group-hover:text-[#eea137] transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="whitespace-nowrap">Track Order</span>
+                        </Link>
+                      </div>
+                      
+                      {/* Divider */}
+                      <div className="border-t border-[#e6e6e6] my-[2px]"></div>
+                      
+                      {/* Sign Out */}
+                      <div className="py-[2px]">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-[12px] px-[16px] sm:px-[18px] py-[10px] sm:py-[12px] text-[14px] sm:text-[15px] font-['Poppins'] font-medium text-[#dc2626] hover:bg-[#fef2f2] transition-colors duration-150 cursor-pointer"
+                        >
+                          <svg className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] text-[#dc2626] transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                          <span className="whitespace-nowrap">Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <Link
+                to="/sign-in"
+                className="bg-[#eea137] content-stretch cursor-pointer flex h-[40px] sm:h-[44px] md:h-[48px] items-center justify-center px-[12px] sm:px-[16px] md:px-[20px] py-[8px] sm:py-[10px] relative rounded-[4px] shrink-0 hover:opacity-90 transition-all duration-200 active:scale-[0.98]"
+              >
+                <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[12px] sm:text-[14px] md:text-[16px] text-white whitespace-nowrap">
+                  Sign In
+                </p>
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -237,32 +427,32 @@ export default function Header() {
           </div>
         </div>
         <div className="content-stretch flex flex-wrap gap-[12px] sm:gap-[16px] md:gap-[20px] items-center justify-center relative shrink-0 w-full sm:w-auto">
-          <a className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0">
+          <Link to="/" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
             <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-left text-white">{`Computers & Laptops`}</p>
-          </a>
-          <div className="content-stretch flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0">
+          </Link>
+          <Link to="/" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
             <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-white">{`Mobiles & Tablets`}</p>
-          </div>
-          <div className="content-stretch flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0">
+          </Link>
+          <Link to="/digital-e-cards" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
             <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-white">
               Smartphones
             </p>
-          </div>
-          <div className="content-stretch flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0">
+          </Link>
+          <Link to="/" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
             <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-white">
               Monitors
             </p>
-          </div>
-          <div className="content-stretch flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0">
+          </Link>
+          <Link to="/" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
             <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-white">
               Processors
             </p>
-          </div>
-          <div className="content-stretch flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0">
+          </Link>
+          <Link to="/" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
             <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-white">
               Motherboards
             </p>
-          </div>
+          </Link>
         </div>
       </div>
     </>

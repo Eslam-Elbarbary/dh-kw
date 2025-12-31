@@ -2,6 +2,8 @@
 // This is a large component, splitting into multiple files would be better
 // For now, creating the full component
 
+import { Link } from 'react-router-dom';
+
 const imgUntitled111 = "https://www.figma.com/api/mcp/asset/f31432a1-167d-4d8b-9ee7-b251ce43e5b4";
 const imgImage = "https://www.figma.com/api/mcp/asset/d21476fb-b45c-4ced-901d-0fd2694a38ab";
 const imgImage1 = "https://www.figma.com/api/mcp/asset/901c345a-eff2-4acb-8a8a-b0ba204195fd";
@@ -346,9 +348,9 @@ export default function ShoppingCart() {
           </div>
           {/* Breadcrumb */}
           <div className="content-stretch flex gap-[8px] items-center px-[100px] py-0 relative shrink-0 w-full" data-name="Breadcumb" data-node-id="35:4873">
-            <p className="font-['Poppins'] font-normal leading-[20px] not-italic relative shrink-0 text-[#5f6c72] text-[14px]" data-node-id="35:4874">
+            <Link to="/" className="font-['Poppins'] font-normal leading-[20px] not-italic relative shrink-0 text-[#5f6c72] text-[14px] hover:text-[#eea137] transition-colors cursor-pointer" data-node-id="35:4874">
               Home
-            </p>
+            </Link>
             <div className="flex items-center justify-center relative shrink-0 size-[18px]">
               <div className="flex-none rotate-[270deg]">
                 <div className="relative size-[18px]" data-name="arrow-down" data-node-id="35:4875">
@@ -640,14 +642,14 @@ export default function ShoppingCart() {
                     </p>
                   </div>
                 </div>
-                <button className="bg-[#0e1c47] content-stretch cursor-pointer flex gap-[11.273px] h-[45.091px] items-center justify-center px-[22.545px] py-0 relative rounded-[4px] shrink-0 w-full" data-name="Button" data-node-id="35:5019">
+                <Link to="/checkout" className="bg-[#0e1c47] content-stretch cursor-pointer flex gap-[11.273px] h-[45.091px] items-center justify-center px-[22.545px] py-0 relative rounded-[4px] shrink-0 w-full hover:opacity-90 transition-opacity" data-name="Button" data-node-id="35:5019">
                   <p className="capitalize font-['Poppins'] font-semibold leading-[52.606px] not-italic relative shrink-0 text-[16px] text-white tracking-[0.192px]" data-node-id="35:5020">
                     shop now
                   </p>
                   <div className="relative shrink-0 size-[22.545px]" data-name="ShoppingCartSimple" data-node-id="35:5021">
                     <img alt="" className="block max-w-none size-full" src={imgShoppingCartSimple} />
                   </div>
-                </button>
+                </Link>
               </div>
             </div>
           </div>

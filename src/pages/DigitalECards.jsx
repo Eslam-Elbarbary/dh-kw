@@ -1,6 +1,8 @@
 // Digital E-Cards page component - exact Figma implementation
 // Based on node 35:5515
 
+import { Link } from 'react-router-dom';
+
 const imgProperty1Default = "https://www.figma.com/api/mcp/asset/0e1f27bc-f780-47c8-a09e-32dbd0fb7fbb";
 const imgUntitled111 = "https://www.figma.com/api/mcp/asset/2f26a83f-848c-4359-b5d9-b7bc585d6a6a";
 const imgVoucherIconSaleBuySpecialDiscountPromotionMarketingPurchaseCheckoutECommerceOnlineShopping3DIllustration1 = "https://www.figma.com/api/mcp/asset/8299a1b9-6556-403f-b2d9-f12a3714794e";
@@ -136,9 +138,9 @@ export default function DigitalECards() {
               <Frame className="h-[499px] relative shrink-0 w-full" />
             </div>
             <div className="content-stretch flex gap-[8px] items-center px-[100px] py-0 relative shrink-0 w-full max-w-full" data-node-id="35:5580">
-              <p className="font-['Poppins'] font-normal leading-[20px] not-italic relative shrink-0 text-[#666] text-[14px]" data-node-id="35:5581">
+              <Link to="/" className="font-['Poppins'] font-normal leading-[20px] not-italic relative shrink-0 text-[#666] text-[14px] hover:text-[#eea137] transition-colors cursor-pointer" data-node-id="35:5581">
                 Home
-              </p>
+              </Link>
               <div className="flex items-center justify-center relative shrink-0 size-[18px]">
                 <div className="flex-none rotate-[270deg]">
                   <div className="relative size-[18px]" data-name="arrow-down" data-node-id="35:5582">
