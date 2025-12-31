@@ -1,14 +1,14 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Outlet } from 'react-router-dom';
 import './App.css';
-import Header from './components/Header.jsx';
-import Footer from './components/Footer.jsx';
-import SignUp from './pages/SignUp.jsx';
-import SignIn from './pages/SignIn.jsx';
-import VerificationCode from './pages/VerificationCode.jsx';
-import ShoppingCart from './pages/ShoppingCart.jsx';
-import DigitalECards from './pages/DigitalECards.jsx';
-import Home from './pages/Home.jsx';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import SignUp from './pages/SignUp';
+import SignIn from './pages/SignIn';
+import VerificationCode from './pages/VerificationCode';
+import ShoppingCart from './pages/ShoppingCart';
+import DigitalECards from './pages/DigitalECards';
+import Home from './pages/Home';
 
 function AppLayout() {
   return (
