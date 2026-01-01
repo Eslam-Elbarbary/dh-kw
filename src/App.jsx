@@ -12,6 +12,10 @@ import DigitalECards from './pages/DigitalECards';
 import Home from './pages/Home';
 import Checkout from './pages/Checkout';
 import SearchResults from './pages/SearchResults';
+import ProductDetail from './pages/ProductDetail';
+import PCComponents from './pages/PCComponents';
+import Favorites from './pages/Favorites';
+import ReportFraud from './pages/ReportFraud';
 
 function AppLayout() {
   return (
@@ -34,9 +38,11 @@ function App() {
             <Route path="/shopping-cart" element={<ShoppingCart />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/search" element={<SearchResults />} />
-            <Route path="/favorite" element={<div className="min-h-screen bg-white flex items-center justify-center">Favorites Page - Coming Soon</div>} />
+            <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/pc-components" element={<PCComponents />} />
+            <Route path="/favorite" element={<Favorites />} />
             <Route path="/track-order" element={<div className="min-h-screen bg-white flex items-center justify-center">Track Order Page - Coming Soon</div>} />
-            <Route path="/report-fraud" element={<div className="min-h-screen bg-white flex items-center justify-center">Report Fraud Page - Coming Soon</div>} />
+            <Route path="/report-fraud" element={<ReportFraud />} />
           </Route>
           <Route path="/sign-up" element={<SignUp />} />
           <Route path="/sign-in" element={<SignIn />} />

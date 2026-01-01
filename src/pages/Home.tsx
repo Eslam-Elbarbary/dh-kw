@@ -2,6 +2,7 @@
 // Based on node 35:497
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 // Hero Banner Assets
 const imgHeroBackground = "https://www.figma.com/api/mcp/asset/13ca6eee-fe0a-48f0-b246-80f0d10fd5ba";
@@ -40,7 +41,25 @@ function HeroBanner() {
 }
 
 // Product Category Card Component
-function ProductCategoryCard({ title, mainImage, mainImageAlt, linkText, subCategories }) {
+function ProductCategoryCard({ title, mainImage, mainImageAlt, linkText, linkTo = null, subCategories }) {
+  const MainCategoryContent = (
+    <div className="flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-start relative shrink-0 w-full">
+      <div className="bg-[#0e1c47] flex flex-col h-[120px] sm:h-[140px] md:h-[168px] items-center justify-center overflow-clip px-[40px] sm:px-[50px] md:px-[67px] py-[12px] sm:py-[16px] md:py-[20px] relative rounded-[4px] shrink-0 w-full">
+        <div className="flex items-center relative shrink-0">
+          <img alt={mainImageAlt} className="h-[70px] w-[120px] sm:h-[85px] sm:w-[150px] md:h-[102px] md:w-[180px] object-contain" src={mainImage} />
+        </div>
+      </div>
+      <div className="flex gap-[12px] sm:gap-[14px] md:gap-[16px] items-center justify-center relative shrink-0 w-full">
+        <p className="capitalize font-['Poppins'] font-medium leading-[normal] not-italic relative shrink-0 text-[16px] sm:text-[18px] md:text-[20px] text-black text-center" dir="auto">
+          {linkText}
+        </p>
+        <div className="relative shrink-0 size-[20px] sm:size-[22px] md:size-[24px]">
+          <img alt="" className="block max-w-none size-full" src={imgArrowRight} />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="bg-white border border-[#e6e6e6] border-solid flex items-center overflow-hidden p-[10px] sm:p-[12px] md:p-[16px] lg:p-[20px] relative rounded-[4px] shrink-0 w-full max-w-full sm:max-w-[368px]">
       <div className="flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-center relative shrink-0 w-full">
@@ -49,21 +68,13 @@ function ProductCategoryCard({ title, mainImage, mainImageAlt, linkText, subCate
         </p>
         <div className="flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-start relative shrink-0 w-full">
           {/* Main Category */}
-          <div className="flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-start relative shrink-0 w-full">
-            <div className="bg-[#0e1c47] flex flex-col h-[120px] sm:h-[140px] md:h-[168px] items-center justify-center overflow-clip px-[40px] sm:px-[50px] md:px-[67px] py-[12px] sm:py-[16px] md:py-[20px] relative rounded-[4px] shrink-0 w-full">
-              <div className="flex items-center relative shrink-0">
-                <img alt={mainImageAlt} className="h-[70px] w-[120px] sm:h-[85px] sm:w-[150px] md:h-[102px] md:w-[180px] object-contain" src={mainImage} />
-              </div>
-            </div>
-            <div className="flex gap-[12px] sm:gap-[14px] md:gap-[16px] items-center justify-center relative shrink-0 w-full">
-              <p className="capitalize font-['Poppins'] font-medium leading-[normal] not-italic relative shrink-0 text-[16px] sm:text-[18px] md:text-[20px] text-black text-center" dir="auto">
-                {linkText}
-              </p>
-              <div className="relative shrink-0 size-[20px] sm:size-[22px] md:size-[24px]">
-                <img alt="" className="block max-w-none size-full" src={imgArrowRight} />
-              </div>
-            </div>
-          </div>
+          {linkTo ? (
+            <Link to={linkTo} className="w-full hover:opacity-90 transition-opacity">
+              {MainCategoryContent}
+            </Link>
+          ) : (
+            MainCategoryContent
+          )}
           {/* Sub Categories */}
           <div className="flex gap-[12px] sm:gap-[14px] md:gap-[16px] items-center relative shrink-0 w-full">
             {subCategories.map((sub, index) => (
@@ -212,18 +223,36 @@ function BlogsSection() {
         onTouchEnd={onTouchEnd}
       >
         <div
-          className="flex transition-transform duration-500 ease-in-out gap-[12px] sm:gap-[8px]"
+          className="flex transition-transform duration-500 ease-in-out gap-[12px] sm:gap-[8px] w-full "
           style={{
             transform: `translateX(-${currentIndex * (100 / visibleCount)}%)`,
           }}
         >
-          {blogs.map((blog) => (
+          {blogs.map((blog) => {
+            // Calculate width accounting for gaps
+            // Container gap: gap-[12px] sm:gap-[8px]
+            // Mobile (1 card): 100% (no gap needed)
+            // Small (2 cards, 8px gap): calc((100% - 8px) / 2)
+            // Large (3 cards, 8px gap): calc((100% - 16px) / 3)
+            const getCardWidth = () => {
+              if (visibleCount === 1) return '100%';
+              // For 2+ cards, gap is 8px on sm and up
+              const gapSize = 8; // sm:gap-[8px]
+              const totalGaps = (visibleCount - 1) * gapSize;
+              return `calc((100% - ${totalGaps}px) / ${visibleCount})`;
+            };
+            
+            const cardWidth = getCardWidth();
+            
+            return (
             <div
               key={blog.id}
-              className="bg-white border-[#e4e7e9] border-[0.928px] border-solid flex flex-col gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] items-center justify-center overflow-hidden px-[10px] sm:px-[12px] md:px-[14px] lg:px-[16px] py-[12px] sm:py-[16px] md:py-[20px] lg:py-[24px] relative rounded-[3.713px] shrink-0"
+              className="bg-white border-[#e4e7e9] border-[0.928px] border-solid flex flex-col gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] items-center justify-center overflow-hidden px-[10px] sm:px-[12px] md:px-[14px] lg:px-[16px] py-[12px] sm:py-[16px] md:py-[20px] lg:py-[24px] relative rounded-[3.713px] shrink-0 flex-shrink-0"
               style={{
-                width: `${100 / visibleCount}%`,
-                minWidth: `${100 / visibleCount}%`,
+                width: cardWidth,
+                minWidth: cardWidth,
+                maxWidth: cardWidth,
+                flexBasis: cardWidth,
               }}
             >
               <div className="h-[140px] sm:h-[160px] md:h-[174px] relative rounded-[4px] shrink-0 w-full">
@@ -248,7 +277,8 @@ function BlogsSection() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -317,6 +347,7 @@ export default function Home() {
       mainImage: img69694768AmazonEchoPngClipartTransparentAmazonEchoPng1,
       mainImageAlt: "Digital E-Cards",
       linkText: "Digital E-Cards",
+      linkTo: "/digital-e-cards",
       subCategories: [
         { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" },
         { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" }
@@ -327,6 +358,7 @@ export default function Home() {
       mainImage: imgElectronicCollectionComputerMotherboardWithCpuCooler1,
       mainImageAlt: "PC Components",
       linkText: "PC Components",
+      linkTo: "/pc-components",
       subCategories: [
         { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" },
         { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" }

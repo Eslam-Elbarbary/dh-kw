@@ -331,7 +331,7 @@ export default function Home() {
       mainImage: imgElectronicCollectionComputerMotherboardWithCpuCooler1,
       mainImageAlt: "PC Components",
       linkText: "PC Components",
-      linkTo: "/",
+      linkTo: "/pc-components",
       subCategories: [
         { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" },
         { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" }
@@ -383,7 +383,7 @@ export default function Home() {
         </div>
 
         {/* Blogs Section */}
-        <div className="flex flex-col gap-[24px] sm:gap-[28px] md:gap-[32px] lg:gap-[36px] xl:gap-[40px] 2xl:gap-[44px] items-center relative w-full py-[24px] sm:py-[32px] md:py-[40px] lg:py-[48px] xl:py-[56px] 2xl:py-[64px]">
+        <div className="flex flex-col gap-[24px] sm:gap-[28px] md:gap-[32px] lg:gap-[36px] xl:gap-[40px] 2xl:gap-[44px] items-center relative w-full  py-[24px] sm:py-[32px] md:py-[40px] lg:py-[48px] xl:py-[56px] 2xl:py-[64px]">
           <BlogsSection />
         </div>
 

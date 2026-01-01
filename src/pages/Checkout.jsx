@@ -1,213 +1,373 @@
-// Checkout page - exact Figma implementation  
-// Based on node 35:5064
-// Note: This page includes header/footer - consider using shared components
+// Checkout page - exact Figma implementation
+// Based on Figma design - Checkout Page
 
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 
-const imgUntitled111 = "https://www.figma.com/api/mcp/asset/df5d6222-1573-4ea9-b067-dc2c7b1f9115";
-const imgImage9 = "https://www.figma.com/api/mcp/asset/065b0989-0180-4e06-bf87-6449dfed7b45";
-const imgImage = "https://www.figma.com/api/mcp/asset/a2844135-1c3e-49c3-ae4d-7a53f5cfc231";
-const imgImage1 = "https://www.figma.com/api/mcp/asset/5ac3eb8a-e2c9-402d-8984-6ccbcd3f0266";
-const imgVector = "https://www.figma.com/api/mcp/asset/4ea9f0b3-7cdd-40b4-9464-1f76e963f033";
-const imgGroup = "https://www.figma.com/api/mcp/asset/3f4426c5-22a8-484e-9ecc-dcda4f0dbf93";
-const imgGroup1 = "https://www.figma.com/api/mcp/asset/361667bd-4dad-492c-8109-bf1d12eb9377";
-const imgVector1 = "https://www.figma.com/api/mcp/asset/a5e3f025-48ae-42e6-8942-89c07b3fbfd0";
-const imgVuesaxLinearUser = "https://www.figma.com/api/mcp/asset/60991d5a-57a5-430e-a57e-dccc61674fd9";
-const imgElements = "https://www.figma.com/api/mcp/asset/92604dbe-f401-4f81-ac96-28d03713b144";
-const imgVuesaxLinearHeart = "https://www.figma.com/api/mcp/asset/24680690-05fc-460c-83ee-1ae51528b279";
-const imgVuesaxOutlineArrowSwapHorizontal = "https://www.figma.com/api/mcp/asset/e7b6e009-ed6b-4df6-99c8-af342c368ee4";
-const img = "https://www.figma.com/api/mcp/asset/91b675e0-8dbc-4955-b86f-1340bcdfd61d";
-const imgLine1 = "https://www.figma.com/api/mcp/asset/462a8f71-b21e-47a5-bac2-c769cf7b1ff2";
-const img1 = "https://www.figma.com/api/mcp/asset/959c8b0e-ef6b-4838-9ca8-d61e3497eec1";
-const img2 = "https://www.figma.com/api/mcp/asset/982c3ecc-00e7-4764-a640-4930034f410f";
-const img3 = "https://www.figma.com/api/mcp/asset/c8c462a4-f883-4332-8385-55dc4f65089c";
-const imgFlat = "https://www.figma.com/api/mcp/asset/363f7452-019c-41e0-b3a9-30e0b3140149";
-const imgGloss = "https://www.figma.com/api/mcp/asset/2d33fd27-959c-416f-a8a9-07a11afdeffb";
-const img4 = "https://www.figma.com/api/mcp/asset/423c6ce4-325f-4448-b1cf-ea7d03ac4b83";
-const img5 = "https://www.figma.com/api/mcp/asset/6896e20c-3103-488f-aa15-0c7a42aebba2";
-const img6 = "https://www.figma.com/api/mcp/asset/3184503f-dfaf-47cb-a29f-c17ff137c74d";
-const img7 = "https://www.figma.com/api/mcp/asset/213740b6-f6ce-401b-b216-6f0baca55345";
-const img8 = "https://www.figma.com/api/mcp/asset/f3ea0a52-1837-4e35-ad5e-549d60511250";
-const img9 = "https://www.figma.com/api/mcp/asset/37fb4609-3b5c-4d3f-8e3f-3c233d6aebc5";
-const imgRegularCurrencyDollar = "https://www.figma.com/api/mcp/asset/bf5d3cb2-5229-4f9a-b1c9-668837cf4746";
-const img10 = "https://www.figma.com/api/mcp/asset/e1e7f2cd-39fb-4dbc-a394-89edcc054e43";
-const img11 = "https://www.figma.com/api/mcp/asset/26790fc0-e0c5-4e86-b269-08858cfe3558";
-const imgLine27 = "https://www.figma.com/api/mcp/asset/16559d3f-4f5e-4080-bafd-70387902cd8b";
-const imgIcon = "https://www.figma.com/api/mcp/asset/352ac6a3-c6a7-4969-8274-a9a6c75b2c1e";
-const imgGroup2 = "https://www.figma.com/api/mcp/asset/8bac2d20-cb95-425d-9129-c9508d6d79f6";
-const img12 = "https://www.figma.com/api/mcp/asset/ba9109d3-826f-4ee7-9353-560abb26a62e";
-const img13 = "https://www.figma.com/api/mcp/asset/6b5d1353-6a8e-4a03-837c-8785a3417c38";
-const img14 = "https://www.figma.com/api/mcp/asset/cbcc240d-e92b-4b27-9cb7-63713b34dc93";
-const img15 = "https://www.figma.com/api/mcp/asset/bb62c357-4220-45d1-8d66-18d55190fa9a";
-const img16 = "https://www.figma.com/api/mcp/asset/19f2b58f-c9bd-4f98-9e38-99e3fa7a4c1f";
-const img17 = "https://www.figma.com/api/mcp/asset/ca107afb-4737-466a-98f8-0b3ab418df69";
-const imgLine26 = "https://www.figma.com/api/mcp/asset/29d40b8e-6d64-4c7d-a6a2-3c28ac2c35b1";
-const imgRegularArrowRight = "https://www.figma.com/api/mcp/asset/6151f0b2-acef-45a0-95df-6f7ce61ca8a5";
-const img18 = "https://www.figma.com/api/mcp/asset/315a1bbf-fabc-4b9a-93b7-f7903060010f";
-const img19 = "https://www.figma.com/api/mcp/asset/63c26891-7499-4c1a-b6de-1f2fc1444582";
-const imgEmailSvg = "https://www.figma.com/api/mcp/asset/9a54598b-2df4-4b09-bc11-81a3ad445088";
-const imgLine4 = "https://www.figma.com/api/mcp/asset/5cddfaa7-7ca6-4df3-9abd-305279bb832d";
-const img20 = "https://www.figma.com/api/mcp/asset/76f3db15-49f3-40f3-8dc1-e0a4f89b82bf";
-const img21 = "https://www.figma.com/api/mcp/asset/01a39088-92f9-44c3-b319-3f02c2a3de79";
-const img22 = "https://www.figma.com/api/mcp/asset/f204a7d5-9415-4ee7-bb28-a022bde799e5";
+// Arrow icon for breadcrumbs
+const imgArrowDown = "https://www.figma.com/api/mcp/asset/213740b6-f6ce-401b-b216-6f0baca55345";
 
-function IconLinkedin({ className }) {
-  return (
-    <div className={className} data-name="Icon-Linkedin" data-node-id="1:533">
-      <div className="absolute inset-[12.5%_14.58%_14.58%_12.5%]" data-name="Vector" data-node-id="1:534">
-        <img alt="" className="block max-w-none size-full" src={imgVector} />
-      </div>
-    </div>
-  );
-}
+// Payment method icons - using placeholder URLs, replace with actual Figma assets
+const imgCashOnDelivery = "https://www.figma.com/api/mcp/asset/bf5d3cb2-5229-4f9a-b1c9-668837cf4746"; // Dollar icon
+const imgVenmo = "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=100&h=100&fit=crop"; // Placeholder - replace with Venmo logo
+const imgPayPal = "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=100&h=100&fit=crop"; // Placeholder - replace with PayPal logo
+const imgAmazonPay = "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=100&h=100&fit=crop"; // Placeholder - replace with Amazon logo
+const imgCreditCard = "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=100&h=100&fit=crop"; // Placeholder - replace with card icon
 
-function IconInstagram({ className }) {
-  return (
-    <div className={className} data-name="icon-instagram" data-node-id="1:528">
-      <div className="absolute inset-[12.5%]" data-name="Group" data-node-id="1:529">
-        <div className="absolute inset-[-4.17%]">
-          <img alt="" className="block max-w-none size-full" src={imgGroup} />
-        </div>
-      </div>
-    </div>
-  );
-}
+// Arrow right icon for button
+const imgArrowRight = "https://www.figma.com/api/mcp/asset/6151f0b2-acef-45a0-95df-6f7ce61ca8a5";
 
-function IconTwitter({ className }) {
-  return (
-    <div className={className} data-name="Icon-Twitter" data-node-id="1:524">
-      <div className="absolute inset-[0_8.09%_0_-20.83%]" data-name="Group" data-node-id="1:525">
-        <img alt="" className="block max-w-none size-full" src={imgGroup1} />
-      </div>
-    </div>
-  );
-}
-
-function IconFacebook({ className }) {
-  return (
-    <div className={className} data-name="Icon-Facebook" data-node-id="1:521">
-      <div className="absolute inset-[12.5%_27.08%_12.5%_29.17%]" data-name="Vector" data-node-id="1:522">
-        <img alt="" className="block max-w-none size-full" src={imgVector1} />
-      </div>
-    </div>
-  );
-}
-
-function User({ className, property1 = "Default" }) {
-  return (
-    <div data-node-id="35:256" className={className}>
-      <div data-node-id="35:257" className="absolute contents inset-0" data-name="vuesax/linear/user">
-        <img className="block max-w-none size-full" alt="" src={imgVuesaxLinearUser} />
-      </div>
-    </div>
-  );
-}
-
-function ShoppingBasket({ className, property1 = "Default" }) {
-  return (
-    <div data-node-id="35:112" className={className}>
-      <div data-node-id="35:113" className="absolute inset-[8.33%_10.42%]" data-name="elements">
-        <div className="absolute inset-[-3.75%_-3.95%]">
-          <img className="block max-w-none size-full" alt="" src={imgElements} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function More({ className, property1 = "Variant3" }) {
-  return (
-    <div data-node-id="35:101" className={className}>
-      <div data-node-id="35:102" className="absolute contents inset-0" data-name="vuesax/linear/heart">
-        <img className="block max-w-none size-full" alt="" src={imgVuesaxLinearHeart} />
-      </div>
-    </div>
-  );
-}
-
-function ArrowSwapHorizontal({ className, property1 = "Default" }) {
-  return (
-    <div data-node-id="35:84" className={className}>
-      <div data-node-id="35:85" className="absolute contents inset-0" data-name="vuesax/outline/arrow-swap-horizontal">
-        <img className="block max-w-none size-full" alt="" src={imgVuesaxOutlineArrowSwapHorizontal} />
-      </div>
-    </div>
-  );
-}
+// Product images for order summary
+const imgCamera = "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=100&h=100&fit=crop";
+const imgHeadphones = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop";
 
 export default function Checkout() {
+  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [shipToDifferentAddress, setShipToDifferentAddress] = useState(false);
+
   return (
-    <div className="bg-white relative size-full min-h-screen" data-name="Shopping Cart" data-node-id="35:5064">
-      <div className="absolute content-stretch flex flex-col gap-[40px] items-center left-0 top-0 w-full max-w-full" data-node-id="35:5065">
+    <div className="bg-white relative w-full min-h-screen" data-name="Checkout" data-node-id="35:5064">
+      <div className="flex flex-col gap-[40px] sm:gap-[50px] md:gap-[60px] items-center relative w-full px-[12px] sm:px-[16px] md:px-[24px] lg:px-[40px] xl:px-[100px] py-[20px] sm:py-[30px] md:py-[40px]">
         {/* Breadcrumb */}
-        <div className="content-stretch flex gap-[8px] items-center px-[120px] py-0 relative shrink-0 w-full max-w-full" data-name="Breadcumb" data-node-id="35:5125">
+        <div className="flex gap-[8px] items-center relative w-full max-w-[1240px] px-[12px] sm:px-[16px] md:px-[24px] lg:px-0" data-name="Breadcrumb" data-node-id="35:5125">
           <Link to="/" className="font-['Poppins'] font-normal leading-[20px] not-italic relative shrink-0 text-[#666] text-[14px] hover:text-[#eea137] transition-colors cursor-pointer" data-node-id="35:5126">
             Home
           </Link>
           <div className="flex items-center justify-center relative shrink-0 size-[18px]">
             <div className="flex-none rotate-[270deg]">
               <div className="relative size-[18px]" data-name="arrow-down" data-node-id="35:5127">
-                <div className="absolute contents inset-0" data-name="vuesax/linear/arrow-down" data-node-id="I35:5127;166:15267">
-                  <img alt="" className="block max-w-none size-full" src={img7} />
+                <div className="absolute contents inset-0">
+                  <img alt="" className="block max-w-none size-full" src={imgArrowDown} onError={(e) => e.target.style.display = 'none'} />
                 </div>
               </div>
             </div>
           </div>
           <Link to="/shopping-cart" className="font-['Poppins'] font-medium leading-[20px] not-italic relative shrink-0 text-[#eea137] text-[14px] hover:opacity-80 transition-opacity cursor-pointer" data-node-id="35:5136">
-            Shopping Cart
+            Shopping Card
           </Link>
-          <div className="flex items-center justify-center relative shrink-0 size-[18px]">
-            <div className="flex-none rotate-[270deg]">
-              <div className="relative size-[18px]" data-name="arrow-down" data-node-id="35:5127">
-                <div className="absolute contents inset-0" data-name="vuesax/linear/arrow-down" data-node-id="I35:5127;166:15267">
-                  <img alt="" className="block max-w-none size-full" src={img7} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <p className="font-['Poppins'] font-medium leading-[20px] not-italic relative shrink-0 text-[#eea137] text-[14px]" data-node-id="35:5136">
-            Checkout
-          </p>
         </div>
         
         {/* Checkout Content */}
-        <div className="content-stretch flex items-start justify-between relative shrink-0 w-full max-w-[1240px] mx-auto px-[100px] flex-wrap gap-[24px]" data-node-id="35:5141">
-          <div className="content-stretch flex flex-col gap-[40px] items-start relative shrink-0 flex-1 min-w-[600px]" data-name="Checkout Information" data-node-id="35:5142">
+        <div className="flex flex-col lg:flex-row items-start justify-between gap-[24px] sm:gap-[32px] relative w-full max-w-[1240px]" data-node-id="35:5141">
+          {/* Left Column - Checkout Information */}
+          <div className="flex flex-col gap-[40px] sm:gap-[50px] items-start relative shrink-0 flex-1 w-full lg:min-w-0" data-name="Checkout Information" data-node-id="35:5142">
             {/* Billing Information */}
-            <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0 w-full" data-name="Billing Information" data-node-id="35:5143">
-              <p className="font-['Poppins'] font-medium leading-[24px] not-italic relative shrink-0 text-[18px] text-black w-full whitespace-pre-wrap" data-node-id="35:5144">
+            <div className="flex flex-col gap-[24px] items-start relative shrink-0 w-full" data-name="Billing Information" data-node-id="35:5143">
+              <p className="font-['Poppins'] font-medium leading-[24px] not-italic relative shrink-0 text-[18px] sm:text-[20px] text-black w-full" data-node-id="35:5144">
                 Billing Information
               </p>
-              {/* Form fields continue here - truncated for brevity but full form structure from Figma */}
+              
+              {/* Name Fields */}
+              <div className="flex flex-col sm:flex-row gap-[16px] sm:gap-[20px] w-full">
+                <div className="flex flex-col gap-[8px] flex-1 w-full">
+                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">First name</label>
+                  <input 
+                    type="text" 
+                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                    placeholder="First name"
+                  />
+                </div>
+                <div className="flex flex-col gap-[8px] flex-1 w-full">
+                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Last name</label>
+                  <input 
+                    type="text" 
+                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                    placeholder="Last name"
+                  />
+                </div>
+              </div>
+
+              {/* Company Name */}
+              <div className="flex flex-col gap-[8px] w-full">
+                <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Company Name (Optional)</label>
+                <input 
+                  type="text" 
+                  className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                  placeholder="Company Name"
+                />
+              </div>
+
+              {/* Address */}
+              <div className="flex flex-col gap-[8px] w-full">
+                <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Address</label>
+                <input 
+                  type="text" 
+                  className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                  placeholder="Address"
+                />
+              </div>
+
+              {/* Location Details */}
+              <div className="flex flex-col sm:flex-row gap-[16px] sm:gap-[20px] w-full">
+                <div className="flex flex-col gap-[8px] flex-1 w-full">
+                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Country</label>
+                  <select className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full bg-white">
+                    <option value="">Select...</option>
+                    <option value="kuwait">Kuwait</option>
+                    <option value="saudi">Saudi Arabia</option>
+                    <option value="uae">UAE</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-[8px] flex-1 w-full">
+                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Region/State</label>
+                  <select className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full bg-white">
+                    <option value="">Select...</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-[8px] flex-1 w-full">
+                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">City</label>
+                  <select className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full bg-white">
+                    <option value="">Select...</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-[8px] flex-1 w-full">
+                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Zip Code</label>
+                  <input 
+                    type="text" 
+                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                    placeholder="Zip Code"
+                  />
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div className="flex flex-col sm:flex-row gap-[16px] sm:gap-[20px] w-full">
+                <div className="flex flex-col gap-[8px] flex-1 w-full">
+                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Email</label>
+                  <input 
+                    type="email" 
+                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                    placeholder="Email"
+                  />
+                </div>
+                <div className="flex flex-col gap-[8px] flex-1 w-full">
+                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Phone Number</label>
+                  <input 
+                    type="tel" 
+                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                    placeholder="Phone Number"
+                  />
+                </div>
+              </div>
+
+              {/* Shipping Option */}
+              <div className="flex items-center gap-[8px] w-full">
+                <input 
+                  type="checkbox" 
+                  id="shipDifferent"
+                  checked={shipToDifferentAddress}
+                  onChange={(e) => setShipToDifferentAddress(e.target.checked)}
+                  className="w-[16px] h-[16px] cursor-pointer"
+                />
+                <label htmlFor="shipDifferent" className="font-['Poppins'] font-normal text-[14px] text-[#333] cursor-pointer">
+                  Ship into different address
+                </label>
+              </div>
             </div>
             
             {/* Payment Option */}
-            <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0 w-full" data-node-id="35:5194">
-              <p className="font-['Poppins'] font-medium leading-[24px] not-italic relative shrink-0 text-[18px] text-black w-full whitespace-pre-wrap" data-node-id="35:5195">
+            <div className="flex flex-col gap-[24px] items-start relative shrink-0 w-full" data-node-id="35:5194">
+              <p className="font-['Poppins'] font-medium leading-[24px] not-italic relative shrink-0 text-[18px] sm:text-[20px] text-black w-full" data-node-id="35:5195">
                 Payment Option
               </p>
-              {/* Payment options continue here */}
+              
+              {/* Payment Methods */}
+              <div className="flex flex-wrap gap-[12px] sm:gap-[16px] w-full">
+                {[
+                  { id: 'cash', label: 'Cash on Delivery', icon: imgCashOnDelivery },
+                  { id: 'venmo', label: 'Venmo', icon: imgVenmo },
+                  { id: 'paypal', label: 'Paypal', icon: imgPayPal },
+                  { id: 'amazon', label: 'Amazon Pay', icon: imgAmazonPay },
+                  { id: 'card', label: 'Debit/Credit Card', icon: imgCreditCard }
+                ].map((method) => (
+                  <div key={method.id} className="flex flex-col items-center gap-[8px]">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod(method.id)}
+                      className={`border border-[#e4e7e9] border-solid rounded-[8px] p-[12px] sm:p-[16px] flex flex-col items-center justify-center gap-[8px] w-[100px] sm:w-[120px] h-[120px] sm:h-[140px] cursor-pointer transition-all ${
+                        paymentMethod === method.id 
+                          ? 'border-[#eea137] bg-[#fff9f0]' 
+                          : 'hover:border-[#0e1c47]'
+                      }`}
+                    >
+                      <div className="relative size-[40px] sm:size-[48px] flex items-center justify-center shrink-0">
+                        {method.id === 'cash' ? (
+                          <div className="text-[24px] sm:text-[28px]">$</div>
+                        ) : (
+                          <img 
+                            src={method.icon} 
+                            alt={method.label} 
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              e.target.src = 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=100&h=100&fit=crop';
+                            }}
+                          />
+                        )}
+                      </div>
+                      <p className="font-['Poppins'] font-normal text-[12px] sm:text-[13px] text-[#333] text-center leading-tight">
+                        {method.label}
+                      </p>
+                    </button>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value={method.id}
+                      checked={paymentMethod === method.id}
+                      onChange={() => setPaymentMethod(method.id)}
+                      className="w-[16px] h-[16px] cursor-pointer"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Card Details - Show when Debit/Credit Card is selected */}
+              {paymentMethod === 'card' && (
+                <div className="flex flex-col gap-[16px] sm:gap-[20px] w-full mt-[8px]">
+                  <div className="flex flex-col gap-[8px] w-full">
+                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Name on Card</label>
+                    <input 
+                      type="text" 
+                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                      placeholder="Name on Card"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-[8px] w-full">
+                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Card Number</label>
+                    <input 
+                      type="text" 
+                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                      placeholder="Card Number"
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-[16px] sm:gap-[20px] w-full">
+                    <div className="flex flex-col gap-[8px] flex-1 w-full">
+                      <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Expire Date</label>
+                      <input 
+                        type="text" 
+                        className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                        placeholder="DD/YY"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-[8px] flex-1 w-full">
+                      <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">CVC</label>
+                      <input 
+                        type="text" 
+                        className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                        placeholder="CVC"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             
             {/* Additional Information */}
-            <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0 w-full" data-name="Additional Information" data-node-id="35:5250">
-              <p className="font-['Poppins'] font-medium leading-[24px] not-italic relative shrink-0 text-[18px] text-black w-full whitespace-pre-wrap" data-node-id="35:5251">
+            <div className="flex flex-col gap-[24px] items-start relative shrink-0 w-full" data-name="Additional Information" data-node-id="35:5250">
+              <p className="font-['Poppins'] font-medium leading-[24px] not-italic relative shrink-0 text-[18px] sm:text-[20px] text-black w-full" data-node-id="35:5251">
                 Additional Information
               </p>
-              {/* Additional fields continue here */}
+              <div className="flex flex-col gap-[8px] w-full">
+                <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Order Notes (Optional)</label>
+                <textarea 
+                  className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full min-h-[100px] resize-y"
+                  placeholder="Notes about your order, e.g. special notes for delivery"
+                />
+              </div>
             </div>
           </div>
           
-          {/* Order Summary */}
-          <div className="bg-white border border-[#e6e6e6] border-solid content-stretch flex flex-col gap-[10px] items-center justify-center p-[24px] relative rounded-[12px] shrink-0 min-w-[350px]" data-name="Order Summery" data-node-id="35:5256">
-            <p className="font-['Poppins'] font-medium leading-[24px] not-italic relative shrink-0 text-[18px] text-black w-full whitespace-pre-wrap" data-node-id="35:5257">
+          {/* Right Column - Order Summary */}
+          <div className="bg-white border border-[#e6e6e6] border-solid flex flex-col gap-[24px] items-start justify-start p-[20px] sm:p-[24px] rounded-[12px] shrink-0 w-full lg:w-[400px] lg:sticky lg:top-[100px] lg:self-start" data-name="Order Summery" data-node-id="35:5256">
+            <p className="font-['Poppins'] font-medium leading-[24px] not-italic relative shrink-0 text-[18px] sm:text-[20px] text-black w-full" data-node-id="35:5257">
               Order Summery
             </p>
-            {/* Order summary details continue here */}
+            
+            {/* Order Items */}
+            <div className="flex flex-col gap-[16px] w-full">
+              {/* Item 1 */}
+              <div className="flex gap-[12px] items-start w-full">
+                <div className="relative size-[80px] sm:size-[100px] shrink-0 rounded-[4px] overflow-hidden bg-[#f5f5f5]">
+                  <img 
+                    src={imgCamera} 
+                    alt="Canon EOS 1500D DSLR Camera" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=100&h=100&fit=crop';
+                    }}
+                  />
+                </div>
+                <div className="flex flex-col gap-[4px] flex-1 min-w-0">
+                  <p className="font-['Poppins'] font-normal text-[14px] text-[#333] line-clamp-2">
+                    Canon EOS 1500D DSLR Camera Body+ 18-...
+                  </p>
+                  <p className="font-['Poppins'] font-medium text-[14px] text-[#333]">
+                    1 x $70
+                  </p>
+                </div>
+              </div>
+              
+              {/* Item 2 */}
+              <div className="flex gap-[12px] items-start w-full">
+                <div className="relative size-[80px] sm:size-[100px] shrink-0 rounded-[4px] overflow-hidden bg-[#f5f5f5]">
+                  <img 
+                    src={imgHeadphones} 
+                    alt="Wired Over-Ear Gaming Headphones" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop';
+                    }}
+                  />
+                </div>
+                <div className="flex flex-col gap-[4px] flex-1 min-w-0">
+                  <p className="font-['Poppins'] font-normal text-[14px] text-[#333] line-clamp-2">
+                    Wired Over-Ear Gaming Headphones with U...
+                  </p>
+                  <p className="font-['Poppins'] font-medium text-[14px] text-[#333]">
+                    3 x $250
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Cost Breakdown */}
+            <div className="flex flex-col gap-[12px] w-full border-t border-[#e4e7e9] pt-[16px]">
+              <div className="flex justify-between items-center w-full">
+                <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Sub-total</p>
+                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">$320</p>
+              </div>
+              <div className="flex justify-between items-center w-full">
+                <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Shipping</p>
+                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">Free</p>
+              </div>
+              <div className="flex justify-between items-center w-full">
+                <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Discount</p>
+                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">$24</p>
+              </div>
+              <div className="flex justify-between items-center w-full">
+                <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Tax</p>
+                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">$61.99</p>
+              </div>
+              <div className="flex justify-between items-center w-full border-t border-[#e4e7e9] pt-[12px] mt-[4px]">
+                <p className="font-['Poppins'] font-semibold text-[16px] sm:text-[18px] text-[#333]">Total</p>
+                <p className="font-['Poppins'] font-semibold text-[16px] sm:text-[18px] text-[#333]">$357.99 USD</p>
+              </div>
+            </div>
+
+            {/* Process To Check Button */}
+            <button className="bg-[#0e1c47] text-white font-['Poppins'] font-semibold py-[12px] sm:py-[14px] px-[20px] sm:px-[24px] rounded-[4px] hover:bg-[#1a2f5c] transition-colors text-[14px] sm:text-[16px] w-full flex items-center justify-center gap-[8px] cursor-pointer">
+              <span>Process To Check</span>
+              <div className="relative size-[16px] sm:size-[18px]">
+                <img 
+                  src={imgArrowRight} 
+                  alt="Arrow" 
+                  className="w-full h-full object-contain"
+                  onError={(e) => e.target.style.display = 'none'}
+                />
+              </div>
+            </button>
           </div>
         </div>
       </div>
     </div>
   );
 }
-

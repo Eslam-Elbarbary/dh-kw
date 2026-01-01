@@ -427,7 +427,7 @@ export default function Header() {
           </div>
         </div>
         <div className="content-stretch flex flex-wrap gap-[12px] sm:gap-[16px] md:gap-[20px] items-center justify-center relative shrink-0 w-full sm:w-auto">
-          <Link to="/" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
+          <Link to="/pc-components" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
             <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-left text-white">{`Computers & Laptops`}</p>
           </Link>
           <Link to="/" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
@@ -438,17 +438,17 @@ export default function Header() {
               Smartphones
             </p>
           </Link>
-          <Link to="/" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
+          <Link to="/pc-components" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
             <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-white">
               Monitors
             </p>
           </Link>
-          <Link to="/" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
+          <Link to="/pc-components" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
             <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-white">
               Processors
             </p>
           </Link>
-          <Link to="/" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
+          <Link to="/pc-components" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[8px] relative shrink-0 hover:opacity-80 transition-opacity">
             <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-white">
               Motherboards
             </p>
