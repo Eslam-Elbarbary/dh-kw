@@ -83,16 +83,16 @@ export default function Footer() {
                 <p className="leading-[19.5px]">Links</p>
               </div>
               <div className="content-stretch flex flex-col font-['Poppins'] font-medium gap-[10px] sm:gap-[12px] items-start leading-[0] not-italic relative shrink-0 text-[#f2f2f2] text-[13px] sm:text-[14px] w-full whitespace-nowrap" data-node-id="35:5037">
-                <Link to="/" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5038">
+                <Link to="/about-us" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5038">
                   <p className="leading-[19.5px]">About us</p>
                 </Link>
-                <Link to="/" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5039">
+                <Link to="/faqs" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5039">
                   <p className="leading-[19.5px]">FAQs</p>
                 </Link>
-                <Link to="/" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5040">
+                <Link to="/contact-us" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5040">
                   <p className="leading-[19.5px]">Contact Us</p>
                 </Link>
-                <Link to="/" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5041">
+                <Link to="/delivery-return" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5041">
                   <p className="leading-[19.5px]">{`Delivery & Return`}</p>
                 </Link>
               </div>
@@ -102,16 +102,16 @@ export default function Footer() {
                 <p className="leading-[19.5px]">My Account</p>
               </div>
               <div className="content-stretch flex flex-col font-['Poppins'] font-medium gap-[10px] sm:gap-[12px] items-start leading-[0] not-italic relative shrink-0 text-[#f2f2f2] text-[13px] sm:text-[14px] w-full whitespace-nowrap" data-node-id="35:5044">
-                <Link to="/" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5045">
+                <Link to="/brands" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5045">
                   <p className="leading-[19.5px]">Brands</p>
                 </Link>
-                <Link to="/" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5046">
+                <Link to="/returns" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5046">
                   <p className="leading-[19.5px]">Returns</p>
                 </Link>
-                <Link to="/" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5047">
+                <Link to="/site-map" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5047">
                   <p className="leading-[19.5px]">Site Map</p>
                 </Link>
-                <Link to="/sign-in" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity" data-node-id="35:5048">
+                <Link to="/my-account" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5048">
                   <p className="leading-[19.5px]">My Account</p>
                 </Link>
               </div>

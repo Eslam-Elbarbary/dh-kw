@@ -1,6 +1,8 @@
 // Shared Footer Component used across pages
 // Based on Figma design
 
+import { Link } from 'react-router-dom';
+
 const imgUntitled111 = "https://www.figma.com/api/mcp/asset/f31432a1-167d-4d8b-9ee7-b251ce43e5b4";
 const imgVector = "https://www.figma.com/api/mcp/asset/d295f00c-f727-4394-ada2-0cca08982b3d";
 const imgGroup = "https://www.figma.com/api/mcp/asset/644d434a-e4ac-4929-a260-3720902310b7";
@@ -56,7 +58,7 @@ function IconFacebook({ className }) {
 
 export default function Footer() {
   return (
-    <div className="bg-[#0e1c47] content-stretch flex flex-col gap-[20px] items-start justify-center pb-[16px] pt-[24px] sm:pt-[32px] md:pt-[40px] px-0 relative shrink-0 w-full overflow-hidden" data-name="Footer" data-node-id="35:5022">
+    <div className="bg-[#0e1c47] dark:bg-[#0a1529] content-stretch flex flex-col gap-[20px] items-start justify-center pb-[16px] pt-[24px] sm:pt-[32px] md:pt-[40px] px-0 relative shrink-0 w-full overflow-hidden transition-colors duration-300" data-name="Footer" data-node-id="35:5022">
       <div className="content-stretch flex flex-col items-start px-[12px] sm:px-[16px] md:px-[24px] lg:px-[80px] xl:px-[120px] py-0 relative shrink-0 w-full max-w-full overflow-hidden" data-node-id="35:5023">
         <div className="content-stretch flex flex-col lg:flex-row items-start lg:items-center justify-between relative shrink-0 w-full gap-[32px] sm:gap-[36px] md:gap-[40px]" data-node-id="35:5024">
           <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0" data-node-id="35:5025">
@@ -81,18 +83,18 @@ export default function Footer() {
                 <p className="leading-[19.5px]">Links</p>
               </div>
               <div className="content-stretch flex flex-col font-['Poppins'] font-medium gap-[10px] sm:gap-[12px] items-start leading-[0] not-italic relative shrink-0 text-[#f2f2f2] text-[13px] sm:text-[14px] w-full whitespace-nowrap" data-node-id="35:5037">
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5038">
+                <Link to="/about-us" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5038">
                   <p className="leading-[19.5px]">About us</p>
-                </div>
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5039">
+                </Link>
+                <Link to="/faqs" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5039">
                   <p className="leading-[19.5px]">FAQs</p>
-                </div>
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5040">
+                </Link>
+                <Link to="/contact-us" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5040">
                   <p className="leading-[19.5px]">Contact Us</p>
-                </div>
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5041">
+                </Link>
+                <Link to="/delivery-return" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5041">
                   <p className="leading-[19.5px]">{`Delivery & Return`}</p>
-                </div>
+                </Link>
               </div>
             </div>
             <div className="content-stretch flex flex-col gap-[16px] sm:gap-[18px] md:gap-[20px] items-start relative shrink-0 w-full sm:w-[180px] md:w-[200px]" data-node-id="35:5042">
@@ -100,18 +102,18 @@ export default function Footer() {
                 <p className="leading-[19.5px]">My Account</p>
               </div>
               <div className="content-stretch flex flex-col font-['Poppins'] font-medium gap-[10px] sm:gap-[12px] items-start leading-[0] not-italic relative shrink-0 text-[#f2f2f2] text-[13px] sm:text-[14px] w-full whitespace-nowrap" data-node-id="35:5044">
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5045">
+                <Link to="/brands" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5045">
                   <p className="leading-[19.5px]">Brands</p>
-                </div>
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5046">
+                </Link>
+                <Link to="/returns" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5046">
                   <p className="leading-[19.5px]">Returns</p>
-                </div>
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5047">
+                </Link>
+                <Link to="/site-map" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5047">
                   <p className="leading-[19.5px]">Site Map</p>
-                </div>
-                <div className="flex flex-col justify-center relative shrink-0" data-node-id="35:5048">
+                </Link>
+                <Link to="/my-account" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5048">
                   <p className="leading-[19.5px]">My Account</p>
-                </div>
+                </Link>
               </div>
             </div>
             <div className="content-stretch flex flex-col gap-[16px] sm:gap-[18px] md:gap-[20px] items-start relative shrink-0 w-full sm:w-[180px] md:w-[200px]" data-node-id="35:5049">

@@ -123,11 +123,122 @@
     width: 100%;
     margin: 0;
     padding: 0;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   body {
     width: 100%;
     overflow-x: hidden;
+  }
+
+  /* Dark mode specific styles for site colors */
+  .dark {
+    --site-primary: #0e1c47;
+    --site-secondary: #eea137;
+    --site-text: #f2f2f2;
+    --site-text-secondary: #d1d5db;
+    --site-bg: #0f172a;
+    --site-card-bg: #1e293b;
+    --site-border: #334155;
+    --site-hover: #1e3a8a;
+  }
+
+  :root:not(.dark) {
+    --site-primary: #0e1c47;
+    --site-secondary: #eea137;
+    --site-text: #0e1c47;
+    --site-text-secondary: #666;
+    --site-bg: #ffffff;
+    --site-card-bg: #ffffff;
+    --site-border: #e6e6e6;
+    --site-hover: #1a2d5a;
+  }
+
+  /* Global dark mode page backgrounds */
+  .dark .bg-white {
+    background-color: var(--site-bg) !important;
+  }
+
+  .dark .text-\[#0e1c47\] {
+    color: #ffffff !important;
+  }
+
+  .dark .text-\[#666\] {
+    color: #e5e7eb !important;
+  }
+
+  .dark .text-\[#333\] {
+    color: #f3f4f6 !important;
+  }
+
+  .dark .text-black {
+    color: #ffffff !important;
+  }
+
+  .dark .border-\[#e6e6e6\] {
+    border-color: var(--site-border) !important;
+  }
+
+  .dark .bg-\[#f8f9fa\] {
+    background-color: var(--site-card-bg) !important;
+  }
+
+  /* Make all text white/light in dark mode for better readability */
+  .dark p:not(.text-white):not(.text-\[#f2f2f2\]):not(.text-\[#eea137\]):not(.text-\[#d8902f\]),
+  .dark h1:not(.text-white):not(.text-\[#f2f2f2\]):not(.text-\[#eea137\]),
+  .dark h2:not(.text-white):not(.text-\[#f2f2f2\]):not(.text-\[#eea137\]),
+  .dark h3:not(.text-white):not(.text-\[#f2f2f2\]):not(.text-\[#eea137\]),
+  .dark h4:not(.text-white):not(.text-\[#f2f2f2\]):not(.text-\[#eea137\]),
+  .dark h5:not(.text-white):not(.text-\[#f2f2f2\]):not(.text-\[#eea137\]),
+  .dark h6:not(.text-white):not(.text-\[#f2f2f2\]):not(.text-\[#eea137\]),
+  .dark span:not(.text-white):not(.text-\[#f2f2f2\]):not(.text-\[#eea137\]):not(.text-\[#d8902f\]),
+  .dark label:not(.text-white):not(.text-\[#f2f2f2\]):not(.text-\[#eea137\]),
+  .dark li:not(.text-white):not(.text-\[#f2f2f2\]):not(.text-\[#eea137\]) {
+    color: #ffffff !important;
+  }
+
+  /* Keep orange/primary colors visible */
+  .dark .text-\[#eea137\] {
+    color: #eea137 !important;
+  }
+
+  .dark .text-orange-500,
+  .dark .text-\[#d8902f\] {
+    color: #eea137 !important;
+  }
+
+  /* Keep links visible and white, with orange hover */
+  .dark a:not(.text-\[#eea137\]):not(.text-\[#d8902f\]):not(.text-white):not(.text-\[#f2f2f2\]) {
+    color: #ffffff !important;
+  }
+
+  .dark a:hover:not(.text-\[#eea137\]) {
+    color: #eea137 !important;
+  }
+
+  /* Input text should be white in dark mode */
+  .dark input:not([type="submit"]):not([type="button"]),
+  .dark textarea,
+  .dark select {
+    color: #ffffff !important;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #9ca3af !important;
+  }
+
+  /* Smooth transitions for dark mode - applied to specific elements */
+  body,
+  .bg-white,
+  .bg-\[#0e1c47\],
+  .text-\[#0e1c47\],
+  .text-\[#666\],
+  .border-\[#e6e6e6\],
+  .bg-\[#f8f9fa\] {
+    transition-property: background-color, border-color, color;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
   }
 }
 

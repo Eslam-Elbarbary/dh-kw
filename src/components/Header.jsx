@@ -4,6 +4,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import React, { useState, useRef, useEffect } from 'react';
+import ThemeToggle from './ThemeToggle';
 
 const imgUntitled111 = "https://www.figma.com/api/mcp/asset/f31432a1-167d-4d8b-9ee7-b251ce43e5b4";
 const img = "https://www.figma.com/api/mcp/asset/4d564cb0-8338-4267-86a3-dfd6078c6d49";
@@ -106,7 +107,7 @@ export default function Header() {
   return (
     <>
       {/* Top bar */}
-      <div className="bg-[#0e1c47] border-[#4b505e] border-b border-l-0 border-r-0 border-solid border-t-0 content-stretch flex flex-col sm:flex-row items-start sm:items-center justify-between px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] xl:px-[120px] 2xl:px-[140px] py-[10px] sm:py-[12px] md:py-[14px] lg:py-[16px] xl:py-[18px] 2xl:py-[20px] relative shrink-0 w-full max-w-full overflow-hidden" data-node-id="39:5520">
+      <div className="bg-[#0e1c47] dark:bg-[#0a1529] border-[#4b505e] dark:border-[#2a3a5a] border-b border-l-0 border-r-0 border-solid border-t-0 content-stretch flex flex-col sm:flex-row items-start sm:items-center justify-between px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] xl:px-[120px] 2xl:px-[140px] py-[10px] sm:py-[12px] md:py-[14px] lg:py-[16px] xl:py-[18px] 2xl:py-[20px] relative shrink-0 w-full max-w-full overflow-hidden transition-colors duration-300" data-node-id="39:5520">
         <div className="content-stretch flex gap-[6px] sm:gap-[8px] md:gap-[12px] lg:gap-[16px] items-center relative shrink-0 flex-wrap w-full sm:w-auto" data-node-id="39:5521">
           <div className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0" data-name="new-next-logo-gold 4" data-node-id="39:5522">
             <div className="relative shrink-0 size-[16px]" data-name="call" data-node-id="39:5523">
@@ -148,7 +149,7 @@ export default function Header() {
               </div>
             </div>
           </div>
-          <div className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0">
+          <Link to="/help-center" className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
             <div className="relative shrink-0 size-[16px]">
               <div className="absolute contents inset-0">
                 <img alt="" className="block max-w-none size-full" src={img} />
@@ -157,7 +158,7 @@ export default function Header() {
             <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[14px] md:text-[16px] text-center hidden md:block" dir="auto">
               Help Center
             </p>
-          </div>
+          </Link>
           <div className="hidden sm:flex h-[24px] items-center justify-center relative shrink-0 w-0">
             <div className="flex-none rotate-[270deg]">
               <div className="h-0 relative w-[24px]">
@@ -186,14 +187,14 @@ export default function Header() {
               </div>
             </div>
           </div>
-          <div className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0">
+          <Link to="/become-a-seller" className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
             <div className="relative shrink-0 size-[16px]">
               <div className="absolute contents inset-0">
                 <img alt="" className="block max-w-none size-full" src={img3} />
               </div>
             </div>
             <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[14px] md:text-[16px] text-center hidden lg:block" dir="auto">{` Become a Seller`}</p>
-          </div>
+          </Link>
         </div>
         <div className="content-stretch flex gap-[6px] sm:gap-[8px] items-center justify-end relative shrink-0 w-full sm:w-auto mt-[8px] sm:mt-0">
           <div className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0">
@@ -229,7 +230,7 @@ export default function Header() {
         </div>
       </div>
       {/* Search bar and logo */}
-      <div className="bg-[#0e1c47] content-stretch flex flex-col items-start px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] xl:px-[120px] 2xl:px-[140px] py-[12px] sm:py-[14px] md:py-[16px] lg:py-[18px] xl:py-[20px] 2xl:py-[22px] relative shrink-0 w-full max-w-full overflow-visible">
+      <div className="bg-[#0e1c47] dark:bg-[#0a1529] content-stretch flex flex-col items-start px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] xl:px-[120px] 2xl:px-[140px] py-[12px] sm:py-[14px] md:py-[16px] lg:py-[18px] xl:py-[20px] 2xl:py-[22px] relative shrink-0 w-full max-w-full overflow-visible transition-colors duration-300">
         <div className="content-stretch flex flex-col sm:flex-row items-center justify-between relative shrink-0 w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto gap-[12px] sm:gap-[16px] lg:gap-[20px] xl:gap-[24px]">
           <Link to="/" className="relative shrink-0 size-[36px] sm:size-[40px] md:size-[44px] lg:size-[48px] xl:size-[52px] 2xl:size-[56px] self-start sm:self-center cursor-pointer hover:opacity-80 transition-opacity">
             <img alt="Logo" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgUntitled111} />
@@ -268,18 +269,21 @@ export default function Header() {
             </div>
           </form>
           <div className="content-stretch flex gap-[10px] sm:gap-[12px] md:gap-[14px] lg:gap-[16px] items-center justify-end relative shrink-0 w-full sm:w-auto">
-            <ArrowSwapHorizontal className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[24px] hidden sm:block" />
+            <Link to="/compare" className="cursor-pointer hover:opacity-80 transition-opacity">
+              <ArrowSwapHorizontal className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[24px]" />
+            </Link>
             <Link to="/favorite" className="cursor-pointer hover:opacity-80 transition-opacity">
               <More className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[24px]" />
             </Link>
             <Link to="/shopping-cart" className="cursor-pointer hover:opacity-80 transition-opacity">
               <ShoppingBasket className="overflow-clip relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[24px]" />
             </Link>
-            <div className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[24px] hidden sm:block">
+            <Link to="/notifications" className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[24px] cursor-pointer hover:opacity-80 transition-opacity">
               <div className="absolute contents inset-0">
                 <img alt="" className="block max-w-none size-full" src={img6} />
               </div>
-            </div>
+            </Link>
+            <ThemeToggle />
             
             {/* User Authentication Button */}
             {isAuthenticated ? (
@@ -338,7 +342,7 @@ export default function Header() {
                       {/* Menu Items */}
                       <div className="py-[4px]">
                         <Link
-                          to="/"
+                          to="/my-profile"
                           onClick={() => setShowDropdown(false)}
                           className="flex items-center gap-[12px] px-[16px] sm:px-[18px] py-[10px] sm:py-[12px] text-[14px] sm:text-[15px] font-['Poppins'] font-medium text-[#0e1c47] hover:bg-[#f8f9fa] transition-colors duration-150 group cursor-pointer"
                         >
@@ -349,7 +353,7 @@ export default function Header() {
                         </Link>
                         
                         <Link
-                          to="/shopping-cart"
+                          to="/my-orders"
                           onClick={() => setShowDropdown(false)}
                           className="flex items-center gap-[12px] px-[16px] sm:px-[18px] py-[10px] sm:py-[12px] text-[14px] sm:text-[15px] font-['Poppins'] font-medium text-[#0e1c47] hover:bg-[#f8f9fa] transition-colors duration-150 group cursor-pointer"
                         >
@@ -415,7 +419,7 @@ export default function Header() {
         </div>
       </div>
       {/* Navigation menu */}
-      <div className="bg-[#0e1c47] content-stretch flex flex-col sm:flex-row gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] items-center justify-center px-[12px] sm:px-[16px] md:px-[40px] lg:px-[80px] xl:px-[100px] 2xl:px-[120px] py-[12px] sm:py-[16px] md:py-[20px] lg:py-[24px] xl:py-[28px] 2xl:py-[32px] relative shrink-0 w-full max-w-full overflow-x-auto">
+      <div className="bg-[#0e1c47] dark:bg-[#0a1529] content-stretch flex flex-col sm:flex-row gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] items-center justify-center px-[12px] sm:px-[16px] md:px-[40px] lg:px-[80px] xl:px-[100px] 2xl:px-[120px] py-[12px] sm:py-[16px] md:py-[20px] lg:py-[24px] xl:py-[28px] 2xl:py-[32px] relative shrink-0 w-full max-w-full overflow-x-auto transition-colors duration-300">
         <div className="bg-[#eea137] content-stretch flex gap-[6px] sm:gap-[8px] h-[36px] sm:h-[40px] items-center px-[12px] sm:px-[16px] md:px-[20px] lg:px-[24px] py-[8px] relative rounded-[4px] shrink-0 w-full sm:w-auto">
           <p className="flex flex-col font-['Poppins'] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[16px] sm:text-[17px] md:text-[18px] text-white whitespace-nowrap">
             Category

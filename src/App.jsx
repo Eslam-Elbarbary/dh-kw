@@ -2,8 +2,10 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Outlet } from 'react-router-dom';
 import './App.css';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import ScrollToTop from './components/ScrollToTop';
 import SignUp from './pages/SignUp';
 import SignIn from './pages/SignIn';
 import VerificationCode from './pages/VerificationCode';
@@ -16,6 +18,21 @@ import ProductDetail from './pages/ProductDetail';
 import PCComponents from './pages/PCComponents';
 import Favorites from './pages/Favorites';
 import ReportFraud from './pages/ReportFraud';
+import TrackOrder from './pages/TrackOrder';
+import HelpCenter from './pages/HelpCenter';
+import BecomeASeller from './pages/BecomeASeller';
+import AboutUs from './pages/AboutUs';
+import FAQs from './pages/FAQs';
+import ContactUs from './pages/ContactUs';
+import DeliveryReturn from './pages/DeliveryReturn';
+import MyAccount from './pages/MyAccount';
+import Brands from './pages/Brands';
+import Returns from './pages/Returns';
+import SiteMap from './pages/SiteMap';
+import MyProfile from './pages/MyProfile';
+import MyOrders from './pages/MyOrders';
+import Compare from './pages/Compare';
+import Notifications from './pages/Notifications';
 
 function AppLayout() {
   return (
@@ -23,14 +40,16 @@ function AppLayout() {
       <Header />
       <Outlet />
       <Footer />
+      <ScrollToTop />
     </>
   );
 }
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
         <Routes>
           <Route element={<AppLayout />}>
             <Route path="/" element={<Home />} />
@@ -41,8 +60,22 @@ function App() {
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/pc-components" element={<PCComponents />} />
             <Route path="/favorite" element={<Favorites />} />
-            <Route path="/track-order" element={<div className="min-h-screen bg-white flex items-center justify-center">Track Order Page - Coming Soon</div>} />
+            <Route path="/track-order" element={<TrackOrder />} />
             <Route path="/report-fraud" element={<ReportFraud />} />
+            <Route path="/help-center" element={<HelpCenter />} />
+            <Route path="/become-a-seller" element={<BecomeASeller />} />
+            <Route path="/about-us" element={<AboutUs />} />
+            <Route path="/faqs" element={<FAQs />} />
+            <Route path="/contact-us" element={<ContactUs />} />
+            <Route path="/delivery-return" element={<DeliveryReturn />} />
+            <Route path="/my-account" element={<MyAccount />} />
+            <Route path="/brands" element={<Brands />} />
+            <Route path="/returns" element={<Returns />} />
+            <Route path="/site-map" element={<SiteMap />} />
+            <Route path="/my-profile" element={<MyProfile />} />
+            <Route path="/my-orders" element={<MyOrders />} />
+            <Route path="/compare" element={<Compare />} />
+            <Route path="/notifications" element={<Notifications />} />
           </Route>
           <Route path="/sign-up" element={<SignUp />} />
           <Route path="/sign-in" element={<SignIn />} />
@@ -50,7 +83,8 @@ function App() {
           <Route path="/cart" element={<ShoppingCart />} />
         </Routes>
       </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

@@ -69,11 +69,11 @@ export default function ShoppingCart() {
   const total = subtotal - discount + tax;
 
   return (
-    <div className="bg-white relative w-full min-h-screen">
+    <div className="bg-white dark:bg-[#0f172a] relative w-full min-h-screen transition-colors duration-300">
       <div className="flex flex-col gap-[40px] items-center relative w-full px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] xl:px-[120px] 2xl:px-[140px] py-[24px] sm:py-[32px] md:py-[40px]">
         {/* Breadcrumb */}
         <div className="flex gap-[8px] items-center relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-[12px] sm:px-[16px] md:px-[24px] lg:px-0" data-name="Breadcrumb" data-node-id="35:4873">
-          <Link to="/" className="font-['Poppins'] font-normal leading-[20px] text-[#5f6c72] text-[14px] hover:text-[#eea137] transition-colors cursor-pointer" data-node-id="35:4874">
+          <Link to="/" className="font-['Poppins'] font-normal leading-[20px] text-[#5f6c72] dark:text-white text-[14px] hover:text-[#eea137] transition-colors cursor-pointer" data-node-id="35:4874">
             Home
           </Link>
           <div className="flex items-center justify-center relative size-[18px]">
@@ -93,26 +93,26 @@ export default function ShoppingCart() {
         {/* Cart Content */}
         <div className="flex flex-col lg:flex-row gap-[24px] items-start relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-[12px] sm:px-[16px] md:px-[24px] lg:px-0" data-node-id="35:4889">
           {/* Shopping Cart Section */}
-          <div className="bg-white border border-[#e4e7e9] border-solid flex flex-col items-start relative rounded-[12px] shrink-0 flex-1 w-full lg:min-w-0" data-name="Shopping Cart" data-node-id="35:4890">
+          <div className="bg-white dark:bg-[#1e293b] border border-[#e4e7e9] dark:border-[#334155] border-solid flex flex-col items-start relative rounded-[12px] shrink-0 flex-1 w-full lg:min-w-0 transition-colors duration-300" data-name="Shopping Cart" data-node-id="35:4890">
             {/* Section Title */}
-            <div className="flex items-start px-[20px] sm:px-[24px] py-[16px] sm:py-[20px] relative shrink-0 w-full border-b border-[#e4e7e9]" data-name="Heading" data-node-id="35:4891">
-              <p className="font-['Poppins'] font-medium leading-[24px] text-[18px] text-black" data-node-id="35:4892">
+            <div className="flex items-start px-[20px] sm:px-[24px] py-[16px] sm:py-[20px] relative shrink-0 w-full border-b border-[#e4e7e9] dark:border-[#334155]" data-name="Heading" data-node-id="35:4891">
+              <p className="font-['Poppins'] font-medium leading-[24px] text-[18px] text-black dark:text-white" data-node-id="35:4892">
                 Shopping Cart
               </p>
             </div>
 
             {/* Table Header - Hidden on mobile */}
-            <div className="hidden md:flex bg-[#f2f4f5] border-b border-[#e4e7e9] border-solid font-['Poppins'] font-normal gap-[12px] sm:gap-[16px] md:gap-[24px] items-center leading-[24px] px-[20px] sm:px-[24px] py-[10px] relative shrink-0 w-full" data-name="Sub-Heading" data-node-id="35:4893">
-              <p className="relative shrink-0 flex-1 min-w-[200px]" data-node-id="35:4894">
+            <div className="hidden md:flex bg-[#f2f4f5] dark:bg-[#0f172a] border-b border-[#e4e7e9] dark:border-[#334155] border-solid font-['Poppins'] font-normal gap-[12px] sm:gap-[16px] md:gap-[24px] items-center leading-[24px] px-[20px] sm:px-[24px] py-[10px] relative shrink-0 w-full transition-colors duration-300" data-name="Sub-Heading" data-node-id="35:4893">
+              <p className="relative shrink-0 flex-1 min-w-[200px] text-black dark:text-white" data-node-id="35:4894">
                 Products
               </p>
-              <p className="relative shrink-0 w-[88px] text-center" data-node-id="35:4895">
+              <p className="relative shrink-0 w-[88px] text-center text-black dark:text-white" data-node-id="35:4895">
                 Price
               </p>
-              <p className="relative shrink-0 w-[148px] md:w-[172px] text-center" data-node-id="35:4896">
+              <p className="relative shrink-0 w-[148px] md:w-[172px] text-center text-black dark:text-white" data-node-id="35:4896">
                 Quantity
               </p>
-              <p className="relative shrink-0 w-[100px] md:w-[112px] text-center" data-node-id="35:4897">
+              <p className="relative shrink-0 w-[100px] md:w-[112px] text-center text-black dark:text-white" data-node-id="35:4897">
                 Sub-Total
               </p>
               <p className="relative shrink-0 w-[20px]"></p>
@@ -121,7 +121,7 @@ export default function ShoppingCart() {
             {/* Products List */}
             <div className="flex flex-col gap-[16px] sm:gap-[20px] items-start p-[12px] sm:p-[16px] md:p-[20px] lg:p-[24px] relative shrink-0 w-full" data-name="Products" data-node-id="35:4898">
               {cartItems.map((item) => (
-                <div key={item.id} className="flex flex-col md:flex-row gap-[12px] md:gap-[24px] items-start md:items-center justify-between relative shrink-0 w-full border-b border-[#e4e7e9] pb-[16px] last:border-b-0 last:pb-0" data-name="Product" data-node-id={`35:${4899 + item.id}`}>
+                <div key={item.id} className="flex flex-col md:flex-row gap-[12px] md:gap-[24px] items-start md:items-center justify-between relative shrink-0 w-full border-b border-[#e4e7e9] dark:border-[#334155] pb-[16px] last:border-b-0 last:pb-0 transition-colors duration-300" data-name="Product" data-node-id={`35:${4899 + item.id}`}>
                   {/* Product Info */}
                   <div className="flex gap-[12px] items-center relative shrink-0 flex-1 w-full md:min-w-[200px]" data-name="Product" data-node-id={`35:${4900 + item.id}`}>
                     <div className="relative rounded-[2px] shrink-0 size-[60px] sm:size-[72px]" data-name="Image" data-node-id={`35:${4901 + item.id}`}>
@@ -135,22 +135,22 @@ export default function ShoppingCart() {
                       />
                     </div>
                     <div className="flex flex-col gap-[4px] flex-1 min-w-0">
-                      <p className="font-['Public_Sans'] font-normal leading-[20px] text-[13px] sm:text-[14px] text-black line-clamp-2" data-node-id={`35:${4902 + item.id}`}>
+                      <p className="font-['Public_Sans'] font-normal leading-[20px] text-[13px] sm:text-[14px] text-black dark:text-white line-clamp-2" data-node-id={`35:${4902 + item.id}`}>
                         {item.name}
                       </p>
                       {/* Mobile Price Display */}
                       <div className="md:hidden font-['Public_Sans'] font-normal leading-[20px] text-[14px]" data-node-id={`35:${4903 + item.id}-mobile`}>
                         {item.originalPrice ? (
                           <>
-                            <span className="line-through text-[#929fa5] mr-[8px]">
+                            <span className="line-through text-[#929fa5] dark:text-[#9ca3af] mr-[8px]">
                               ${item.originalPrice}
                             </span>
-                            <span className="text-[#475156] font-medium">
+                            <span className="text-[#475156] dark:text-white font-medium">
                               ${item.price}
                             </span>
                           </>
                         ) : (
-                          <span className="text-[#475156] font-medium">
+                          <span className="text-[#475156] dark:text-white font-medium">
                             ${item.price}
                           </span>
                         )}
@@ -158,7 +158,7 @@ export default function ShoppingCart() {
                     </div>
                     {/* Remove Button - Mobile */}
                     <button 
-                      className="md:hidden overflow-clip relative shrink-0 size-[20px] cursor-pointer hover:opacity-70 transition-opacity" 
+                      className="md:hidden overflow-clip relative shrink-0 size-[20px] cursor-pointer hover:opacity-70 transition-opacity text-black dark:text-white" 
                       data-name="Remove" 
                       data-node-id={`35:${4910 + item.id}-mobile`}
                       aria-label="Remove item"
@@ -167,13 +167,16 @@ export default function ShoppingCart() {
                         <div className="absolute inset-[-4.24%_-5%]">
                           <img 
                             alt="Remove" 
-                            className="block max-w-none size-full" 
+                            className="block max-w-none size-full dark:hidden" 
                             src={imgRemove}
                             onError={(e) => {
                               e.target.style.display = 'none';
                               e.target.parentElement.innerHTML = '<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>';
                             }}
                           />
+                          <svg className="hidden dark:block w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
                         </div>
                       </div>
                     </button>
@@ -185,15 +188,15 @@ export default function ShoppingCart() {
                     <div className="font-['Public_Sans'] font-normal h-[20px] leading-[20px] relative shrink-0 text-[14px] w-[88px] text-center" data-node-id={`35:${4903 + item.id}`}>
                       {item.originalPrice ? (
                         <>
-                          <span className="line-through text-[#929fa5] mr-[8px]">
+                          <span className="line-through text-[#929fa5] dark:text-[#9ca3af] mr-[8px]">
                             ${item.originalPrice}
                           </span>
-                          <span className="text-[#475156]">
+                          <span className="text-[#475156] dark:text-white">
                             ${item.price}
                           </span>
                         </>
                       ) : (
-                        <span className="text-[#475156]">
+                        <span className="text-[#475156] dark:text-white">
                           ${item.price}
                         </span>
                       )}
@@ -201,22 +204,22 @@ export default function ShoppingCart() {
 
                     {/* Quantity */}
                     <div className="flex flex-col items-start pl-0 pr-[12px] md:pr-[24px] py-0 relative shrink-0" data-name="Quantity" data-node-id={`35:${4904 + item.id}`}>
-                      <div className="bg-white border border-[#e4e7e9] border-solid flex items-center justify-between px-[12px] sm:px-[16px] md:px-[20px] py-[10px] sm:py-[12px] relative rounded-[3px] shrink-0 w-[120px] sm:w-[140px] md:w-[148px]" data-name="Button" data-node-id={`35:${4905 + item.id}`}>
+                      <div className="bg-white dark:bg-[#0f172a] border border-[#e4e7e9] dark:border-[#334155] border-solid flex items-center justify-between px-[12px] sm:px-[16px] md:px-[20px] py-[10px] sm:py-[12px] relative rounded-[3px] shrink-0 w-[120px] sm:w-[140px] md:w-[148px] transition-colors duration-300" data-name="Button" data-node-id={`35:${4905 + item.id}`}>
                         <button 
                           onClick={() => updateQuantity(item.id, -1)}
-                          className="relative shrink-0 size-[16px] sm:size-[18px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation"
+                          className="relative shrink-0 size-[16px] sm:size-[18px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation text-black dark:text-white"
                           aria-label="Decrease quantity"
                         >
                           <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                           </svg>
                         </button>
-                        <p className="font-['Public_Sans'] font-normal leading-[24px] text-[14px] sm:text-[16px] text-[#475156]" data-node-id={`35:${4907 + item.id}`}>
+                        <p className="font-['Public_Sans'] font-normal leading-[24px] text-[14px] sm:text-[16px] text-[#475156] dark:text-white" data-node-id={`35:${4907 + item.id}`}>
                           {String(item.quantity).padStart(2, '0')}
                         </p>
                         <button 
                           onClick={() => updateQuantity(item.id, 1)}
-                          className="relative shrink-0 size-[16px] sm:size-[18px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation"
+                          className="relative shrink-0 size-[16px] sm:size-[18px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation text-black dark:text-white"
                           aria-label="Increase quantity"
                         >
                           <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -227,13 +230,13 @@ export default function ShoppingCart() {
                     </div>
 
                     {/* Sub-Total */}
-                    <p className="font-['Public_Sans'] font-medium leading-[20px] text-[14px] text-black w-[100px] md:w-[112px] text-center" data-node-id={`35:${4909 + item.id}`}>
+                    <p className="font-['Public_Sans'] font-medium leading-[20px] text-[14px] text-black dark:text-white w-[100px] md:w-[112px] text-center" data-node-id={`35:${4909 + item.id}`}>
                       ${item.price * item.quantity}
                     </p>
 
                     {/* Remove Button - Desktop */}
                     <button 
-                      className="overflow-clip relative shrink-0 size-[20px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation" 
+                      className="overflow-clip relative shrink-0 size-[20px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation text-black dark:text-white" 
                       data-name="Remove" 
                       data-node-id={`35:${4910 + item.id}`}
                       aria-label="Remove item"
@@ -242,13 +245,16 @@ export default function ShoppingCart() {
                         <div className="absolute inset-[-4.24%_-5%]">
                           <img 
                             alt="Remove" 
-                            className="block max-w-none size-full" 
+                            className="block max-w-none size-full dark:hidden" 
                             src={imgRemove}
                             onError={(e) => {
                               e.target.style.display = 'none';
                               e.target.parentElement.innerHTML = '<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>';
                             }}
                           />
+                          <svg className="hidden dark:block w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
                         </div>
                       </div>
                     </button>
@@ -257,23 +263,23 @@ export default function ShoppingCart() {
                   {/* Mobile Layout - Quantity and Sub-Total */}
                   <div className="md:hidden flex items-center justify-between w-full gap-[12px]">
                     <div className="flex items-center gap-[12px]">
-                      <span className="font-['Poppins'] font-normal text-[12px] text-[#666]">Quantity:</span>
-                      <div className="bg-white border border-[#e4e7e9] border-solid flex items-center justify-between px-[12px] py-[10px] relative rounded-[3px] shrink-0 w-[100px]" data-name="Button" data-node-id={`35:${4905 + item.id}-mobile`}>
+                      <span className="font-['Poppins'] font-normal text-[12px] text-[#666] dark:text-white">Quantity:</span>
+                      <div className="bg-white dark:bg-[#0f172a] border border-[#e4e7e9] dark:border-[#334155] border-solid flex items-center justify-between px-[12px] py-[10px] relative rounded-[3px] shrink-0 w-[100px] transition-colors duration-300" data-name="Button" data-node-id={`35:${4905 + item.id}-mobile`}>
                         <button 
                           onClick={() => updateQuantity(item.id, -1)}
-                          className="relative shrink-0 size-[16px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation"
+                          className="relative shrink-0 size-[16px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation text-black dark:text-white"
                           aria-label="Decrease quantity"
                         >
                           <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                           </svg>
                         </button>
-                        <p className="font-['Public_Sans'] font-normal leading-[24px] text-[14px] text-[#475156]">
+                        <p className="font-['Public_Sans'] font-normal leading-[24px] text-[14px] text-[#475156] dark:text-white">
                           {String(item.quantity).padStart(2, '0')}
                         </p>
                         <button 
                           onClick={() => updateQuantity(item.id, 1)}
-                          className="relative shrink-0 size-[16px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation"
+                          className="relative shrink-0 size-[16px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation text-black dark:text-white"
                           aria-label="Increase quantity"
                         >
                           <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,8 +289,8 @@ export default function ShoppingCart() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="font-['Poppins'] font-normal text-[12px] text-[#666]">Sub-Total:</span>
-                      <p className="font-['Public_Sans'] font-medium leading-[20px] text-[14px] text-black">
+                      <span className="font-['Poppins'] font-normal text-[12px] text-[#666] dark:text-white">Sub-Total:</span>
+                      <p className="font-['Public_Sans'] font-medium leading-[20px] text-[14px] text-black dark:text-white">
                         ${item.price * item.quantity}
                       </p>
                     </div>
@@ -294,15 +300,15 @@ export default function ShoppingCart() {
             </div>
 
             {/* Divider */}
-            <div className="h-[1px] relative shrink-0 w-full border-t border-[#e4e7e9]" data-node-id="35:4996">
+            <div className="h-[1px] relative shrink-0 w-full border-t border-[#e4e7e9] dark:border-[#334155] transition-colors duration-300" data-node-id="35:4996">
               <img alt="" className="block max-w-none size-full opacity-0" src={imgLine25} onError={(e) => e.target.style.display = 'none'} />
             </div>
           </div>
 
           {/* Cart Totals Section */}
           <div className="flex flex-col items-start relative shrink-0 w-full lg:w-[400px] lg:sticky lg:top-[100px] lg:self-start" data-node-id="35:4997">
-            <div className="bg-white border border-[#e4e7e9] border-solid flex flex-col gap-[16px] sm:gap-[20px] items-center justify-center p-[16px] sm:p-[20px] md:p-[24px] relative rounded-[12px] shrink-0 w-full" data-name="Cart Totals" data-node-id="35:4998">
-              <p className="font-['Poppins'] font-medium leading-[24px] text-[16px] sm:text-[18px] text-black w-full" data-node-id="35:4999">
+            <div className="bg-white dark:bg-[#1e293b] border border-[#e4e7e9] dark:border-[#334155] border-solid flex flex-col gap-[16px] sm:gap-[20px] items-center justify-center p-[16px] sm:p-[20px] md:p-[24px] relative rounded-[12px] shrink-0 w-full transition-colors duration-300" data-name="Cart Totals" data-node-id="35:4998">
+              <p className="font-['Poppins'] font-medium leading-[24px] text-[16px] sm:text-[18px] text-black dark:text-white w-full" data-node-id="35:4999">
                 Cart Totals
               </p>
               
@@ -310,46 +316,46 @@ export default function ShoppingCart() {
                 <div className="flex flex-col gap-[12px] sm:gap-[16px] items-start relative shrink-0 w-full" data-name="Total" data-node-id="35:5001">
                   <div className="flex flex-col gap-[10px] sm:gap-[12px] items-start pb-[4px] pt-0 px-0 relative shrink-0 w-full" data-name="Content" data-node-id="35:5002">
                     <div className="flex items-center justify-between leading-[20px] text-[13px] sm:text-[14px] w-full" data-node-id="35:5003">
-                      <p className="font-['Poppins'] font-normal text-[#5f6c72]" data-node-id="35:5004">
+                      <p className="font-['Poppins'] font-normal text-[#5f6c72] dark:text-white" data-node-id="35:5004">
                         Sub-total
                       </p>
-                      <p className="font-['Poppins'] font-medium text-black" data-node-id="35:5005">
+                      <p className="font-['Poppins'] font-medium text-black dark:text-white" data-node-id="35:5005">
                         ${subtotal}
                       </p>
                     </div>
                     <div className="flex items-center justify-between leading-[20px] text-[13px] sm:text-[14px] w-full" data-node-id="35:5006">
-                      <p className="font-['Poppins'] font-normal text-[#5f6c72]" data-node-id="35:5007">
+                      <p className="font-['Poppins'] font-normal text-[#5f6c72] dark:text-white" data-node-id="35:5007">
                         Shipping
                       </p>
-                      <p className="font-['Poppins'] font-medium text-black" data-node-id="35:5008">
+                      <p className="font-['Poppins'] font-medium text-black dark:text-white" data-node-id="35:5008">
                         Free
                       </p>
                     </div>
                     <div className="flex items-center justify-between leading-[20px] text-[13px] sm:text-[14px] w-full" data-node-id="35:5009">
-                      <p className="font-['Poppins'] font-normal text-[#5f6c72]" data-node-id="35:5010">
+                      <p className="font-['Poppins'] font-normal text-[#5f6c72] dark:text-white" data-node-id="35:5010">
                         Discount
                       </p>
-                      <p className="font-['Poppins'] font-medium text-black" data-node-id="35:5011">
+                      <p className="font-['Poppins'] font-medium text-black dark:text-white" data-node-id="35:5011">
                         ${discount}
                       </p>
                     </div>
                     <div className="flex items-center justify-between leading-[20px] text-[13px] sm:text-[14px] w-full" data-node-id="35:5012">
-                      <p className="font-['Poppins'] font-normal text-[#5f6c72]" data-node-id="35:5013">
+                      <p className="font-['Poppins'] font-normal text-[#5f6c72] dark:text-white" data-node-id="35:5013">
                         Tax
                       </p>
-                      <p className="font-['Poppins'] font-medium text-black" data-node-id="35:5014">
+                      <p className="font-['Poppins'] font-medium text-black dark:text-white" data-node-id="35:5014">
                         ${tax}
                       </p>
                     </div>
                   </div>
 
                   {/* Dashed Line Separator */}
-                  <div className="h-[1px] relative shrink-0 w-full border-t border-dashed border-[#e4e7e9]" data-node-id="35:5015">
+                  <div className="h-[1px] relative shrink-0 w-full border-t border-dashed border-[#e4e7e9] dark:border-[#334155]" data-node-id="35:5015">
                     <img alt="" className="block max-w-none size-full opacity-0" src={imgLine26} onError={(e) => e.target.style.display = 'none'} />
                   </div>
 
                   {/* Total */}
-                  <div className="flex items-center justify-between leading-[22px] sm:leading-[24px] text-[15px] sm:text-[16px] text-black w-full" data-node-id="35:5016">
+                  <div className="flex items-center justify-between leading-[22px] sm:leading-[24px] text-[15px] sm:text-[16px] text-black dark:text-white w-full" data-node-id="35:5016">
                     <p className="font-['Poppins'] font-normal" data-node-id="35:5017">
                       Total
                     </p>
