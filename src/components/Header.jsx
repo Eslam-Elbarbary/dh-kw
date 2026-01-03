@@ -108,7 +108,7 @@ export default function Header() {
     <>
       {/* Top bar */}
       <div className="bg-[#0e1c47] dark:bg-[#0a1529] border-[#4b505e] dark:border-[#2a3a5a] border-b border-l-0 border-r-0 border-solid border-t-0 content-stretch flex flex-col sm:flex-row items-start sm:items-center justify-between px-[12px] sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[120px] 2xl:px-[140px] py-[8px] sm:py-[10px] md:py-[12px] lg:py-[12px] xl:py-[8px] 2xl:py-[20px] relative shrink-0 w-full max-w-full overflow-hidden transition-colors duration-300" data-node-id="39:5520">
-        <div className="content-stretch height-[15px] flex gap-[6px] sm:gap-[8px] md:gap-[12px] lg:gap-[16px] items-center relative shrink-0 flex-wrap w-full sm:w-auto py-[8px] " data-node-id="39:5521" >
+        <div className="content-stretch h-[15px !important]  flex gap-[6px] sm:gap-[8px] md:gap-[12px] lg:gap-[16px] items-center relative shrink-0 flex-wrap w-full sm:w-auto " data-node-id="39:5521" >
           <div className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0" data-name="new-next-logo-gold 4" data-node-id="39:5522">
             <div className="relative shrink-0 size-[16px]" data-name="call" data-node-id="39:5523">
               <div className="absolute contents inset-0">
@@ -240,7 +240,7 @@ export default function Header() {
               e.preventDefault();
               navigate('/search');
             }}
-            className="border border-[rgba(255,255,255,0.2)] border-solid content-stretch flex h-[20px] sm:h-[42px] md:h-[20px] lg:h-[30px] xl:h-[20px] 2xl:h-[40px] items-center justify-between overflow-hidden pl-[10px] sm:pl-[12px] md:pl-[14px] lg:pl-[16px] xl:pl-[24px] pr-0 py-0 relative rounded-[4px] shrink-0 w-full sm:w-[480px] md:w-[520px] lg:w-[520px] xl:w-[650px] 2xl:w-[700px] sm:max-w-full sm:flex-1 sm:min-w-0"
+            className="border border-[rgba(255,255,255,0.2)] border-solid content-stretch flex h-[30px] sm:h-[30px] md:h-[30px] lg:h-[30px] xl:h-[30px] 2xl:h-[40px] items-center justify-between overflow-hidden pl-[10px] sm:pl-[12px] md:pl-[14px] lg:pl-[16px] xl:pl-[24px] pr-0 py-0 relative rounded-[4px] shrink-0 w-full sm:w-[480px] md:w-[520px] lg:w-[520px] xl:w-[650px] 2xl:w-[700px] sm:max-w-full sm:flex-1 sm:min-w-0"
           >
             <input 
               type="text" 
