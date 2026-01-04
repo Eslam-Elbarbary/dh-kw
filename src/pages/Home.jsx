@@ -43,7 +43,7 @@ function HeroBanner() {
 // Product Category Card Component
 function ProductCategoryCard({ title, mainImage, mainImageAlt, linkText, subCategories, linkTo = "/" }) {
   return (
-    <Link to={linkTo} className="bg-white border border-[#e6e6e6] border-solid flex items-center overflow-hidden p-[10px] sm:p-[12px] md:p-[16px] lg:p-[20px] xl:p-[24px] 2xl:p-[28px] relative rounded-[4px] shrink-0 w-full max-w-full sm:max-w-[368px] lg:max-w-[380px] xl:max-w-[400px] 2xl:max-w-[420px] cursor-pointer hover:shadow-lg transition-shadow">
+    <Link to={linkTo} className="bg-white border border-[#e6e6e6] border-solid flex items-center overflow-hidden p-[10px] sm:p-[12px] md:p-[16px] lg:p-[20px] xl:p-[24px] 2xl:p-[28px] relative rounded-[4px] shrink-0 w-full sm:w-auto sm:flex-1 max-w-full sm:max-w-[368px] lg:max-w-[360px] xl:max-w-[380px] 2xl:max-w-[400px] cursor-pointer hover:shadow-lg transition-shadow">
       <div className="flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-center relative shrink-0 w-full">
         <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[26px] xl:text-[28px] 2xl:text-[30px] text-black text-center" dir="auto">
           {title}
@@ -361,23 +361,23 @@ export default function Home() {
         </div>
 
         {/* Product Categories Section */}
-        <div className="flex flex-col gap-[20px] sm:gap-[24px] md:gap-[28px] lg:gap-[32px] xl:gap-[36px] 2xl:gap-[40px] items-center relative w-full px-[12px] sm:px-[16px] md:px-[24px] lg:px-0" data-node-id="35:561">
+        <div className="flex flex-col gap-[20px] sm:gap-[24px] md:gap-[28px] lg:gap-[32px] xl:gap-[36px] 2xl:gap-[40px] items-center relative w-full px-[12px] sm:px-[16px] md:px-[24px] lg:px-[60px] xl:px-[80px] 2xl:px-[100px]" data-node-id="35:561">
           {/* First Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto lg:px-[100px] xl:px-[120px] 2xl:px-[140px] md:px-[60px] sm:px-[40px] px-[12px]" data-node-id="35:9481">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto" data-node-id="35:9481">
             {productCategories.map((category, index) => (
               <ProductCategoryCard key={index} {...category} linkTo={category.linkTo} />
             ))}
           </div>
 
           {/* Second Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto lg:px-[100px] xl:px-[120px] 2xl:px-[140px] md:px-[60px] sm:px-[40px] px-[12px]" data-node-id="35:9604">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto" data-node-id="35:9604">
             {productCategories.map((category, index) => (
               <ProductCategoryCard key={index} {...category} linkTo={category.linkTo} />
             ))}
           </div>
 
           {/* Third Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto lg:px-[100px] xl:px-[120px] 2xl:px-[140px] md:px-[60px] sm:px-[40px] px-[12px]" data-node-id="35:9358">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto" data-node-id="35:9358">
             {productCategories.map((category, index) => (
               <ProductCategoryCard key={index} {...category} linkTo={category.linkTo} />
             ))}
