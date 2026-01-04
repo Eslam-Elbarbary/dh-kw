@@ -91,9 +91,9 @@ export default function ShoppingCart() {
         </div>
 
         {/* Cart Content */}
-        <div className="flex flex-col lg:flex-row gap-[20px] md:gap-[24px] lg:gap-[28px] xl:gap-[32px] items-start relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-[12px] sm:px-[16px] md:px-[24px] lg:px-0" data-node-id="35:4889">
+        <div className="flex flex-col lg:flex-row gap-[20px] md:gap-[24px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] items-start relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-[12px] sm:px-[16px] md:px-[24px] lg:px-0" data-node-id="35:4889">
           {/* Shopping Cart Section */}
-          <div className="bg-white dark:bg-[#1e293b] border border-[#e4e7e9] dark:border-[#334155] border-solid flex flex-col items-start relative rounded-[12px] shrink-0 flex-1 w-full lg:flex-[2] lg:min-w-0 transition-colors duration-300" data-name="Shopping Cart" data-node-id="35:4890">
+          <div className="bg-white dark:bg-[#1e293b] border border-[#e4e7e9] dark:border-[#334155] border-solid flex flex-col items-start relative rounded-[12px] shrink-0 flex-1 w-full lg:flex-[1.75] lg:min-w-[0] lg:max-w-[calc(100%-400px)] transition-colors duration-300" data-name="Shopping Cart" data-node-id="35:4890">
             {/* Section Title */}
             <div className="flex items-start px-[16px] sm:px-[20px] md:px-[22px] lg:px-[24px] py-[14px] sm:py-[16px] md:py-[18px] lg:py-[20px] relative shrink-0 w-full border-b border-[#e4e7e9] dark:border-[#334155]" data-name="Heading" data-node-id="35:4891">
               <p className="font-['Poppins'] font-medium leading-[24px] text-[16px] sm:text-[17px] md:text-[18px] text-black dark:text-white" data-node-id="35:4892">
@@ -102,28 +102,28 @@ export default function ShoppingCart() {
             </div>
 
             {/* Table Header - Hidden on mobile */}
-            <div className="hidden md:flex bg-[#f2f4f5] dark:bg-[#0f172a] border-b border-[#e4e7e9] dark:border-[#334155] border-solid font-['Poppins'] font-normal gap-[12px] sm:gap-[14px] md:gap-[16px] lg:gap-[20px] xl:gap-[24px] items-center leading-[24px] px-[16px] sm:px-[20px] md:px-[22px] lg:px-[24px] py-[10px] relative shrink-0 w-full transition-colors duration-300" data-name="Sub-Heading" data-node-id="35:4893">
-              <p className="relative shrink-0 flex-1 min-w-[180px] md:min-w-[200px] lg:min-w-[220px] text-black dark:text-white text-[13px] sm:text-[14px]" data-node-id="35:4894">
+            <div className="hidden md:flex bg-[#f2f4f5] dark:bg-[#0f172a] border-b border-[#e4e7e9] dark:border-[#334155] border-solid font-['Poppins'] font-normal gap-[8px] sm:gap-[10px] md:gap-[12px] lg:gap-[14px] xl:gap-[18px] items-center leading-[24px] px-[12px] sm:px-[16px] md:px-[18px] lg:px-[20px] xl:px-[24px] py-[10px] relative shrink-0 w-full transition-colors duration-300" data-name="Sub-Heading" data-node-id="35:4893">
+              <p className="relative shrink-0 flex-1 min-w-[140px] md:min-w-[160px] lg:min-w-[180px] xl:min-w-[200px] text-black dark:text-white text-[13px] sm:text-[14px]" data-node-id="35:4894">
                 Products
               </p>
-              <p className="relative shrink-0 w-[80px] md:w-[88px] lg:w-[90px] text-center text-black dark:text-white text-[13px] sm:text-[14px]" data-node-id="35:4895">
+              <p className="relative shrink-0 w-[65px] md:w-[70px] lg:w-[75px] xl:w-[85px] text-center text-black dark:text-white text-[13px] sm:text-[14px]" data-node-id="35:4895">
                 Price
               </p>
-              <p className="relative shrink-0 w-[130px] md:w-[148px] lg:w-[160px] xl:w-[172px] text-center text-black dark:text-white text-[13px] sm:text-[14px]" data-node-id="35:4896">
+              <p className="relative shrink-0 w-[110px] md:w-[120px] lg:w-[130px] xl:w-[150px] 2xl:w-[165px] text-center text-black dark:text-white text-[13px] sm:text-[14px]" data-node-id="35:4896">
                 Quantity
               </p>
-              <p className="relative shrink-0 w-[90px] md:w-[100px] lg:w-[105px] xl:w-[112px] text-center text-black dark:text-white text-[13px] sm:text-[14px]" data-node-id="35:4897">
+              <p className="relative shrink-0 w-[80px] md:w-[85px] lg:w-[90px] xl:w-[100px] 2xl:w-[110px] text-center text-black dark:text-white text-[13px] sm:text-[14px]" data-node-id="35:4897">
                 Sub-Total
               </p>
               <p className="relative shrink-0 w-[20px]"></p>
             </div>
 
             {/* Products List */}
-            <div className="flex flex-col gap-[14px] sm:gap-[16px] md:gap-[18px] lg:gap-[20px] items-start p-[12px] sm:p-[14px] md:p-[18px] lg:p-[20px] xl:p-[24px] relative shrink-0 w-full" data-name="Products" data-node-id="35:4898">
+            <div className="flex flex-col gap-[14px] sm:gap-[16px] md:gap-[18px] lg:gap-[20px] items-start p-[12px] sm:p-[14px] md:p-[18px] lg:p-[20px] xl:p-[24px] relative shrink-0 w-full overflow-x-auto" data-name="Products" data-node-id="35:4898">
               {cartItems.map((item) => (
-                <div key={item.id} className="flex flex-col md:flex-row gap-[12px] md:gap-[16px] lg:gap-[20px] xl:gap-[24px] items-start md:items-center justify-between relative shrink-0 w-full border-b border-[#e4e7e9] dark:border-[#334155] pb-[14px] md:pb-[16px] last:border-b-0 last:pb-0 transition-colors duration-300" data-name="Product" data-node-id={`35:${4899 + item.id}`}>
+                <div key={item.id} className="flex flex-col md:flex-row gap-[12px] md:gap-[12px] lg:gap-[14px] xl:gap-[18px] items-start md:items-center justify-between relative shrink-0 w-full border-b border-[#e4e7e9] dark:border-[#334155] pb-[14px] md:pb-[16px] last:border-b-0 last:pb-0 transition-colors duration-300" data-name="Product" data-node-id={`35:${4899 + item.id}`}>
                   {/* Product Info */}
-                  <div className="flex gap-[10px] sm:gap-[12px] items-center relative shrink-0 flex-1 w-full md:min-w-[180px] lg:min-w-[200px]" data-name="Product" data-node-id={`35:${4900 + item.id}`}>
+                  <div className="flex gap-[10px] sm:gap-[12px] items-center relative shrink-0 flex-1 w-full md:min-w-[140px] lg:min-w-[160px] xl:min-w-[180px]" data-name="Product" data-node-id={`35:${4900 + item.id}`}>
                     <div className="relative rounded-[2px] shrink-0 size-[60px] sm:size-[72px]" data-name="Image" data-node-id={`35:${4901 + item.id}`}>
                       <img 
                         alt={item.name} 
@@ -183,9 +183,9 @@ export default function ShoppingCart() {
                   </div>
 
                   {/* Desktop Layout - Price, Quantity, Sub-Total, Remove */}
-                  <div className="hidden md:flex gap-[12px] md:gap-[16px] lg:gap-[20px] xl:gap-[24px] items-center justify-end w-full md:w-auto">
+                  <div className="hidden md:flex gap-[8px] sm:gap-[10px] md:gap-[12px] lg:gap-[14px] xl:gap-[18px] items-center justify-end w-full md:w-auto flex-shrink-0" data-node-id="desktop-layout">
                     {/* Price - Desktop */}
-                    <div className="font-['Public_Sans'] font-normal h-[20px] leading-[20px] relative shrink-0 text-[13px] md:text-[14px] w-[80px] md:w-[88px] lg:w-[90px] text-center" data-node-id={`35:${4903 + item.id}`}>
+                    <div className="font-['Public_Sans'] font-normal h-[20px] leading-[20px] relative shrink-0 text-[13px] md:text-[14px] w-[65px] md:w-[70px] lg:w-[75px] xl:w-[85px] text-center" data-node-id={`35:${4903 + item.id}`}>
                       {item.originalPrice ? (
                         <>
                           <span className="line-through text-[#929fa5] dark:text-[#9ca3af] mr-[8px]">
@@ -203,8 +203,8 @@ export default function ShoppingCart() {
                     </div>
 
                     {/* Quantity */}
-                    <div className="flex flex-col items-start pl-0 pr-[12px] md:pr-[16px] lg:pr-[20px] xl:pr-[24px] py-0 relative shrink-0" data-name="Quantity" data-node-id={`35:${4904 + item.id}`}>
-                      <div className="bg-white dark:bg-[#0f172a] border border-[#e4e7e9] dark:border-[#334155] border-solid flex items-center justify-between px-[10px] sm:px-[12px] md:px-[14px] lg:px-[16px] xl:px-[20px] py-[8px] sm:py-[10px] md:py-[12px] relative rounded-[3px] shrink-0 w-[110px] sm:w-[120px] md:w-[130px] lg:w-[140px] xl:w-[148px] transition-colors duration-300" data-name="Button" data-node-id={`35:${4905 + item.id}`}>
+                    <div className="flex flex-col items-start pl-0 pr-[8px] sm:pr-[10px] md:pr-[12px] lg:pr-[14px] xl:pr-[18px] py-0 relative shrink-0" data-name="Quantity" data-node-id={`35:${4904 + item.id}`}>
+                      <div className="bg-white dark:bg-[#0f172a] border border-[#e4e7e9] dark:border-[#334155] border-solid flex items-center justify-between px-[6px] sm:px-[8px] md:px-[10px] lg:px-[12px] xl:px-[14px] 2xl:px-[18px] py-[8px] sm:py-[10px] md:py-[12px] relative rounded-[3px] shrink-0 w-[105px] sm:w-[110px] md:w-[115px] lg:w-[125px] xl:w-[135px] 2xl:w-[145px] transition-colors duration-300" data-name="Button" data-node-id={`35:${4905 + item.id}`}>
                         <button 
                           onClick={() => updateQuantity(item.id, -1)}
                           className="relative shrink-0 size-[16px] sm:size-[18px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation text-black dark:text-white"
@@ -230,7 +230,7 @@ export default function ShoppingCart() {
                     </div>
 
                     {/* Sub-Total */}
-                    <p className="font-['Public_Sans'] font-medium leading-[20px] text-[13px] md:text-[14px] text-black dark:text-white w-[90px] md:w-[100px] lg:w-[105px] xl:w-[112px] text-center" data-node-id={`35:${4909 + item.id}`}>
+                    <p className="font-['Public_Sans'] font-medium leading-[20px] text-[13px] md:text-[14px] text-black dark:text-white w-[80px] md:w-[85px] lg:w-[90px] xl:w-[100px] 2xl:w-[110px] text-center" data-node-id={`35:${4909 + item.id}`}>
                       ${item.price * item.quantity}
                     </p>
 
@@ -306,7 +306,7 @@ export default function ShoppingCart() {
           </div>
 
           {/* Cart Totals Section */}
-          <div className="flex flex-col items-start relative shrink-0 w-full lg:w-[380px] xl:w-[400px] lg:sticky lg:top-[100px] lg:self-start" data-node-id="35:4997">
+          <div className="flex flex-col items-start relative shrink-0 w-full lg:w-[350px] xl:w-[380px] 2xl:w-[400px] lg:sticky lg:top-[100px] lg:self-start lg:flex-shrink-0" data-node-id="35:4997">
             <div className="bg-white dark:bg-[#1e293b] border border-[#e4e7e9] dark:border-[#334155] border-solid flex flex-col gap-[16px] sm:gap-[18px] md:gap-[20px] items-center justify-center p-[16px] sm:p-[18px] md:p-[20px] lg:p-[22px] xl:p-[24px] relative rounded-[12px] shrink-0 w-full transition-colors duration-300" data-name="Cart Totals" data-node-id="35:4998">
               <p className="font-['Poppins'] font-medium leading-[24px] text-[16px] sm:text-[18px] text-black dark:text-white w-full" data-node-id="35:4999">
                 Cart Totals
