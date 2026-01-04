@@ -1,5 +1,4 @@
 {
-  "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "devCommand": "npm run dev",
@@ -13,7 +12,7 @@
   ],
   "headers": [
     {
-      "source": "/assets/(.*)",
+      "source": "/static/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -22,7 +21,7 @@
       ]
     },
     {
-      "source": "/(.*\\.(js|css|woff|woff2|ttf|eot))",
+      "source": "/assets/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -32,4 +31,3 @@
     }
   ]
 }
-
