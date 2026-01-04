@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Outlet, useLocation } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import './App.css';
 import { AuthProvider } from './context/AuthContext';
@@ -61,46 +61,136 @@ function AppLayout() {
   );
 }
 
+// Define routes using createBrowserRouter (React Router v7 recommended approach)
+const router = createBrowserRouter([
+  {
+    element: <AppLayout />,
+    children: [
+      {
+        path: '/',
+        element: <Home />,
+      },
+      {
+        path: '/digital-e-cards',
+        element: <DigitalECards />,
+      },
+      {
+        path: '/shopping-cart',
+        element: <ShoppingCart />,
+      },
+      {
+        path: '/cart',
+        element: <ShoppingCart />,
+      },
+      {
+        path: '/checkout',
+        element: <Checkout />,
+      },
+      {
+        path: '/search',
+        element: <SearchResults />,
+      },
+      {
+        path: '/product/:id',
+        element: <ProductDetail />,
+      },
+      {
+        path: '/pc-components',
+        element: <PCComponents />,
+      },
+      {
+        path: '/favorite',
+        element: <Favorites />,
+      },
+      {
+        path: '/track-order',
+        element: <TrackOrder />,
+      },
+      {
+        path: '/report-fraud',
+        element: <ReportFraud />,
+      },
+      {
+        path: '/help-center',
+        element: <HelpCenter />,
+      },
+      {
+        path: '/become-a-seller',
+        element: <BecomeASeller />,
+      },
+      {
+        path: '/about-us',
+        element: <AboutUs />,
+      },
+      {
+        path: '/faqs',
+        element: <FAQs />,
+      },
+      {
+        path: '/contact-us',
+        element: <ContactUs />,
+      },
+      {
+        path: '/delivery-return',
+        element: <DeliveryReturn />,
+      },
+      {
+        path: '/my-account',
+        element: <MyAccount />,
+      },
+      {
+        path: '/brands',
+        element: <Brands />,
+      },
+      {
+        path: '/returns',
+        element: <Returns />,
+      },
+      {
+        path: '/site-map',
+        element: <SiteMap />,
+      },
+      {
+        path: '/my-profile',
+        element: <MyProfile />,
+      },
+      {
+        path: '/my-orders',
+        element: <MyOrders />,
+      },
+      {
+        path: '/compare',
+        element: <Compare />,
+      },
+      {
+        path: '/notifications',
+        element: <Notifications />,
+      },
+      {
+        path: '*',
+        element: <ErrorPage />,
+      },
+    ],
+  },
+  {
+    path: '/sign-up',
+    element: <SignUp />,
+  },
+  {
+    path: '/sign-in',
+    element: <SignIn />,
+  },
+  {
+    path: '/verification',
+    element: <VerificationCode />,
+  },
+]);
+
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Router>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/digital-e-cards" element={<DigitalECards />} />
-            <Route path="/shopping-cart" element={<ShoppingCart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/search" element={<SearchResults />} />
-            <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/pc-components" element={<PCComponents />} />
-            <Route path="/favorite" element={<Favorites />} />
-            <Route path="/track-order" element={<TrackOrder />} />
-            <Route path="/report-fraud" element={<ReportFraud />} />
-            <Route path="/help-center" element={<HelpCenter />} />
-            <Route path="/become-a-seller" element={<BecomeASeller />} />
-            <Route path="/about-us" element={<AboutUs />} />
-            <Route path="/faqs" element={<FAQs />} />
-            <Route path="/contact-us" element={<ContactUs />} />
-            <Route path="/delivery-return" element={<DeliveryReturn />} />
-            <Route path="/my-account" element={<MyAccount />} />
-            <Route path="/brands" element={<Brands />} />
-            <Route path="/returns" element={<Returns />} />
-            <Route path="/site-map" element={<SiteMap />} />
-            <Route path="/my-profile" element={<MyProfile />} />
-            <Route path="/my-orders" element={<MyOrders />} />
-            <Route path="/compare" element={<Compare />} />
-            <Route path="/notifications" element={<Notifications />} />
-            {/* Error Page - Catch all unmatched routes */}
-            <Route path="*" element={<ErrorPage />} />
-          </Route>
-          <Route path="/sign-up" element={<SignUp />} />
-          <Route path="/sign-in" element={<SignIn />} />
-          <Route path="/verification" element={<VerificationCode />} />
-          <Route path="/cart" element={<ShoppingCart />} />
-        </Routes>
-      </Router>
+        <RouterProvider router={router} />
       </AuthProvider>
     </ThemeProvider>
   );
