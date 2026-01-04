@@ -68,27 +68,58 @@ export default function Header() {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showNavCategoryDropdown, setShowNavCategoryDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  const categoryDropdownRef = useRef(null);
+  const navCategoryDropdownRef = useRef(null);
 
-  // Close dropdown when clicking outside or pressing Escape
+  // Categories data
+  const categories = [
+    { name: 'All Categories', path: '/search' },
+    { name: 'Electronics Devices', path: '/search?category=electronics' },
+    { name: 'Computer & Laptop', path: '/search?category=computers' },
+    { name: 'Computer Accessories', path: '/search?category=accessories' },
+    { name: 'SmartPhone', path: '/search?category=smartphones' },
+    { name: 'Headphone', path: '/search?category=headphones' },
+    { name: 'Mobile Accessories', path: '/search?category=mobile-accessories' },
+    { name: 'Gaming Console', path: '/search?category=gaming' },
+    { name: 'Camera & Photo', path: '/search?category=cameras' },
+    { name: 'TV & Homes Appliances', path: '/search?category=tv' },
+    { name: 'Watchs & Accessories', path: '/search?category=watches' },
+    { name: 'GPS & Navigation', path: '/search?category=gps' },
+    { name: 'Warable Technology', path: '/search?category=wearables' },
+  ];
+
+  // Close dropdowns when clicking outside or pressing Escape
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
       }
-    }
-
-    function handleEscapeKey(event) {
-      if (event.key === 'Escape' && showDropdown) {
-        setShowDropdown(false);
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target)) {
+        setShowCategoryDropdown(false);
+      }
+      if (navCategoryDropdownRef.current && !navCategoryDropdownRef.current.contains(event.target)) {
+        setShowNavCategoryDropdown(false);
       }
     }
 
-    if (showDropdown) {
+    function handleEscapeKey(event) {
+      if (event.key === 'Escape') {
+        setShowDropdown(false);
+        setShowCategoryDropdown(false);
+        setShowNavCategoryDropdown(false);
+      }
+    }
+
+    if (showDropdown || showCategoryDropdown || showNavCategoryDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleEscapeKey);
       // Prevent body scroll when dropdown is open on mobile
-      document.body.style.overflow = 'hidden';
+      if (showDropdown) {
+        document.body.style.overflow = 'hidden';
+      }
     }
 
     return () => {
@@ -96,7 +127,7 @@ export default function Header() {
       document.removeEventListener('keydown', handleEscapeKey);
       document.body.style.overflow = 'unset';
     };
-  }, [showDropdown]);
+  }, [showDropdown, showCategoryDropdown, showNavCategoryDropdown]);
 
   const handleLogout = () => {
     logout();
@@ -105,7 +136,7 @@ export default function Header() {
   };
 
   return (
-    <>
+    <div className="relative z-[50]">
       {/* Top bar */}
       <div className="bg-[#0e1c47] dark:bg-[#0a1529] border-[#4b505e] dark:border-[#2a3a5a] border-b border-l-0 border-r-0 border-solid border-t-0 content-stretch flex flex-col sm:flex-row items-start sm:items-center justify-between px-[12px] sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[120px] 2xl:px-[140px] py-[8px] sm:py-[10px] md:py-[12px] lg:py-[12px] xl:py-[8px] 2xl:py-[20px] relative shrink-0 w-full max-w-full overflow-hidden transition-colors duration-300" data-node-id="39:5520">
         <div className="content-stretch h-[15px !important]  flex gap-[6px] sm:gap-[8px] md:gap-[12px] lg:gap-[16px] items-center relative shrink-0 flex-wrap w-full sm:w-auto " data-node-id="39:5521" >
@@ -240,7 +271,7 @@ export default function Header() {
               e.preventDefault();
               navigate('/search');
             }}
-            className="border border-[rgba(255,255,255,0.2)] border-solid content-stretch flex h-[30px] sm:h-[30px] md:h-[30px] lg:h-[30px] xl:h-[30px] 2xl:h-[40px] items-center justify-between overflow-hidden pl-[10px] sm:pl-[12px] md:pl-[14px] lg:pl-[16px] xl:pl-[24px] pr-0 py-0 relative rounded-[4px] shrink-0 w-full sm:w-[480px] md:w-[520px] lg:w-[520px] xl:w-[650px] 2xl:w-[700px] sm:max-w-full sm:flex-1 sm:min-w-0"
+            className="border border-[rgba(255,255,255,0.2)] border-solid content-stretch flex h-[30px] sm:h-[30px] md:h-[30px] lg:h-[30px] xl:h-[30px] 2xl:h-[40px] items-center justify-between overflow-visible pl-[10px] sm:pl-[12px] md:pl-[14px] lg:pl-[16px] xl:pl-[24px] pr-0 py-0 relative rounded-[4px] shrink-0 w-full sm:w-[480px] md:w-[520px] lg:w-[520px] xl:w-[650px] 2xl:w-[700px] sm:max-w-full sm:flex-1 sm:min-w-0"
           >
             <input 
               type="text" 
@@ -248,15 +279,48 @@ export default function Header() {
               placeholder="Search for products" 
             />
             <div className="content-stretch flex gap-[12px] lg:gap-[14px] h-full items-center relative shrink-0">
-              <div className="content-stretch flex gap-[6px] lg:gap-[8px] items-center relative shrink-0">
-                <p className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[13px] sm:text-[14px] lg:text-[14px] text-white whitespace-nowrap">
-                  Category
-                </p>
-                <div className="relative shrink-0 size-[20px] lg:size-[22px]">
-                  <div className="absolute contents inset-0">
-                    <img alt="" className="block max-w-none size-full" src={img5} />
+              <div className="relative z-[100]" ref={categoryDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                  className="content-stretch flex gap-[6px] lg:gap-[8px] items-center relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                  aria-expanded={showCategoryDropdown}
+                  aria-haspopup="true"
+                >
+                  <p className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[13px] sm:text-[14px] lg:text-[14px] text-white whitespace-nowrap">
+                    Category
+                  </p>
+                  <div className={`relative shrink-0 size-[20px] lg:size-[22px] transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`}>
+                    <div className="absolute contents inset-0">
+                      <img alt="" className="block max-w-none size-full" src={img5} />
+                    </div>
                   </div>
-                </div>
+                </button>
+                
+                {/* Category Dropdown */}
+                {showCategoryDropdown && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-[9998] sm:hidden bg-black bg-opacity-20"
+                      onClick={() => setShowCategoryDropdown(false)}
+                      aria-hidden="true"
+                    ></div>
+                    <div className="absolute left-0 top-full mt-[8px] bg-white dark:bg-[#1e293b] border border-[#e6e6e6] dark:border-[#334155] rounded-[8px] shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-[280px] sm:w-[300px] z-[9999] overflow-hidden animate-[dropdownFadeIn_0.2s_ease-out] max-h-[400px] overflow-y-auto">
+                      <div className="py-[4px]">
+                        {categories.map((category, index) => (
+                          <Link
+                            key={index}
+                            to={category.path}
+                            onClick={() => setShowCategoryDropdown(false)}
+                            className="flex items-center px-[16px] py-[10px] sm:py-[12px] text-[14px] font-['Poppins'] font-medium text-[#0e1c47] dark:text-white hover:bg-[#f8f9fa] dark:hover:bg-[#0f172a] transition-colors duration-150 cursor-pointer"
+                          >
+                            <span className="whitespace-nowrap">{category.name}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
               <button 
                 type="submit"
@@ -419,16 +483,51 @@ export default function Header() {
         </div>
       </div>
       {/* Navigation menu */}
-      <div className="bg-[#0e1c47] dark:bg-[#0a1529] content-stretch flex flex-col sm:flex-row gap-[10px] sm:gap-[14px] md:gap-[16px] lg:gap-[18px] xl:gap-[28px] 2xl:gap-[32px] items-center justify-center px-[12px] sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[100px] 2xl:px-[120px] py-[10px] sm:py-[14px] md:py-[8px] lg:py-[8px] xl:py-[18px] 2xl:py-[22px] relative shrink-0 w-full max-w-full overflow-x-auto  py-[8px] transition-colors duration-300" style={{ paddingTop: '10px'  ,paddingBottom: '10px'}}>
-        <div className="bg-[#eea137] content-stretch flex gap-[6px] sm:gap-[7px] h-[30px] sm:h-[30px] lg:h-[30px] items-center px-[12px] sm:px-[14px] md:px-[18px] lg:px-[18px] py-[8px] relative rounded-[4px] shrink-0 w-full sm:w-auto">
-          <p className="flex flex-col font-['Poppins'] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[15px] sm:text-[16px] md:text-[17px] lg:text-[15px] text-white whitespace-nowrap">
-            Category
-          </p>
-          <div className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[20px]">
-            <div className="absolute contents inset-0">
-              <img alt="" className="block max-w-none size-full" src={img5} />
+      <div className="bg-[#0e1c47] dark:bg-[#0a1529] content-stretch flex flex-col sm:flex-row gap-[10px] sm:gap-[14px] md:gap-[16px] lg:gap-[18px] xl:gap-[28px] 2xl:gap-[32px] items-center justify-center px-[12px] sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[100px] 2xl:px-[120px] py-[10px] sm:py-[14px] md:py-[8px] lg:py-[8px] xl:py-[18px] 2xl:py-[22px] relative shrink-0 w-full max-w-full overflow-x-auto overflow-y-visible py-[8px] transition-colors duration-300" style={{ paddingTop: '10px', paddingBottom: '10px', overflow: 'visible' }}>
+        <div className="relative z-[10000]" ref={navCategoryDropdownRef}>
+          <button
+            onClick={() => setShowNavCategoryDropdown(!showNavCategoryDropdown)}
+            className="bg-[#eea137] hover:bg-[#ffb84d] content-stretch flex gap-[6px] sm:gap-[7px] h-[30px] sm:h-[30px] lg:h-[30px] items-center px-[12px] sm:px-[14px] md:px-[18px] lg:px-[18px] py-[8px] relative rounded-[4px] shrink-0 w-full sm:w-auto cursor-pointer transition-all duration-200"
+            aria-expanded={showNavCategoryDropdown}
+            aria-haspopup="true"
+          >
+            <p className="flex flex-col font-['Poppins'] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[15px] sm:text-[16px] md:text-[17px] lg:text-[15px] text-white whitespace-nowrap">
+              Category
+            </p>
+            <div className={`relative shrink-0 size-[18px] sm:size-[20px] md:size-[22px] lg:size-[20px] transition-transform duration-200 ${showNavCategoryDropdown ? 'rotate-180' : ''}`}>
+              <div className="absolute contents inset-0">
+                <img alt="" className="block max-w-none size-full" src={img5} />
+              </div>
             </div>
-          </div>
+          </button>
+          
+          {/* Navigation Category Dropdown */}
+          {showNavCategoryDropdown && (
+            <>
+              <div 
+                className="fixed inset-0 z-[9998] sm:hidden bg-black bg-opacity-20"
+                onClick={() => setShowNavCategoryDropdown(false)}
+                aria-hidden="true"
+              ></div>
+              <div 
+                className="absolute left-0 top-full mt-[8px] bg-white dark:bg-[#1e293b] border border-[#e6e6e6] dark:border-[#334155] rounded-[8px] shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-[280px] sm:w-[300px] md:w-[320px] z-[10001] overflow-hidden animate-[dropdownFadeIn_0.2s_ease-out] max-h-[400px] overflow-y-auto"
+                style={{ position: 'absolute', top: '100%', left: '0', marginTop: '8px' }}
+              >
+                <div className="py-[4px]">
+                  {categories.map((category, index) => (
+                    <Link
+                      key={index}
+                      to={category.path}
+                      onClick={() => setShowNavCategoryDropdown(false)}
+                      className="flex items-center px-[16px] py-[10px] sm:py-[12px] text-[14px] font-['Poppins'] font-medium text-[#0e1c47] dark:text-white hover:bg-[#f8f9fa] dark:hover:bg-[#0f172a] transition-colors duration-150 cursor-pointer"
+                    >
+                      <span className="whitespace-nowrap">{category.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
         <div className="content-stretch flex flex-wrap gap-[10px] sm:gap-[14px] md:gap-[16px] lg:gap-[14px] items-center justify-center relative shrink-0 w-full sm:w-auto">
           <Link to="/pc-components" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[7px] relative shrink-0 hover:opacity-80 transition-opacity">
@@ -459,7 +558,7 @@ export default function Header() {
           </Link>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

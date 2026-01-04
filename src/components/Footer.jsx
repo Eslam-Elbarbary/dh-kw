@@ -59,30 +59,30 @@ function IconFacebook({ className }) {
 export default function Footer() {
   return (
     <div className="bg-[#0e1c47] content-stretch flex flex-col gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] items-start justify-center pb-[16px] lg:pb-[20px] xl:pb-[24px] 2xl:pb-[28px] pt-[24px] sm:pt-[32px] md:pt-[40px] lg:pt-[48px] xl:pt-[56px] 2xl:pt-[64px] px-0 relative shrink-0 w-full overflow-hidden" data-name="Footer" data-node-id="35:5022">
-      <div className="content-stretch flex flex-col items-start px-[12px] sm:px-[16px] md:px-[24px] lg:px-[80px] xl:px-[120px] 2xl:px-[140px] py-0 relative shrink-0 w-full max-w-full overflow-hidden" data-node-id="35:5023">
-        <div className="content-stretch flex flex-col lg:flex-row items-start lg:items-center justify-between relative shrink-0 w-full gap-[32px] sm:gap-[36px] md:gap-[40px] lg:gap-[48px] xl:gap-[56px] 2xl:gap-[64px]" data-node-id="35:5024">
-          <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0" data-node-id="35:5025">
-            <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0" data-node-id="35:5026">
-              <Link to="/" className="relative shrink-0 size-[80px] sm:size-[90px] md:size-[100px] lg:size-[110px] xl:size-[120px] 2xl:size-[130px] cursor-pointer hover:opacity-80 transition-opacity" data-name="Untitled-1[1] 1" data-node-id="35:5027">
+      <div className="content-stretch flex flex-col items-start px-[12px] sm:px-[16px] md:px-[32px] lg:px-[60px] xl:px-[100px] 2xl:px-[140px] py-0 relative shrink-0 w-full max-w-full overflow-hidden" data-node-id="35:5023">
+        <div className="content-stretch flex flex-col md:flex-row items-start md:items-start lg:items-center justify-between relative shrink-0 w-full gap-[24px] sm:gap-[28px] md:gap-[32px] lg:gap-[40px] xl:gap-[48px] 2xl:gap-[64px]" data-node-id="35:5024">
+          <div className="content-stretch flex flex-col gap-[20px] sm:gap-[22px] md:gap-[24px] items-start relative shrink-0 w-full md:w-auto md:max-w-[400px] lg:max-w-[360px]" data-node-id="35:5025">
+            <div className="content-stretch flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-start relative shrink-0 w-full" data-node-id="35:5026">
+              <Link to="/" className="relative shrink-0 size-[70px] sm:size-[80px] md:size-[90px] lg:size-[100px] xl:size-[110px] 2xl:size-[130px] cursor-pointer hover:opacity-80 transition-opacity" data-name="Untitled-1[1] 1" data-node-id="35:5027">
                 <img alt="Logo" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgUntitled111} />
               </Link>
-              <div className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] lg:text-[17px] xl:text-[18px] 2xl:text-[20px] text-white w-full sm:w-[280px] md:w-[303px] lg:w-[320px] xl:w-[340px] 2xl:w-[360px]" data-node-id="35:5028">
-                <p className="leading-[1.35] whitespace-pre-wrap">{`A premium store offering a curated selection from top international brands. `}</p>
+              <div className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[13px] sm:text-[14px] md:text-[15px] lg:text-[16px] xl:text-[17px] 2xl:text-[18px] text-white w-full" data-node-id="35:5028">
+                <p className="leading-[1.4] sm:leading-[1.35] whitespace-pre-wrap">{`A premium store offering a curated selection from top international brands. `}</p>
               </div>
             </div>
-            <div className="content-stretch flex gap-[24px] items-start relative shrink-0" data-node-id="35:5029">
-              <IconFacebook className="overflow-clip relative shrink-0 size-[24px]" />
-              <IconTwitter className="overflow-clip relative shrink-0 size-[24px]" />
-              <IconInstagram className="overflow-clip relative shrink-0 size-[24px]" />
-              <IconLinkedin className="overflow-clip relative shrink-0 size-[24px]" />
+            <div className="content-stretch flex gap-[20px] sm:gap-[22px] md:gap-[24px] items-start relative shrink-0" data-node-id="35:5029">
+              <IconFacebook className="overflow-clip relative shrink-0 size-[20px] sm:size-[22px] md:size-[24px] cursor-pointer hover:opacity-80 transition-opacity" />
+              <IconTwitter className="overflow-clip relative shrink-0 size-[20px] sm:size-[22px] md:size-[24px] cursor-pointer hover:opacity-80 transition-opacity" />
+              <IconInstagram className="overflow-clip relative shrink-0 size-[20px] sm:size-[22px] md:size-[24px] cursor-pointer hover:opacity-80 transition-opacity" />
+              <IconLinkedin className="overflow-clip relative shrink-0 size-[20px] sm:size-[22px] md:size-[24px] cursor-pointer hover:opacity-80 transition-opacity" />
             </div>
           </div>
-          <div className="content-stretch flex flex-col sm:flex-row gap-[32px] sm:gap-[40px] md:gap-[60px] lg:gap-[99px] xl:gap-[120px] 2xl:gap-[140px] items-start justify-center relative shrink-0 w-full sm:w-auto" data-node-id="35:5034">
-            <div className="content-stretch flex flex-col gap-[16px] sm:gap-[18px] md:gap-[20px] items-start relative shrink-0 w-full sm:w-[180px] md:w-[200px]" data-node-id="35:5035">
+          <div className="content-stretch flex flex-col sm:flex-row md:flex-wrap lg:flex-nowrap gap-[24px] sm:gap-[32px] md:gap-[40px] lg:gap-[60px] xl:gap-[80px] 2xl:gap-[120px] items-start justify-start md:justify-between lg:justify-center relative shrink-0 w-full md:w-auto md:flex-1 lg:flex-initial" data-node-id="35:5034">
+            <div className="content-stretch flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] lg:gap-[18px] items-start relative shrink-0 w-full sm:w-[160px] md:w-[170px] lg:w-[180px]" data-node-id="35:5035">
               <div className="flex flex-col font-['Poppins'] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-white whitespace-nowrap" data-node-id="35:5036">
                 <p className="leading-[19.5px]">Links</p>
               </div>
-              <div className="content-stretch flex flex-col font-['Poppins'] font-medium gap-[10px] sm:gap-[12px] items-start leading-[0] not-italic relative shrink-0 text-[#f2f2f2] text-[13px] sm:text-[14px] w-full whitespace-nowrap" data-node-id="35:5037">
+              <div className="content-stretch flex flex-col font-['Poppins'] font-medium gap-[8px] sm:gap-[10px] md:gap-[12px] items-start leading-[0] not-italic relative shrink-0 text-[#f2f2f2] text-[13px] sm:text-[14px] w-full whitespace-nowrap" data-node-id="35:5037">
                 <Link to="/about-us" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5038">
                   <p className="leading-[19.5px]">About us</p>
                 </Link>
@@ -97,11 +97,11 @@ export default function Footer() {
                 </Link>
               </div>
             </div>
-            <div className="content-stretch flex flex-col gap-[16px] sm:gap-[18px] md:gap-[20px] items-start relative shrink-0 w-full sm:w-[180px] md:w-[200px]" data-node-id="35:5042">
+            <div className="content-stretch flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] lg:gap-[18px] items-start relative shrink-0 w-full sm:w-[160px] md:w-[170px] lg:w-[180px]" data-node-id="35:5042">
               <div className="flex flex-col font-['Poppins'] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-white whitespace-nowrap" data-node-id="35:5043">
                 <p className="leading-[19.5px]">My Account</p>
               </div>
-              <div className="content-stretch flex flex-col font-['Poppins'] font-medium gap-[10px] sm:gap-[12px] items-start leading-[0] not-italic relative shrink-0 text-[#f2f2f2] text-[13px] sm:text-[14px] w-full whitespace-nowrap" data-node-id="35:5044">
+              <div className="content-stretch flex flex-col font-['Poppins'] font-medium gap-[8px] sm:gap-[10px] md:gap-[12px] items-start leading-[0] not-italic relative shrink-0 text-[#f2f2f2] text-[13px] sm:text-[14px] w-full whitespace-nowrap" data-node-id="35:5044">
                 <Link to="/brands" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5045">
                   <p className="leading-[19.5px]">Brands</p>
                 </Link>
@@ -116,23 +116,23 @@ export default function Footer() {
                 </Link>
               </div>
             </div>
-            <div className="content-stretch flex flex-col gap-[16px] sm:gap-[18px] md:gap-[20px] items-start relative shrink-0 w-full sm:w-[180px] md:w-[200px]" data-node-id="35:5049">
+            <div className="content-stretch flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] lg:gap-[18px] items-start relative shrink-0 w-full sm:w-[280px] md:w-[300px] lg:w-[320px]" data-node-id="35:5049">
               <div className="flex flex-col font-['Cairo'] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[14px] sm:text-[15px] md:text-[16px] text-white whitespace-nowrap" data-node-id="35:5050">
                 <p className="leading-[1.2]">Newsletter</p>
               </div>
-              <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0 w-full" data-node-id="35:5051">
-                <div className="content-stretch flex flex-col h-[38px] items-start relative rounded-[4px] shrink-0 w-full" data-node-id="35:5052">
-                  <div className="border-[#f2f2f2] border-[0.75px] border-solid content-stretch flex flex-col gap-[8px] h-[38px] items-start justify-center pl-[16px] pr-[19px] py-[8px] relative rounded-[4px] shrink-0 w-full" data-name="Input" data-node-id="35:5053">
-                    <div className="content-stretch flex gap-[8px] items-center relative shrink-0" data-node-id="35:5055">
-                      <div className="h-[9px] relative shrink-0 w-[12px]" data-name="email.svg" data-node-id="35:5056">
+              <div className="content-stretch flex flex-col gap-[10px] sm:gap-[12px] items-start relative shrink-0 w-full" data-node-id="35:5051">
+                <div className="content-stretch flex flex-col h-[36px] sm:h-[38px] items-start relative rounded-[4px] shrink-0 w-full" data-node-id="35:5052">
+                  <div className="border-[#f2f2f2] border-[0.75px] border-solid content-stretch flex flex-col gap-[8px] h-[36px] sm:h-[38px] items-start justify-center pl-[12px] sm:pl-[14px] md:pl-[16px] pr-[15px] sm:pr-[17px] md:pr-[19px] py-[7px] sm:py-[8px] relative rounded-[4px] shrink-0 w-full" data-name="Input" data-node-id="35:5053">
+                    <div className="content-stretch flex gap-[6px] sm:gap-[8px] items-center relative shrink-0" data-node-id="35:5055">
+                      <div className="h-[8px] sm:h-[9px] relative shrink-0 w-[11px] sm:w-[12px]" data-name="email.svg" data-node-id="35:5056">
                         <img alt="" className="block max-w-none size-full" src={imgEmailSvg} />
                       </div>
-                      <input type="email" className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#f2f2f2] text-[12px] bg-transparent border-none outline-none flex-1" placeholder="Enter your email" data-node-id="35:5058" />
+                      <input type="email" className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#f2f2f2] text-[11px] sm:text-[12px] bg-transparent border-none outline-none flex-1 placeholder:text-[#999]" placeholder="Enter your email" data-node-id="35:5058" />
                     </div>
                   </div>
                 </div>
-                <button className="bg-[#eea137] content-stretch flex h-[40px] items-center justify-center px-[16px] py-[10px] relative rounded-[4px] shrink-0 w-full" data-node-id="35:5059">
-                  <div className="flex flex-col font-['Poppins'] font-semibold justify-center leading-[0] not-italic relative shrink-0 text-[14px] text-white whitespace-nowrap" data-node-id="35:5060">
+                <button className="bg-[#eea137] hover:bg-[#ffb84d] content-stretch flex h-[36px] sm:h-[40px] items-center justify-center px-[14px] sm:px-[16px] py-[8px] sm:py-[10px] relative rounded-[4px] shrink-0 w-full transition-colors cursor-pointer" data-node-id="35:5059">
+                  <div className="flex flex-col font-['Poppins'] font-semibold justify-center leading-[0] not-italic relative shrink-0 text-[13px] sm:text-[14px] text-white whitespace-nowrap" data-node-id="35:5060">
                     <p className="leading-[18px]">Send</p>
                   </div>
                 </button>
@@ -151,12 +151,12 @@ export default function Footer() {
             </div>
           </div>
         </div>
-        <div className="content-stretch flex gap-[12px] h-[60px] items-center justify-center relative shrink-0 w-full max-w-full" data-name="Copyright - Desktop" data-node-id="35:5063">
-          <p className="font-['Alexandria'] font-normal leading-[normal] relative shrink-0 text-[#f2f2f2] text-[14px] sm:text-[16px] md:text-[18px] text-center" data-node-id="I35:5063;1:246">
+        <div className="content-stretch flex flex-col sm:flex-row gap-[8px] sm:gap-[12px] h-auto sm:h-[60px] items-center justify-center relative shrink-0 w-full max-w-full px-[12px] sm:px-0" data-name="Copyright - Desktop" data-node-id="35:5063">
+          <p className="font-['Alexandria'] font-normal leading-[normal] relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[14px] md:text-[16px] lg:text-[17px] xl:text-[18px] text-center" data-node-id="I35:5063;1:246">
             Copyright © 2025
           </p>
-          <div className="grid-cols-[max-content] grid-rows-[max-content] inline-grid justify-items-start leading-[0] relative shrink-0" data-name="Layer 1" data-node-id="I35:5063;1:279">
-            <div className="col-[1] grid-cols-[max-content] grid-rows-[max-content] inline-grid justify-items-start ml-0 mt-0 relative row-[1]" data-name="Group" data-node-id="I35:5063;1:280">
+          <div className="grid-cols-[max-content] grid-rows-[max-content] inline-grid justify-items-start leading-[0] relative shrink-0 h-[16px] sm:h-[20px] md:h-[22px]" data-name="Layer 1" data-node-id="I35:5063;1:279">
+            <div className="col-[1] grid-cols-[max-content] grid-rows-[max-content] inline-grid justify-items-start ml-0 mt-0 relative row-[1] h-full" data-name="Group" data-node-id="I35:5063;1:280">
               <div className="col-[1] h-[2.595px] ml-[10.58%] mt-[93.51%] relative row-[1] w-[60.81px]" data-name="Group" data-node-id="I35:5063;1:281">
                 <img alt="" className="block max-w-none size-full" src={img15} />
               </div>
@@ -168,7 +168,7 @@ export default function Footer() {
               </div>
             </div>
           </div>
-          <p className="font-['Alexandria'] font-normal leading-[normal] relative shrink-0 text-[#f2f2f2] text-[14px] sm:text-[16px] md:text-[18px] text-center" data-node-id="I35:5063;1:278">
+          <p className="font-['Alexandria'] font-normal leading-[normal] relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[14px] md:text-[16px] lg:text-[17px] xl:text-[18px] text-center" data-node-id="I35:5063;1:278">
             | All Rights Reserved
           </p>
         </div>

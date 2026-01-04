@@ -1,7 +1,7 @@
 // Search Results page component - exact Figma implementation
 // Based on node 35:2469 and 35:3733
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 // Product Image Assets (from Figma)
@@ -38,6 +38,12 @@ export default function SearchResults() {
   const [selectedTags, setSelectedTags] = useState([]); // Empty = show all tags
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  
+  // Pagination and display states
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState('Most Popular');
+  const [gridView, setGridView] = useState(2); // 1 = 3 columns, 2 = 4 columns, 3 = 5 columns
 
   const toggleBrand = (brand) => {
     setSelectedBrands(prev => 
@@ -59,7 +65,7 @@ export default function SearchResults() {
   const productImage = imgProductImage; // 4K UHD LED Smart TV image
 
   // Sample products data with variety for filtering - matching Figma exactly (node 35:3733)
-  const allProducts = Array.from({ length: 24 }, (_, i) => {
+  const allProducts = Array.from({ length: 50 }, (_, i) => {
     // Create variety in products for filtering
     const brands = ['Apple', 'Microsoft', 'LG', 'HP', 'Panasonic', 'Samsung', 'Sony', 'Dell', 'Xiaomi', 'Google', 'Intel', 'One Plus'];
     const categories = ['Electronics Devices', 'Computer & Laptop', 'Computer Accessories', 'SmartPhone', 'Headphone', 'Mobile Accessories', 'Gaming Console', 'Camera & Photo', 'TV & Homes Appliances', 'Watchs & Accessories', 'GPS & Navigation', 'Warable Technology'];
@@ -80,7 +86,9 @@ export default function SearchResults() {
       salePrice: `$${salePrice}`,
       priceValue: salePrice, // For numeric comparison
       image: productImage,
-      badges: i % 4 === 0 ? ['32% OFF', 'Only 10 Left'] : i % 4 === 1 ? ['32% OFF', 'Only 10 Left'] : []
+      badges: i % 4 === 0 ? ['32% OFF', 'Only 10 Left'] : i % 4 === 1 ? ['32% OFF', 'Only 10 Left'] : [],
+      popularity: Math.floor(Math.random() * 100),
+      rating: 3 + Math.random() * 2
     };
   });
 
@@ -137,7 +145,61 @@ export default function SearchResults() {
     return filtered;
   };
 
-  const products = getFilteredProducts();
+  // Sort products
+  const getSortedProducts = (products) => {
+    const sorted = [...products];
+    
+    switch (sortBy) {
+      case 'Most Popular':
+        return sorted.sort((a, b) => b.popularity - a.popularity);
+      case 'Price: Low to High':
+        return sorted.sort((a, b) => a.priceValue - b.priceValue);
+      case 'Price: High to Low':
+        return sorted.sort((a, b) => b.priceValue - a.priceValue);
+      case 'Rating: High to Low':
+        return sorted.sort((a, b) => b.rating - a.rating);
+      case 'Name: A to Z':
+        return sorted.sort((a, b) => a.name.localeCompare(b.name));
+      case 'Name: Z to A':
+        return sorted.sort((a, b) => b.name.localeCompare(a.name));
+      default:
+        return sorted;
+    }
+  };
+
+  const filteredProducts = getFilteredProducts();
+  const sortedProducts = getSortedProducts(filteredProducts);
+  
+  // Pagination
+  const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedProducts = sortedProducts.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters or items per page change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, selectedPriceRange, selectedBrands, selectedTags, minPrice, maxPrice, sortBy, itemsPerPage]);
+
+  // Grid columns based on view
+  const getGridColumns = () => {
+    const gap = 20.366; // Gap between items
+    switch (gridView) {
+      case 1: 
+        // 3 columns: 2 gaps = 2 * 20.366 = 40.732px
+        return 'lg:w-[calc((100%-40.732px)/3)]';
+      case 2: 
+        // 4 columns: 3 gaps = 3 * 20.366 = 61.098px
+        return 'lg:w-[calc((100%-61.098px)/4)]';
+      case 3: 
+        // 5 columns: 4 gaps = 4 * 20.366 = 81.464px
+        return 'lg:w-[calc((100%-81.464px)/5)]';
+      default: 
+        return 'lg:w-[calc((100%-61.098px)/4)]';
+    }
+  };
+
+  const productsPerRow = gridView === 1 ? 3 : gridView === 2 ? 4 : 5;
 
   return (
     <div className="bg-white dark:bg-[#0f172a] relative w-full min-h-screen transition-colors duration-300">
@@ -167,43 +229,106 @@ export default function SearchResults() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-[16px] sm:gap-[20px] md:gap-[40px]" data-node-id="35:2535">
             {/* Show Items */}
             <div className="flex gap-[8px] items-center leading-[0] not-italic whitespace-nowrap" data-node-id="35:2536">
-              <div className="flex flex-col font-['Poppins'] font-normal justify-center relative shrink-0 text-[#333] dark:text-white text-[14px] sm:text-[16px]" data-node-id="35:2537">
-                <p className="leading-[18px]">Show: </p>
-              </div>
-              <div className="flex flex-col font-['Poppins'] font-semibold justify-center relative shrink-0 text-[#333] dark:text-white text-[14px] sm:text-[16px]" data-node-id="35:2538">
-                <p className="leading-[18px]">15</p>
-              </div>
-              <div className="flex flex-col font-['Inter'] font-normal justify-center relative shrink-0 text-[#e6e6e6] dark:text-[#475156] text-[16px] sm:text-[18px]" data-node-id="35:2539">
-                <p className="leading-[18px]">/</p>
-              </div>
-              <div className="flex flex-col font-['Poppins'] font-normal justify-center relative shrink-0 text-[#e6e6e6] dark:text-[#475156] text-[14px] sm:text-[16px]" data-node-id="35:2540">
-                <p className="leading-[18px]">20</p>
-              </div>
-              <div className="flex flex-col font-['Inter'] font-normal justify-center relative shrink-0 text-[#e6e6e6] dark:text-[#475156] text-[16px] sm:text-[18px]" data-node-id="35:2541">
-                <p className="leading-[18px]">/</p>
-              </div>
-              <div className="flex flex-col font-['Poppins'] font-normal justify-center relative shrink-0 text-[#e6e6e6] dark:text-[#475156] text-[14px] sm:text-[16px]" data-node-id="35:2542">
-                <p className="leading-[18px]">30</p>
-              </div>
+              <span className="font-['Poppins'] font-normal text-[#333] dark:text-white text-[14px] sm:text-[16px] leading-[18px]" data-node-id="35:2537">
+                Show: 
+              </span>
+              <button
+                onClick={() => setItemsPerPage(15)}
+                className={`font-['Poppins'] relative shrink-0 text-[14px] sm:text-[16px] leading-[18px] transition-colors cursor-pointer hover:opacity-80 ${
+                  itemsPerPage === 15 
+                    ? 'font-semibold text-[#333] dark:text-white' 
+                    : 'font-normal text-[#e6e6e6] dark:text-[#475156]'
+                }`}
+                data-node-id="35:2538"
+              >
+                15
+              </button>
+              <span className="font-['Inter'] font-normal text-[#e6e6e6] dark:text-[#475156] text-[16px] sm:text-[18px] leading-[18px]" data-node-id="35:2539">
+                /
+              </span>
+              <button
+                onClick={() => setItemsPerPage(20)}
+                className={`font-['Poppins'] relative shrink-0 text-[14px] sm:text-[16px] leading-[18px] transition-colors cursor-pointer hover:opacity-80 ${
+                  itemsPerPage === 20 
+                    ? 'font-semibold text-[#333] dark:text-white' 
+                    : 'font-normal text-[#e6e6e6] dark:text-[#475156]'
+                }`}
+                data-node-id="35:2540"
+              >
+                20
+              </button>
+              <span className="font-['Inter'] font-normal text-[#e6e6e6] dark:text-[#475156] text-[16px] sm:text-[18px] leading-[18px]" data-node-id="35:2541">
+                /
+              </span>
+              <button
+                onClick={() => setItemsPerPage(30)}
+                className={`font-['Poppins'] relative shrink-0 text-[14px] sm:text-[16px] leading-[18px] transition-colors cursor-pointer hover:opacity-80 ${
+                  itemsPerPage === 30 
+                    ? 'font-semibold text-[#333] dark:text-white' 
+                    : 'font-normal text-[#e6e6e6] dark:text-[#475156]'
+                }`}
+                data-node-id="35:2542"
+              >
+                30
+              </button>
             </div>
 
             {/* Grid View Icons */}
             <div className="flex gap-[8px] items-center relative shrink-0" data-node-id="35:2543">
-              <div className="gap-[2px] grid grid-cols-3 grid-rows-3 p-[4px] relative shrink-0" data-node-id="35:2544">
+              <button
+                onClick={() => setGridView(1)}
+                className={`gap-[2px] grid grid-cols-3 grid-rows-3 p-[4px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity ${
+                  gridView === 1 ? 'opacity-100' : 'opacity-60'
+                }`}
+                data-node-id="35:2544"
+                aria-label="3 column grid view"
+              >
                 {Array.from({ length: 9 }).map((_, i) => (
-                  <div key={i} className="bg-[#e6e6e6] shrink-0 size-[4px]" data-node-id={`35:${2545 + i}`} />
+                  <div 
+                    key={i} 
+                    className={`shrink-0 size-[4px] transition-colors ${
+                      gridView === 1 ? 'bg-[#999]' : 'bg-[#e6e6e6] dark:bg-[#475156]'
+                    }`} 
+                    data-node-id={`35:${2545 + i}`} 
+                  />
                 ))}
-              </div>
-              <div className="gap-[2px] grid grid-cols-4 grid-rows-3 p-[4px] relative shrink-0" data-node-id="35:2554">
+              </button>
+              <button
+                onClick={() => setGridView(2)}
+                className={`gap-[2px] grid grid-cols-4 grid-rows-3 p-[4px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity ${
+                  gridView === 2 ? 'opacity-100' : 'opacity-60'
+                }`}
+                data-node-id="35:2554"
+                aria-label="4 column grid view"
+              >
                 {Array.from({ length: 12 }).map((_, i) => (
-                  <div key={i} className="bg-[#e6e6e6] shrink-0 size-[4px]" data-node-id={`35:${2555 + i}`} />
+                  <div 
+                    key={i} 
+                    className={`shrink-0 size-[4px] transition-colors ${
+                      gridView === 2 ? 'bg-[#999]' : 'bg-[#e6e6e6] dark:bg-[#475156]'
+                    }`} 
+                    data-node-id={`35:${2555 + i}`} 
+                  />
                 ))}
-              </div>
-              <div className="gap-[2px] grid grid-cols-5 grid-rows-3 p-[4px] relative shrink-0" data-node-id="35:2567">
+              </button>
+              <button
+                onClick={() => setGridView(3)}
+                className={`gap-[2px] grid grid-cols-5 grid-rows-3 p-[4px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity ${
+                  gridView === 3 ? 'opacity-100' : 'opacity-60'
+                }`}
+                data-node-id="35:2567"
+                aria-label="5 column grid view"
+              >
                 {Array.from({ length: 15 }).map((_, i) => (
-                  <div key={i} className="bg-[#999] shrink-0 size-[4px]" data-node-id={`35:${2568 + i}`} />
+                  <div 
+                    key={i} 
+                    className={`shrink-0 size-[4px] transition-colors ${
+                      gridView === 3 ? 'bg-[#999]' : 'bg-[#e6e6e6] dark:bg-[#475156]'
+                    }`} 
+                    data-node-id={`35:${2568 + i}`} 
+                  />
                 ))}
-              </div>
+              </button>
             </div>
 
             {/* Sort By */}
@@ -211,11 +336,22 @@ export default function SearchResults() {
               <p className="font-['Poppins'] font-normal leading-[20px] not-italic relative shrink-0 text-[#191c1f] dark:text-white text-[14px]" data-node-id="35:2584">
                 Sort by:
               </p>
-              <div className="bg-white dark:bg-[#1e293b] border border-[#e4e7e9] dark:border-[#334155] border-solid h-[40px] overflow-hidden relative rounded-[2px] shrink-0 w-[180px] transition-colors duration-300" data-name="Dropdown" data-node-id="35:2585">
-                <p className="absolute font-['Poppins'] font-normal leading-[20px] left-[15px] not-italic text-[#666] dark:text-white text-[14px] top-1/2 -translate-y-1/2">
-                  Most Popular
-                </p>
-                <div className="absolute right-[15px] size-[16px] top-1/2 -translate-y-1/2" data-name="Regular/CaretDown">
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="bg-white dark:bg-[#1e293b] border border-[#e4e7e9] dark:border-[#334155] border-solid h-[40px] overflow-hidden relative rounded-[2px] shrink-0 w-[180px] px-[15px] pr-[35px] font-['Poppins'] font-normal text-[14px] text-[#666] dark:text-white appearance-none cursor-pointer focus:outline-none focus:border-[#0e1c47] dark:focus:border-[#eea137] transition-colors duration-300"
+                  data-name="Dropdown"
+                  data-node-id="35:2585"
+                >
+                  <option value="Most Popular">Most Popular</option>
+                  <option value="Price: Low to High">Price: Low to High</option>
+                  <option value="Price: High to Low">Price: High to Low</option>
+                  <option value="Rating: High to Low">Rating: High to Low</option>
+                  <option value="Name: A to Z">Name: A to Z</option>
+                  <option value="Name: Z to A">Name: Z to A</option>
+                </select>
+                <div className="absolute right-[15px] size-[16px] top-1/2 -translate-y-1/2 pointer-events-none" data-name="Regular/CaretDown">
                   <img alt="" className="block max-w-none size-full" src={imgRegularCaretDown} />
                 </div>
               </div>
@@ -248,28 +384,35 @@ export default function SearchResults() {
           <div className="flex flex-col lg:flex-row gap-[24.078px] relative">
             {/* Products Grid - Exact Figma Layout */}
             <div className={`flex-1 w-full lg:w-auto`}>
-              {products.length === 0 ? (
+              {/* Results Count */}
+              <div className="mb-[16px] sm:mb-[20px]">
+                <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">
+                  Showing {startIndex + 1}-{Math.min(endIndex, sortedProducts.length)} of {sortedProducts.length} products
+                </p>
+              </div>
+
+              {paginatedProducts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-[60px]">
                   <p className="font-['Poppins'] font-semibold text-[#191c1f] dark:text-white text-[18px] mb-[8px]">No products found</p>
                   <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">Try adjusting your filters</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-[20.366px] w-full">
-                  {/* Product Rows - 4 products per row when filter visible (exact Figma) */}
-                  {Array.from({ length: Math.ceil(products.length / 4) }).map((_, rowIndex) => {
-                    const rowStart = rowIndex * 4;
+                  {/* Product Rows - Dynamic products per row based on grid view */}
+                  {Array.from({ length: Math.ceil(paginatedProducts.length / productsPerRow) }).map((_, rowIndex) => {
+                    const rowStart = rowIndex * productsPerRow;
                     return (
                       <div 
                         key={rowStart} 
                         className="flex flex-wrap gap-[20.366px] items-start justify-start w-full"
                         data-node-id={rowStart === 0 ? "35:3855" : `row-${rowStart}`}
                       >
-                        {products.slice(rowStart, rowStart + 4).map((product, idx) => {
+                        {paginatedProducts.slice(rowStart, rowStart + productsPerRow).map((product, idx) => {
                       return (
                         <Link
                           key={product.id}
                           to={`/product/${product.id}`}
-                          className="bg-white dark:bg-[#1e293b] border-[#e4e7e9] dark:border-[#334155] border-[0.849px] border-solid flex flex-col gap-[6.789px] items-start overflow-hidden p-[13.578px] rounded-[3.394px] w-full sm:w-[calc(50%-10.183px)] md:w-[calc(33.333%-13.577px)] lg:w-[calc((100%-61.098px)/4)] hover:shadow-lg transition-all cursor-pointer"
+                          className={`bg-white dark:bg-[#1e293b] border-[#e4e7e9] dark:border-[#334155] border-[0.849px] border-solid flex flex-col gap-[6.789px] items-start overflow-hidden p-[13.578px] rounded-[3.394px] w-full sm:w-[calc(50%-10.183px)] md:w-[calc(33.333%-13.577px)] ${getGridColumns()} hover:shadow-lg transition-all cursor-pointer`}
                           data-name="Product"
                           data-node-id={rowStart === 0 && idx === 0 ? "35:3856" : undefined}
                         >
@@ -333,38 +476,87 @@ export default function SearchResults() {
               )}
 
               {/* Pagination - Exact Figma */}
-              <div className="flex gap-[8px] items-center justify-center mt-[40px] sm:mt-[60px]" data-name="Pages" data-node-id="35:2820">
-                <div className="flex items-center justify-center size-[15.03px]">
-                  <div className="flex-none rotate-[270deg] scale-y-[-100%]">
-                    <div className="relative size-[15.03px]" data-name="Regular/CaretDown" data-node-id="35:2821">
-                      <img alt="" className="block w-full h-full" src={imgRegularCaretDown} />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-[8px] items-center" data-node-id="35:2822">
-                  {[1, 2, 3, 4, 5, 6].map((page) => (
-                    <div 
-                      key={page}
-                      className={`flex items-center justify-center px-0 py-[10px] rounded-[12px] ${page === 1 ? 'bg-[#0e1c47]' : 'bg-white'}`}
-                      data-name="Pagination/Item"
-                      data-node-id={`35:${2823 + (page - 1) * 2}`}
-                    >
-                      <p className={`font-['Public_Sans'] ${page === 1 ? 'font-semibold' : 'font-normal'} leading-[20px] text-[14px] text-center ${page === 1 ? 'text-white' : 'text-[#191c1f]'} w-[40px]`}>
-                        {String(page).padStart(2, '0')}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center" data-node-id="35:2835">
-                  <div className="flex items-center justify-center size-[15.03px]">
-                    <div className="flex-none rotate-[270deg]">
-                      <div className="relative size-[15.03px]" data-name="Regular/CaretDown" data-node-id="35:2836">
+              {totalPages > 1 && (
+                <div className="flex gap-[8px] items-center justify-center mt-[40px] sm:mt-[60px]" data-name="Pages" data-node-id="35:2820">
+                  {/* Previous Button */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className={`flex items-center justify-center size-[15.03px] transition-opacity ${
+                      currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'
+                    }`}
+                    aria-label="Previous page"
+                  >
+                    <div className="flex-none rotate-[270deg] scale-y-[-100%]">
+                      <div className="relative size-[15.03px]" data-name="Regular/CaretDown" data-node-id="35:2821">
                         <img alt="" className="block w-full h-full" src={imgRegularCaretDown} />
                       </div>
                     </div>
+                  </button>
+                  
+                  {/* Page Numbers */}
+                  <div className="flex gap-[8px] items-center" data-node-id="35:2822">
+                    {Array.from({ length: Math.min(totalPages, 6) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 6) {
+                        // Show all pages if 6 or fewer
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        // Show first 6 pages if near start
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        // Show last 6 pages if near end
+                        pageNum = totalPages - 5 + i;
+                      } else {
+                        // Show pages around current page
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`flex items-center justify-center px-0 py-[10px] rounded-[12px] transition-colors duration-200 ${
+                            currentPage === pageNum 
+                              ? 'bg-[#0e1c47] dark:bg-[#eea137]' 
+                              : 'bg-white dark:bg-[#1e293b] hover:bg-[#f0f0f0] dark:hover:bg-[#334155]'
+                          }`}
+                          data-name="Pagination/Item"
+                          data-node-id={`35:${2823 + (pageNum - 1) * 2}`}
+                        >
+                          <p className={`font-['Public_Sans'] ${
+                            currentPage === pageNum ? 'font-semibold' : 'font-normal'
+                          } leading-[20px] text-[14px] text-center ${
+                            currentPage === pageNum 
+                              ? 'text-white' 
+                              : 'text-[#191c1f] dark:text-white'
+                          } w-[40px]`}>
+                            {String(pageNum).padStart(2, '0')}
+                          </p>
+                        </button>
+                      );
+                    })}
                   </div>
+                  
+                  {/* Next Button */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className={`flex items-center justify-center size-[15.03px] transition-opacity ${
+                      currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'
+                    }`}
+                    aria-label="Next page"
+                  >
+                    <div className="flex items-center justify-center size-[15.03px]">
+                      <div className="flex-none rotate-[270deg]">
+                        <div className="relative size-[15.03px]" data-name="Regular/CaretDown" data-node-id="35:2836">
+                          <img alt="" className="block w-full h-full" src={imgRegularCaretDown} />
+                        </div>
+                      </div>
+                    </div>
+                  </button>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Filter Sidebar - Exact Figma */}

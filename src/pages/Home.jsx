@@ -293,22 +293,24 @@ function FeaturesSection() {
   ];
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-center gap-[24px] sm:gap-[20px] md:gap-[24px] lg:gap-[28px] xl:gap-[32px] 2xl:gap-[36px] lg:justify-between relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-[12px] sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[100px] 2xl:px-[120px]" data-node-id="35:814">
-      {features.map((feature, index) => (
-        <div key={index} className="flex flex-col gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] items-center p-[8px] sm:p-[12px] lg:p-[16px] xl:p-[20px] relative shrink-0 w-full sm:w-auto sm:flex-1">
-          <div className="overflow-clip relative shrink-0 size-[40px] sm:size-[44px] md:size-[48px] lg:size-[52px] xl:size-[56px] 2xl:size-[60px]">
-            <img alt="" className="block max-w-none size-full object-contain" src={feature.icon} />
+    <div className="bg-white dark:bg-[#0f172a] py-[32px] sm:py-[40px] md:py-[48px] lg:py-[56px] xl:py-[64px] transition-colors duration-300" data-node-id="35:814">
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-[20px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-[12px] sm:px-[16px] md:px-[32px] lg:px-[60px] xl:px-[100px] 2xl:px-[120px]">
+        {features.map((feature, index) => (
+          <div key={index} className="flex flex-col gap-[10px] sm:gap-[12px] md:gap-[14px] lg:gap-[16px] xl:gap-[18px] items-center p-[12px] sm:p-[14px] md:p-[16px] lg:p-[18px] xl:p-[20px] relative shrink-0 w-full sm:w-auto sm:flex-1 max-w-[280px] md:max-w-none">
+            <div className="overflow-clip relative shrink-0 size-[36px] sm:size-[40px] md:size-[44px] lg:size-[48px] xl:size-[52px] 2xl:size-[56px]">
+              <img alt={feature.title} className="block max-w-none size-full object-contain" src={feature.icon} />
+            </div>
+            <div className="flex flex-col gap-[6px] sm:gap-[8px] md:gap-[10px] lg:gap-[12px] items-center justify-center leading-[normal] not-italic relative shrink-0 text-center w-full">
+              <p className="font-['Poppins'] font-semibold relative shrink-0 text-[#0f0f0f] dark:text-white text-[15px] sm:text-[16px] md:text-[17px] lg:text-[18px] xl:text-[19px] 2xl:text-[20px] whitespace-nowrap transition-colors duration-300" dir="auto">
+                {feature.title}
+              </p>
+              <p className="font-['Poppins'] font-normal relative shrink-0 text-[#666] dark:text-[#9ca3af] text-[13px] sm:text-[14px] md:text-[15px] lg:text-[16px] xl:text-[17px] leading-[1.5] break-words w-full max-w-[200px] sm:max-w-none transition-colors duration-300" dir="auto">
+                {feature.description}
+              </p>
+            </div>
           </div>
-          <div className="flex flex-col gap-[8px] sm:gap-[10px] md:gap-[12px] lg:gap-[14px] xl:gap-[16px] items-center justify-center leading-[normal] not-italic relative shrink-0 text-center w-full">
-            <p className="font-['Poppins'] font-medium relative shrink-0 text-[#0f0f0f] text-[16px] sm:text-[18px] md:text-[20px] lg:text-[22px] xl:text-[24px] 2xl:text-[26px] whitespace-nowrap" dir="auto">
-              {feature.title}
-            </p>
-            <p className="font-['Poppins'] font-normal relative shrink-0 text-[#666] text-[14px] sm:text-[15px] md:text-[16px] lg:text-[17px] xl:text-[18px] 2xl:text-[20px] leading-[1.4] break-words w-full" dir="auto">
-              {feature.description}
-            </p>
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

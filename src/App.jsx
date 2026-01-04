@@ -1,5 +1,5 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import './App.css';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -33,10 +33,26 @@ import MyProfile from './pages/MyProfile';
 import MyOrders from './pages/MyOrders';
 import Compare from './pages/Compare';
 import Notifications from './pages/Notifications';
+import ErrorPage from './pages/ErrorPage';
+import { PageLoader } from './components/Loader';
 
 function AppLayout() {
+  const location = useLocation();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Show loader on route change
+    setLoading(true);
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 300); // Small delay for smooth transition
+
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
+
   return (
     <>
+      {loading && <PageLoader />}
       <Header />
       <Outlet />
       <Footer />
@@ -76,6 +92,8 @@ function App() {
             <Route path="/my-orders" element={<MyOrders />} />
             <Route path="/compare" element={<Compare />} />
             <Route path="/notifications" element={<Notifications />} />
+            {/* Error Page - Catch all unmatched routes */}
+            <Route path="*" element={<ErrorPage />} />
           </Route>
           <Route path="/sign-up" element={<SignUp />} />
           <Route path="/sign-in" element={<SignIn />} />
