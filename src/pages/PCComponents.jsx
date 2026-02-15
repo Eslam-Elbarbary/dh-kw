@@ -4,22 +4,34 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-// Icon Assets (from existing components)
-const imgArrowDown = "https://www.figma.com/api/mcp/asset/11c6c4cc-49be-4c6e-beee-5f1767680185";
-const imgRegularCaretDown = "https://www.figma.com/api/mcp/asset/8b4bcb1e-3b4f-4071-91ff-2859363e4007";
-const imgFilterHorizontalElements = "https://www.figma.com/api/mcp/asset/510df043-ce21-421e-81a0-6d7261d2351b";
-const imgArrowRight = "https://www.figma.com/api/mcp/asset/c993c6e9-76bd-4fc1-8f76-8c9f70ebc1a0";
+// Import assets
+import arrowDownIcon from '../assets/ArrowRight.svg';
+import arrowRightIcon from '../assets/ArrowRight.svg';
+import filterHorizontalIcon from '../assets/filter-horizontal.svg';
+import productImage1 from '../assets/04eed14fc3631917a17e9d14491e48383aa02358.png';
+import productImage2 from '../assets/0e25c65909ff9d8fdace00ffb430dbc3cbf9784b.png';
+import productImage3 from '../assets/231250f17fa15df76d3e6b21fd9b1518b663f444.png';
+import productImage4 from '../assets/26a18289fe1664427df3d41a562c2d7f8e974028.png';
+import productImage5 from '../assets/40d3df5cca44080e3e772bfb623497a0b6ea9dd3.png';
+import motherboardImage from '../assets/231250f17fa15df76d3e6b21fd9b1518b663f444.png';
+
+// Icon Assets
+const imgArrowDown = arrowDownIcon;
+const imgRegularCaretDown = arrowDownIcon;
+const imgFilterHorizontalElements = filterHorizontalIcon;
+const imgArrowRight = arrowRightIcon;
 
 // PC Component Assets
-const imgMotherboard = "https://www.figma.com/api/mcp/asset/ce0bdc1e-3f9b-471b-aad7-a36b113a7c3a"; // From Home.tsx
-const imgPlusIcon = "https://www.figma.com/api/mcp/asset/plus-icon"; // TODO: Get actual Figma asset ID
+const imgMotherboard = motherboardImage;
+// Plus icon - using inline SVG
+const imgPlusIcon = "data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 4v12M4 10h12' stroke='%23333' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E";
 
-// Product Image Assets (reusing from SearchResults)
-const imgProduct1 = "https://www.figma.com/api/mcp/asset/31331607-e3da-4091-a87f-d673768d08a0";
-const imgProduct2 = "https://www.figma.com/api/mcp/asset/397ef9d6-e230-46dc-a591-71cc82d81a35";
-const imgProduct3 = "https://www.figma.com/api/mcp/asset/57cdecfc-ac27-4553-af8c-666330f3a295";
-const imgProduct4 = "https://www.figma.com/api/mcp/asset/6e338bde-c416-445f-9838-e842db794196";
-const imgProduct5 = "https://www.figma.com/api/mcp/asset/2285c162-bbe8-4bdc-9913-5a9447d89870";
+// Product Image Assets
+const imgProduct1 = productImage1;
+const imgProduct2 = productImage2;
+const imgProduct3 = productImage3;
+const imgProduct4 = productImage4;
+const imgProduct5 = productImage5;
 
 export default function PCComponents() {
   const navigate = useNavigate();

@@ -3,17 +3,25 @@
 
 import { Link } from 'react-router-dom';
 
-const imgUntitled111 = "https://www.figma.com/api/mcp/asset/f31432a1-167d-4d8b-9ee7-b251ce43e5b4";
-const imgVector = "https://www.figma.com/api/mcp/asset/d295f00c-f727-4394-ada2-0cca08982b3d";
-const imgGroup = "https://www.figma.com/api/mcp/asset/644d434a-e4ac-4929-a260-3720902310b7";
-const imgGroup1 = "https://www.figma.com/api/mcp/asset/7b1806c4-6849-4313-83e9-00ebbf2c4bcd";
-const imgVector1 = "https://www.figma.com/api/mcp/asset/6f6637f9-4c98-4165-8fa9-c262a842a568";
-const imgEmailSvg = "https://www.figma.com/api/mcp/asset/19365f23-25c4-449c-96f3-68de3e9bcd48";
-const imgLine4 = "https://www.figma.com/api/mcp/asset/3c8cc8da-c650-43d1-ba88-6682dd8d3f49";
-const img15 = "https://www.figma.com/api/mcp/asset/3e663716-787f-4a2f-a1b9-efdae9696a6f";
-const img16 = "https://www.figma.com/api/mcp/asset/718dfbb2-d057-49a5-b7a5-30215a7a9baa";
-const img17 = "https://www.figma.com/api/mcp/asset/8ac69c39-805b-4605-a49d-acc967886987";
+// Import assets
+import logoImage from '../assets/websiteLogo.png';
+import linkedinIcon from '../assets/Icon-Linkedin.svg';
+import instagramIcon from '../assets/icon-instagram.svg';
+import twitterIcon from '../assets/Icon-Twitter.svg';
+import facebookIcon from '../assets/Icon-Facebook.svg';
+import layer1Image from '../assets/Layer 1.svg';
 
+// Logo - 3D gold "dh" logo (same as header)
+const imgUntitled111 = logoImage;
+// Social media icons
+const imgVector = linkedinIcon;
+const imgGroup = instagramIcon;
+const imgGroup1 = twitterIcon;
+const imgVector1 = facebookIcon;
+// Email icon - using inline SVG
+const imgEmailSvg = "data:image/svg+xml,%3Csvg width='12' height='9' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 1H1a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 5L1 2h10L6 5z' fill='%23f2f2f2'/%3E%3C/svg%3E";
+// Divider line - using inline SVG
+const imgLine4 = "data:image/svg+xml,%3Csvg width='100%25' height='1' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='0' x2='100%25' y2='0' stroke='%23ffffff' stroke-opacity='0.2'/%3E%3C/svg%3E";
 function IconLinkedin({ className }) {
   return (
     <div className={className} data-name="Icon-Linkedin" data-node-id="1:533">
@@ -155,18 +163,8 @@ export default function Footer() {
           <p className="font-['Alexandria'] font-normal leading-[normal] relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[14px] md:text-[16px] lg:text-[17px] xl:text-[18px] text-center" data-node-id="I35:5063;1:246">
             Copyright © 2025
           </p>
-          <div className="grid-cols-[max-content] grid-rows-[max-content] inline-grid justify-items-start leading-[0] relative shrink-0 h-[16px] sm:h-[20px] md:h-[22px]" data-name="Layer 1" data-node-id="I35:5063;1:279">
-            <div className="col-[1] grid-cols-[max-content] grid-rows-[max-content] inline-grid justify-items-start ml-0 mt-0 relative row-[1] h-full" data-name="Group" data-node-id="I35:5063;1:280">
-              <div className="col-[1] h-[2.595px] ml-[10.58%] mt-[93.51%] relative row-[1] w-[60.81px]" data-name="Group" data-node-id="I35:5063;1:281">
-                <img alt="" className="block max-w-none size-full" src={img15} />
-              </div>
-              <div className="col-[1] h-[19.922px] ml-[22.21%] mt-0 relative row-[1] w-[40.887px]" data-name="Group" data-node-id="I35:5063;1:296">
-                <img alt="" className="block max-w-none size-full" src={img16} />
-              </div>
-              <div className="col-[1] h-[9.827px] ml-0 mt-[63.18%] relative row-[1] w-[73.627px]" data-name="Group" data-node-id="I35:5063;1:299">
-                <img alt="" className="block max-w-none size-full" src={img17} />
-              </div>
-            </div>
+          <div className="relative shrink-0 h-[16px] sm:h-[20px] md:h-[22px] w-auto" data-name="Layer 1" data-node-id="I35:5063;1:279">
+            <img alt="Payment methods" className="block h-full w-auto object-contain" src={layer1Image} />
           </div>
           <p className="font-['Alexandria'] font-normal leading-[normal] relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[14px] md:text-[16px] lg:text-[17px] xl:text-[18px] text-center" data-node-id="I35:5063;1:278">
             | All Rights Reserved

@@ -3,24 +3,37 @@
 
 import { Link } from 'react-router-dom';
 
+// Import assets
+import arrowDownIcon from '../assets/ArrowRight.svg';
+import deliveryIcon from '../assets/delivery-return-01.svg';
+import truckIcon from '../assets/Truck.svg';
+import packageIcon from '../assets/Package.svg';
+import handshakeIcon from '../assets/Handshake.svg';
+import checkCircleIcon from '../assets/CheckCircle.svg';
+import userIcon from '../assets/User.svg';
+import mapPinIcon from '../assets/MapPinLine.svg';
+import notebookIcon from '../assets/Notebook.svg';
+import productImage1 from '../assets/04eed14fc3631917a17e9d14491e48383aa02358.png';
+import productImage2 from '../assets/0e25c65909ff9d8fdace00ffb430dbc3cbf9784b.png';
+
 // Icon Assets
-const imgArrowDown = "https://www.figma.com/api/mcp/asset/11c6c4cc-49be-4c6e-beee-5f1767680185";
+const imgArrowDown = arrowDownIcon;
 
 // Order Progress Icons
-const imgDocumentIcon = "https://www.figma.com/api/mcp/asset/document-icon"; // TODO: Get actual Figma asset ID
-const imgBoxIcon = "https://www.figma.com/api/mcp/asset/box-icon"; // TODO: Get actual Figma asset ID
-const imgTruckIcon = "https://www.figma.com/api/mcp/asset/44bb4a15-1b33-43cb-b03c-a87b32237591"; // From Header img1
-const imgHandshakeIcon = "https://www.figma.com/api/mcp/asset/handshake-icon"; // TODO: Get actual Figma asset ID
+const imgDocumentIcon = notebookIcon;
+const imgBoxIcon = packageIcon;
+const imgTruckIcon = truckIcon;
+const imgHandshakeIcon = handshakeIcon;
 
 // Activity Icons
-const imgCheckmarkGreen = "https://www.figma.com/api/mcp/asset/checkmark-green"; // TODO: Get actual Figma asset ID
-const imgPersonIcon = "https://www.figma.com/api/mcp/asset/person-icon"; // TODO: Get actual Figma asset ID
-const imgLocationPin = "https://www.figma.com/api/mcp/asset/location-pin"; // TODO: Get actual Figma asset ID
-const imgCheckmarkCircle = "https://www.figma.com/api/mcp/asset/checkmark-circle"; // TODO: Get actual Figma asset ID
+const imgCheckmarkGreen = checkCircleIcon;
+const imgPersonIcon = userIcon;
+const imgLocationPin = mapPinIcon;
+const imgCheckmarkCircle = checkCircleIcon;
 
 // Product Images
-const imgProduct1 = "https://www.figma.com/api/mcp/asset/31331607-e3da-4091-a87f-d673768d08a0";
-const imgProduct2 = "https://www.figma.com/api/mcp/asset/397ef9d6-e230-46dc-a591-71cc82d81a35";
+const imgProduct1 = productImage1;
+const imgProduct2 = productImage2;
 
 export default function TrackOrder() {
   // Sample order data

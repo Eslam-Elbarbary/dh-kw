@@ -1,7 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 
-const imgLayer1 = "https://www.figma.com/api/mcp/asset/797940c1-404d-484b-917a-4de758fc18c1";
-const imgGroup = "https://www.figma.com/api/mcp/asset/ce098739-ba83-42a4-9756-79645750c548";
+// Import assets
+import flagIcon from '../assets/Layer 1.svg';
+
+const imgLayer1 = flagIcon;
+// Eye icon for password visibility - using inline SVG
+const imgGroup = "data:image/svg+xml,%3Csvg width='20' height='13' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 0C5.5 0 1.73 3.11 0 7.5c1.73 4.39 5.5 7.5 10 7.5s8.27-3.11 10-7.5C18.27 3.11 14.5 0 10 0zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z' fill='%23999'/%3E%3C/svg%3E";
 
 export default function SignIn() {
   const navigate = useNavigate();

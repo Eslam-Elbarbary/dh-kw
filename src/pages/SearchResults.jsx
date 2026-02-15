@@ -4,31 +4,52 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
-// Product Image Assets (from Figma)
-const imgProduct1 = "https://www.figma.com/api/mcp/asset/31331607-e3da-4091-a87f-d673768d08a0";
-const imgProduct2 = "https://www.figma.com/api/mcp/asset/397ef9d6-e230-46dc-a591-71cc82d81a35";
-const imgProduct3 = "https://www.figma.com/api/mcp/asset/57cdecfc-ac27-4553-af8c-666330f3a295";
-const imgProduct4 = "https://www.figma.com/api/mcp/asset/6e338bde-c416-445f-9838-e842db794196";
-const imgProduct5 = "https://www.figma.com/api/mcp/asset/2285c162-bbe8-4bdc-9913-5a9447d89870";
-const imgProductImage = "https://www.figma.com/api/mcp/asset/d7b25b9a-4cb5-4616-a033-525d62ea4734"; // For the 4K TV search results
+// Import assets
+import productImage1 from '../assets/2c2703028e858e93057b03391653381259c5700c.png';
+import productImage2 from '../assets/4290b5299d7820aab27a24eef721fc6a3de6f994.png';
+import productImage3 from '../assets/45ffebea53178df09da5b55aa5ec9c64f9c97219.png';
+import productImage4 from '../assets/495f2db0dba66b830ccfbc2b70ff68519b13ce45.png';
+import productImage5 from '../assets/51514609622e9c097a0531f13c0db834797cda9c.png';
+import productImage6 from '../assets/5d1b5ca4f6671da94d620d7aec269e2d17cf66e0.png';
+import productImage7 from '../assets/709f890284df9f0583ba3f0cbed489bb013b8efb.png';
+import productImage8 from '../assets/76236df7a5ad3774e8e14a241d83f4af473d2f52.png';
+import productImage9 from '../assets/89ed235ee47f8d384c57df36ae75c564312166e3.png';
+import productImage10 from '../assets/95835fab043de209b7a372fca8d7f780a4915f2b.png';
+import arrowDownIcon from '../assets/ArrowRight.svg';
+import heartIcon from '../assets/wishlist.svg';
+import shoppingCartIcon from '../assets/shopping-basket-01.svg';
+import filterHorizontalIcon from '../assets/filter-horizontal.svg';
+import checkIcon from '../assets/CheckCircle.svg';
+
+// Product Image Assets
+const imgProduct1 = productImage1;
+const imgProduct2 = productImage2;
+const imgProduct3 = productImage3;
+const imgProduct4 = productImage4;
+const imgProduct5 = productImage5;
+const imgProductImage = productImage1; // For the 4K TV search results
 
 // Icon Assets
-const imgArrowDown = "https://www.figma.com/api/mcp/asset/11c6c4cc-49be-4c6e-beee-5f1767680185";
-const imgRegularCaretDown = "https://www.figma.com/api/mcp/asset/8b4bcb1e-3b4f-4071-91ff-2859363e4007";
-const imgRegularCaretDownVector = "https://www.figma.com/api/mcp/asset/b502bf77-f3c4-46dd-8e2e-dce0a330d6f8";
-const imgHeart = "https://www.figma.com/api/mcp/asset/60067eaf-84de-435a-a60c-844b13c64552";
-const imgShoppingCart = "https://www.figma.com/api/mcp/asset/281e5eef-36c1-49be-8714-dd8f301bf649";
-const imgHeart3 = "https://www.figma.com/api/mcp/asset/64f5390e-b1f9-4bf7-9e61-c58eef611246";
-const imgDropdownCaret = "https://www.figma.com/api/mcp/asset/9122ce45-3cf6-4c44-88ae-e7b8df7d1f51";
+const imgArrowDown = arrowDownIcon;
+const imgRegularCaretDown = arrowDownIcon;
+const imgRegularCaretDownVector = arrowDownIcon;
+const imgHeart = heartIcon;
+const imgShoppingCart = shoppingCartIcon;
+const imgHeart3 = heartIcon;
+const imgDropdownCaret = arrowDownIcon;
 
 // Filter Assets
-const imgFromElements = "https://www.figma.com/api/mcp/asset/d1f6be64-ccf2-4015-bc21-eb1bcb103c0c";
-const imgLine13 = "https://www.figma.com/api/mcp/asset/19db4521-24eb-4863-a634-2bc7b613c4a8";
-const imgPriceRange = "https://www.figma.com/api/mcp/asset/b4155f58-726d-4ba3-9539-21eb9e5d53c5";
-const imgDuotoneCheck = "https://www.figma.com/api/mcp/asset/b38a6c8f-cd7a-4762-b1ca-6b38c922202e";
-const imgCheckVector = "https://www.figma.com/api/mcp/asset/a210e631-7f0f-4511-bc1d-184cccd7a1fc";
-const imgFilterHorizontal = "https://www.figma.com/api/mcp/asset/510df043-ce21-421e-81a0-6d7261d2351b";
-const imgFilterHorizontalElements = "https://www.figma.com/api/mcp/asset/510df043-ce21-421e-81a0-6d7261d2351b";
+// "From" elements - using inline SVG for price range inputs
+const imgFromElements = "data:image/svg+xml,%3Csvg width='12' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='0' y='10' font-size='12' fill='%23666'%3EFrom%3C/text%3E%3C/svg%3E";
+// Divider line
+const imgLine13 = "data:image/svg+xml,%3Csvg width='100%25' height='1' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='0' x2='100%25' y2='0' stroke='%23e4e7e9'/%3E%3C/svg%3E";
+// Price range icon
+const imgPriceRange = "data:image/svg+xml,%3Csvg width='16' height='16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 0L10 6H16L11 10L13 16L8 12L3 16L5 10L0 6H6L8 0Z' fill='%23666'/%3E%3C/svg%3E";
+// Check icons
+const imgDuotoneCheck = checkIcon;
+const imgCheckVector = checkIcon;
+const imgFilterHorizontal = filterHorizontalIcon;
+const imgFilterHorizontalElements = filterHorizontalIcon;
 
 export default function SearchResults() {
   const [showFilter, setShowFilter] = useState(true); // Visible by default on desktop
@@ -61,8 +82,19 @@ export default function SearchResults() {
     );
   };
 
-  // Product images array matching Figma - All use the same TV image from search results design
-  const productImage = imgProductImage; // 4K UHD LED Smart TV image
+  // Product images array - using different images for variety
+  const productImages = [
+    productImage1, productImage2, productImage3, productImage4, productImage5,
+    productImage6, productImage7, productImage8, productImage9, productImage10,
+    productImage1, productImage2, productImage3, productImage4, productImage5,
+    productImage6, productImage7, productImage8, productImage9, productImage10,
+    productImage1, productImage2, productImage3, productImage4, productImage5,
+    productImage6, productImage7, productImage8, productImage9, productImage10,
+    productImage1, productImage2, productImage3, productImage4, productImage5,
+    productImage6, productImage7, productImage8, productImage9, productImage10,
+    productImage1, productImage2, productImage3, productImage4, productImage5,
+    productImage6, productImage7, productImage8, productImage9, productImage10
+  ];
 
   // Sample products data with variety for filtering - matching Figma exactly (node 35:3733)
   const allProducts = Array.from({ length: 50 }, (_, i) => {
@@ -85,7 +117,7 @@ export default function SearchResults() {
       originalPrice: `$${originalPrice.toLocaleString()}`,
       salePrice: `$${salePrice}`,
       priceValue: salePrice, // For numeric comparison
-      image: productImage,
+      image: productImages[i],
       badges: i % 4 === 0 ? ['32% OFF', 'Only 10 Left'] : i % 4 === 1 ? ['32% OFF', 'Only 10 Left'] : [],
       popularity: Math.floor(Math.random() * 100),
       rating: 3 + Math.random() * 2

@@ -2,28 +2,166 @@
 // Based on Figma design - Checkout Page
 
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
+import L from 'leaflet';
+
+// Fix default marker icon in Leaflet with Vite
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Import assets
+import arrowDownIcon from '../assets/ArrowRight.svg';
+import arrowRightIcon from '../assets/ArrowRight.svg';
+import currencyDollarIcon from '../assets/CurrencyDollar.svg';
+import creditCardIcon from '../assets/CreditCard.svg';
+import amazonIcon from '../assets/amazon-icon-1 1.svg';
+import paypalIcon from '../assets/paypal.png';
+import venmoIcon from '../assets/venmo.svg';
+import productImage1 from '../assets/04eed14fc3631917a17e9d14491e48383aa02358.png';
+import productImage2 from '../assets/0e25c65909ff9d8fdace00ffb430dbc3cbf9784b.png';
 
 // Arrow icon for breadcrumbs
-const imgArrowDown = "https://www.figma.com/api/mcp/asset/213740b6-f6ce-401b-b216-6f0baca55345";
+const imgArrowDown = arrowDownIcon;
 
-// Payment method icons - using placeholder URLs, replace with actual Figma assets
-const imgCashOnDelivery = "https://www.figma.com/api/mcp/asset/bf5d3cb2-5229-4f9a-b1c9-668837cf4746"; // Dollar icon
-const imgVenmo = "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=100&h=100&fit=crop"; // Placeholder - replace with Venmo logo
-const imgPayPal = "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=100&h=100&fit=crop"; // Placeholder - replace with PayPal logo
-const imgAmazonPay = "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=100&h=100&fit=crop"; // Placeholder - replace with Amazon logo
-const imgCreditCard = "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=100&h=100&fit=crop"; // Placeholder - replace with card icon
+// Payment method icons
+const imgCashOnDelivery = currencyDollarIcon;
+const imgVenmo = venmoIcon;
+const imgPayPal = paypalIcon;
+const imgAmazonPay = amazonIcon;
+const imgCreditCard = creditCardIcon;
 
 // Arrow right icon for button
-const imgArrowRight = "https://www.figma.com/api/mcp/asset/6151f0b2-acef-45a0-95df-6f7ce61ca8a5";
+const imgArrowRight = arrowRightIcon;
 
 // Product images for order summary
-const imgCamera = "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=100&h=100&fit=crop";
-const imgHeadphones = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop";
+const imgCamera = productImage1;
+const imgHeadphones = productImage2;
+
+// Default map center (Kuwait City)
+const DEFAULT_CENTER = [29.3759, 47.9774];
+const DEFAULT_ZOOM = 12;
+
+// Map Nominatim country name to form select value
+function countryToValue(name) {
+  if (!name) return '';
+  const n = name.toLowerCase();
+  if (n.includes('kuwait')) return 'kuwait';
+  if (n.includes('saudi')) return 'saudi';
+  if (n.includes('uae') || n.includes('emirates') || n.includes('united arab')) return 'uae';
+  return name;
+}
+
+// Reverse geocode using Nominatim (OpenStreetMap); returns { addressLine, country, state, city, zipCode }
+async function reverseGeocode(lat, lng) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+      { headers: { 'Accept-Language': 'en' } }
+    );
+    const data = await res.json();
+    const addr = data.address || {};
+    const parts = [
+      addr.road,
+      addr.house_number,
+      addr.suburb || addr.neighbourhood,
+      addr.city_district || addr.city || addr.town || addr.village,
+      addr.state,
+      addr.country
+    ].filter(Boolean);
+    const addressLine = parts.length ? parts.join(', ') : `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    const countryValue = countryToValue(addr.country || '');
+    const state = addr.state || addr.region || '';
+    const city = addr.city || addr.town || addr.village || addr.county || addr.state || '';
+    const zipCode = addr.postcode || '';
+    return { addressLine, country: countryValue, state, city, zipCode };
+  } catch {
+    const addressLine = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    return { addressLine, country: '', state: '', city: '', zipCode: '' };
+  }
+}
+
+// Map click handler component
+function MapClickHandler({ onLocationSelect }) {
+  useMapEvents({
+    click(e) {
+      onLocationSelect(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+}
+
+// Center map when position changes
+function ChangeView({ center, zoom }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) map.setView(center, zoom ?? 16);
+  }, [center, zoom, map]);
+  return null;
+}
 
 export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [shipToDifferentAddress, setShipToDifferentAddress] = useState(false);
+  const [address, setAddress] = useState('');
+  const [mapPosition, setMapPosition] = useState(null);
+  const [locating, setLocating] = useState(false);
+  const [mapError, setMapError] = useState('');
+  const [country, setCountry] = useState('');
+  const [regionState, setRegionState] = useState('');
+  const [city, setCity] = useState('');
+  const [zipCode, setZipCode] = useState('');
+
+  const handleLocationSelect = useCallback(async (lat, lng) => {
+    setMapPosition([lat, lng]);
+    setMapError('');
+    try {
+      const addr = await reverseGeocode(lat, lng);
+      setAddress(addr.addressLine);
+      setCountry(addr.country);
+      setRegionState(addr.state);
+      setCity(addr.city);
+      setZipCode(addr.zipCode);
+    } catch {
+      setAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    }
+  }, []);
+
+  const handleLocateMe = useCallback(() => {
+    setMapError('');
+    setLocating(true);
+    if (!navigator.geolocation) {
+      setMapError('Geolocation is not supported by your browser.');
+      setLocating(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setMapPosition([latitude, longitude]);
+        try {
+          const addr = await reverseGeocode(latitude, longitude);
+          setAddress(addr.addressLine);
+          setCountry(addr.country);
+          setRegionState(addr.state);
+          setCity(addr.city);
+          setZipCode(addr.zipCode);
+        } catch {
+          setAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+        }
+        setLocating(false);
+      },
+      () => {
+        setMapError('Unable to get your location. Please allow location access or pick a point on the map.');
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }, []);
 
   return (
     <div className="bg-white relative w-full min-h-screen" data-name="Checkout" data-node-id="35:5064">
@@ -87,43 +225,111 @@ export default function Checkout() {
                 />
               </div>
 
-              {/* Address */}
-              <div className="flex flex-col gap-[8px] w-full">
+              {/* Address with map */}
+              <div className="flex flex-col gap-[12px] w-full">
                 <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Address</label>
                 <input 
                   type="text" 
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
                   className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                  placeholder="Address"
+                  placeholder="Enter address or pick on map below"
                 />
+                <div className="flex flex-col gap-[10px] w-full">
+                  <button
+                    type="button"
+                    onClick={handleLocateMe}
+                    disabled={locating}
+                    className="inline-flex items-center justify-center gap-[8px] px-[14px] py-[10px] rounded-[4px] bg-[#0e1c47] text-white font-['Poppins'] font-medium text-[13px] sm:text-[14px] hover:bg-[#1a2f5c] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {locating ? (
+                      <>
+                        <span className="inline-block size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Locating…
+                      </>
+                    ) : (
+                      <>
+                        <svg className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Locate my position
+                      </>
+                    )}
+                  </button>
+                  {mapError && (
+                    <p className="font-['Poppins'] text-[13px] text-amber-600">{mapError}</p>
+                  )}
+                  <div className="rounded-[8px] overflow-hidden border border-[#e4e7e9] bg-[#f9fafb] h-[240px] sm:h-[280px] w-full">
+                    <MapContainer
+                      center={mapPosition || DEFAULT_CENTER}
+                      zoom={mapPosition ? 16 : DEFAULT_ZOOM}
+                      className="h-full w-full z-0"
+                      scrollWheelZoom={true}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      <MapClickHandler onLocationSelect={handleLocationSelect} />
+                      {mapPosition && <ChangeView center={mapPosition} zoom={16} />}
+                      {mapPosition && (
+                        <Marker position={mapPosition}>
+                          <Popup>Delivery address</Popup>
+                        </Marker>
+                      )}
+                    </MapContainer>
+                  </div>
+                  <p className="font-['Poppins'] text-[12px] text-[#666]">
+                    Click on the map to set your delivery address, or use &quot;Locate my position&quot; to use your current location.
+                  </p>
+                </div>
               </div>
 
-              {/* Location Details */}
+              {/* Location Details – filled from map when you use Locate my position or click on the map */}
               <div className="flex flex-col sm:flex-row gap-[16px] sm:gap-[20px] w-full">
                 <div className="flex flex-col gap-[8px] flex-1 w-full">
                   <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Country</label>
-                  <select className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full bg-white">
+                  <select
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full bg-white"
+                  >
                     <option value="">Select...</option>
                     <option value="kuwait">Kuwait</option>
                     <option value="saudi">Saudi Arabia</option>
                     <option value="uae">UAE</option>
+                    {country && !['kuwait', 'saudi', 'uae'].includes(country) && (
+                      <option value={country}>{country}</option>
+                    )}
                   </select>
                 </div>
                 <div className="flex flex-col gap-[8px] flex-1 w-full">
                   <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Region/State</label>
-                  <select className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full bg-white">
-                    <option value="">Select...</option>
-                  </select>
+                  <input
+                    type="text"
+                    value={regionState}
+                    onChange={(e) => setRegionState(e.target.value)}
+                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full bg-white"
+                    placeholder="Region/State"
+                  />
                 </div>
                 <div className="flex flex-col gap-[8px] flex-1 w-full">
                   <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">City</label>
-                  <select className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full bg-white">
-                    <option value="">Select...</option>
-                  </select>
+                  <input
+                    type="text"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full bg-white"
+                    placeholder="City"
+                  />
                 </div>
                 <div className="flex flex-col gap-[8px] flex-1 w-full">
                   <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Zip Code</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
+                    value={zipCode}
+                    onChange={(e) => setZipCode(e.target.value)}
                     className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
                     placeholder="Zip Code"
                   />
@@ -190,14 +396,15 @@ export default function Checkout() {
                           : 'hover:border-[#0e1c47]'
                       }`}
                     >
-                      <div className="relative size-[40px] sm:size-[48px] flex items-center justify-center shrink-0">
+                      <div className="relative size-[40px] sm:size-[48px] min-w-[40px] min-h-[40px] flex items-center justify-center shrink-0">
                         {method.id === 'cash' ? (
                           <div className="text-[24px] sm:text-[28px]">$</div>
                         ) : (
                           <img 
                             src={method.icon} 
                             alt={method.label} 
-                            className="w-full h-full object-contain"
+                            className="max-w-full max-h-full w-auto h-auto object-contain"
+                            loading="eager"
                             onError={(e) => {
                               e.target.src = 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=100&h=100&fit=crop';
                             }}

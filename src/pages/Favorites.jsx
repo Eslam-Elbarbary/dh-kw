@@ -4,20 +4,30 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-// Icon Assets (from existing components)
-const imgArrowDown = "https://www.figma.com/api/mcp/asset/11c6c4cc-49be-4c6e-beee-5f1767680185";
-const imgHeart = "https://www.figma.com/api/mcp/asset/60067eaf-84de-435a-a60c-844b13c64552";
-const imgHeart3 = "https://www.figma.com/api/mcp/asset/64f5390e-b1f9-4bf7-9e61-c58eef611246";
-const imgShoppingCart = "https://www.figma.com/api/mcp/asset/281e5eef-36c1-49be-8714-dd8f301bf649";
-const imgRegularCaretDown = "https://www.figma.com/api/mcp/asset/8b4bcb1e-3b4f-4071-91ff-2859363e4007";
+// Import assets
+import arrowDownIcon from '../assets/ArrowRight.svg';
+import heartIcon from '../assets/wishlist.svg';
+import shoppingCartIcon from '../assets/shopping-basket-01.svg';
+import productImage1 from '../assets/04eed14fc3631917a17e9d14491e48383aa02358.png';
+import productImage2 from '../assets/0e25c65909ff9d8fdace00ffb430dbc3cbf9784b.png';
+import productImage3 from '../assets/231250f17fa15df76d3e6b21fd9b1518b663f444.png';
+import productImage4 from '../assets/26a18289fe1664427df3d41a562c2d7f8e974028.png';
+import productImage5 from '../assets/40d3df5cca44080e3e772bfb623497a0b6ea9dd3.png';
 
-// Product Image Assets (reusing from SearchResults)
-const imgProduct1 = "https://www.figma.com/api/mcp/asset/31331607-e3da-4091-a87f-d673768d08a0";
-const imgProduct2 = "https://www.figma.com/api/mcp/asset/397ef9d6-e230-46dc-a591-71cc82d81a35";
-const imgProduct3 = "https://www.figma.com/api/mcp/asset/57cdecfc-ac27-4553-af8c-666330f3a295";
-const imgProduct4 = "https://www.figma.com/api/mcp/asset/6e338bde-c416-445f-9838-e842db794196";
-const imgProduct5 = "https://www.figma.com/api/mcp/asset/2285c162-bbe8-4bdc-9913-5a9447d89870";
-const imgProductImage = "https://www.figma.com/api/mcp/asset/d7b25b9a-4cb5-4616-a033-525d62ea4734";
+// Icon Assets
+const imgArrowDown = arrowDownIcon;
+const imgHeart = heartIcon;
+const imgHeart3 = heartIcon;
+const imgShoppingCart = shoppingCartIcon;
+const imgRegularCaretDown = arrowDownIcon;
+
+// Product Image Assets
+const imgProduct1 = productImage1;
+const imgProduct2 = productImage2;
+const imgProduct3 = productImage3;
+const imgProduct4 = productImage4;
+const imgProduct5 = productImage5;
+const imgProductImage = productImage1;
 
 export default function Favorites() {
   // Sample favorite products data

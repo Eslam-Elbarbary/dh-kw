@@ -3,50 +3,63 @@
 
 import { Link } from 'react-router-dom';
 
+// Import assets
+import arrowDownIcon from '../assets/ArrowRight.svg';
+import creditCardIcon from '../assets/CreditCard.svg';
+import heroBackgroundImage from '../assets/Frame 1984079876.png';
+import productImage1 from '../assets/2c2703028e858e93057b03391653381259c5700c.png';
+import productImage2 from '../assets/4290b5299d7820aab27a24eef721fc6a3de6f994.png';
+import productImage3 from '../assets/45ffebea53178df09da5b55aa5ec9c64f9c97219.png';
+import productImage4 from '../assets/495f2db0dba66b830ccfbc2b70ff68519b13ce45.png';
+import productImage5 from '../assets/51514609622e9c097a0531f13c0db834797cda9c.png';
+import productImage6 from '../assets/5d1b5ca4f6671da94d620d7aec269e2d17cf66e0.png';
+import productImage7 from '../assets/709f890284df9f0583ba3f0cbed489bb013b8efb.png';
+import productImage8 from '../assets/76236df7a5ad3774e8e14a241d83f4af473d2f52.png';
+import productImage9 from '../assets/89ed235ee47f8d384c57df36ae75c564312166e3.png';
+
 // Icon Assets
-const imgArrowDown = "https://www.figma.com/api/mcp/asset/11c6c4cc-49be-4c6e-beee-5f1767680185";
+const imgArrowDown = arrowDownIcon;
 
-// Hero Banner Assets
-const imgHeroBackground = "https://www.figma.com/api/mcp/asset/0e1f27bc-f780-47c8-a09e-32dbd0fb7fbb";
-const imgGamingController1 = "https://www.figma.com/api/mcp/asset/c51d743d-9a51-46f7-9cc8-cbb0ae33c211";
-const imgGamingController2 = "https://www.figma.com/api/mcp/asset/f6e8ad89-d785-4d4a-8073-1d46bb090f8a";
-const imgElectronicsIcon = "https://www.figma.com/api/mcp/asset/365eadac-66d8-438d-9365-7b2dcb2f8153";
+// Hero Banner Assets - using the provided hero background image
+const imgHeroBackground = heroBackgroundImage;
+const imgGamingController1 = productImage1;
+const imgGamingController2 = productImage2;
+const imgElectronicsIcon = productImage3;
 
-// Category Icons (from Figma assets)
-const imgVoucherIcon = "https://www.figma.com/api/mcp/asset/8299a1b9-6556-403f-b2d9-f12a3714794e";
-const imgConsoleController = "https://www.figma.com/api/mcp/asset/f6e8ad89-d785-4d4a-8073-1d46bb090f8a";
-const imgCreditCardIcon = "https://www.figma.com/api/mcp/asset/6b827610-4ce8-4870-9b99-b0828c3f20da";
-const imgGiftCard = "https://www.figma.com/api/mcp/asset/48ec3927-83ae-4763-adb6-71e570f01c8b";
-const imgTelecom = "https://www.figma.com/api/mcp/asset/365eadac-66d8-438d-9365-7b2dcb2f8153";
-const imgPlayStation = "https://www.figma.com/api/mcp/asset/c51d743d-9a51-46f7-9cc8-cbb0ae33c211";
+// Category Icons
+const imgVoucherIcon = creditCardIcon;
+const imgConsoleController = productImage4;
+const imgCreditCardIcon = creditCardIcon;
+const imgGiftCard = creditCardIcon;
+const imgTelecom = productImage5;
+const imgPlayStation = productImage6;
 
-// Store Flags (from Figma assets - glossy circular badges)
-const imgEgyptFlag = "https://www.figma.com/api/mcp/asset/a0b8346c-9d02-4156-a818-8bcc1b66037a";
-const imgUSFlag = "https://www.figma.com/api/mcp/asset/a8383584-6e5d-4a1b-b6f7-aaf3bcf58116";
-const imgUAEFlag = "https://www.figma.com/api/mcp/asset/dfb0c21b-ea4f-4128-bd54-973402e364ba";
-const imgSaudiFlag = "https://www.figma.com/api/mcp/asset/0a27a1d6-13bc-4427-a6c9-7db2beaf0dab";
-// Placeholder flags for Italian, Japanese, Mexican, Indian - need Figma asset IDs
-const imgItalianFlag = "https://www.figma.com/api/mcp/asset/placeholder-italian-flag"; // TODO: Get actual Figma asset ID
-const imgJapaneseFlag = "https://www.figma.com/api/mcp/asset/placeholder-japanese-flag"; // TODO: Get actual Figma asset ID
-const imgMexicanFlag = "https://www.figma.com/api/mcp/asset/placeholder-mexican-flag"; // TODO: Get actual Figma asset ID
-const imgIndianFlag = "https://www.figma.com/api/mcp/asset/placeholder-indian-flag"; // TODO: Get actual Figma asset ID
+// Store Flags - using placeholder circular badges (you may want to add actual flag images)
+const imgEgyptFlag = "data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='18' fill='%23ed2939'/%3E%3Ccircle cx='20' cy='20' r='15' fill='%23fff'/%3E%3Ccircle cx='20' cy='20' r='12' fill='%23000'/%3E%3Ctext x='20' y='25' font-size='12' fill='%23fff' text-anchor='middle'%3EEG%3C/text%3E%3C/svg%3E";
+const imgUSFlag = "data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='18' fill='%23b22234'/%3E%3Ccircle cx='20' cy='20' r='15' fill='%23fff'/%3E%3Ctext x='20' y='25' font-size='12' fill='%23b22234' text-anchor='middle'%3EUS%3C/text%3E%3C/svg%3E";
+const imgUAEFlag = "data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='18' fill='%2300729f'/%3E%3Ccircle cx='20' cy='20' r='15' fill='%23fff'/%3E%3Ctext x='20' y='25' font-size='12' fill='%2300729f' text-anchor='middle'%3EAE%3C/text%3E%3C/svg%3E";
+const imgSaudiFlag = "data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='18' fill='%23006c35'/%3E%3Ccircle cx='20' cy='20' r='15' fill='%23fff'/%3E%3Ctext x='20' y='25' font-size='12' fill='%23006c35' text-anchor='middle'%3ESA%3C/text%3E%3C/svg%3E";
+const imgItalianFlag = "data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='18' fill='%23009246'/%3E%3Ccircle cx='20' cy='20' r='15' fill='%23fff'/%3E%3Ctext x='20' y='25' font-size='12' fill='%23009246' text-anchor='middle'%3EIT%3C/text%3E%3C/svg%3E";
+const imgJapaneseFlag = "data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='18' fill='%23bc002d'/%3E%3Ccircle cx='20' cy='20' r='15' fill='%23fff'/%3E%3Ccircle cx='20' cy='20' r='8' fill='%23bc002d'/%3E%3C/svg%3E";
+const imgMexicanFlag = "data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='18' fill='%23006147'/%3E%3Ccircle cx='20' cy='20' r='15' fill='%23fff'/%3E%3Ctext x='20' y='25' font-size='12' fill='%23006147' text-anchor='middle'%3EMX%3C/text%3E%3C/svg%3E";
+const imgIndianFlag = "data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='18' fill='%23ff9933'/%3E%3Ccircle cx='20' cy='20' r='15' fill='%23fff'/%3E%3Ccircle cx='20' cy='20' r='6' fill='%2300066f'/%3E%3C/svg%3E";
 
 export default function DigitalECards() {
   const categories = [
     {
       id: 1,
       name: "Digital Vouchers",
-      icon: imgVoucherIcon
+      icon: productImage3 // 45ffebea53178df09da5b55aa5ec9c64f9c97219.png
     },
     {
       id: 2,
       name: "Gaming Vouchers",
-      icon: imgConsoleController
+      icon: productImage4 // 495f2db0dba66b830ccfbc2b70ff68519b13ce45.png
     },
     {
       id: 3,
       name: "Internet Cards",
-      icon: imgCreditCardIcon
+      icon: productImage9 // 89ed235ee47f8d384c57df36ae75c564312166e3.png
     },
     {
       id: 4,
@@ -66,17 +79,17 @@ export default function DigitalECards() {
     {
       id: 7,
       name: "Movie Tickets",
-      icon: imgVoucherIcon
+      icon: productImage7
     },
     {
       id: 8,
       name: "Streaming Services",
-      icon: imgConsoleController
+      icon: productImage8
     },
     {
       id: 9,
       name: "Spotify",
-      icon: imgCreditCardIcon
+      icon: productImage3 // 45ffebea53178df09da5b55aa5ec9c64f9c97219.png
     }
   ];
 
@@ -121,11 +134,11 @@ export default function DigitalECards() {
           <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
             <div className="absolute inset-0 overflow-hidden">
               <img 
-                className="absolute h-full w-full max-w-none object-cover" 
+                className="absolute inset-0 w-full h-full object-cover" 
                 alt="Hero Background" 
                 src={imgHeroBackground}
                 onError={(e) => {
-                  e.target.src = 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1920&h=600&fit=crop';
+                  e.target.style.display = 'none';
                 }}
               />
             </div>

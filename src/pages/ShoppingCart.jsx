@@ -4,16 +4,24 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 
+// Import assets
+import arrowDownIcon from '../assets/ArrowRight.svg';
+import shoppingCartIcon from '../assets/shopping-basket-01.svg';
+import productImage1 from '../assets/04eed14fc3631917a17e9d14491e48383aa02358.png';
+import productImage2 from '../assets/0e25c65909ff9d8fdace00ffb430dbc3cbf9784b.png';
+
 // Icon Assets
-const imgArrowDown = "https://www.figma.com/api/mcp/asset/11c6c4cc-49be-4c6e-beee-5f1767680185";
-const imgRemove = "https://www.figma.com/api/mcp/asset/c40b14b4-1eeb-4f53-840d-0b7d2bc68ff3";
-const imgLine25 = "https://www.figma.com/api/mcp/asset/fa0dcf4b-8e0e-44c3-ba81-95559dc153ac";
-const imgLine26 = "https://www.figma.com/api/mcp/asset/fea37081-f4bb-4633-9e27-b6df88af3120";
-const imgShoppingCartSimple = "https://www.figma.com/api/mcp/asset/5390c4da-ea50-4245-a3be-cbe32d6afdc6";
+const imgArrowDown = arrowDownIcon;
+// Remove icon - using inline SVG
+const imgRemove = "data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 5l10 10M15 5l-10 10' stroke='%23666' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E";
+// Divider lines
+const imgLine25 = "data:image/svg+xml,%3Csvg width='100%25' height='1' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='0' x2='100%25' y2='0' stroke='%23e4e7e9'/%3E%3C/svg%3E";
+const imgLine26 = "data:image/svg+xml,%3Csvg width='100%25' height='1' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='0' x2='100%25' y2='0' stroke='%23e4e7e9'/%3E%3C/svg%3E";
+const imgShoppingCartSimple = shoppingCartIcon;
 
 // Product Images
-const imgHeadphones = "https://www.figma.com/api/mcp/asset/d21476fb-b45c-4ced-901d-0fd2694a38ab";
-const imgTV = "https://www.figma.com/api/mcp/asset/901c345a-eff2-4acb-8a8a-b0ba204195fd";
+const imgHeadphones = productImage1;
+const imgTV = productImage2;
 
 export default function ShoppingCart() {
   const [quantities, setQuantities] = useState({

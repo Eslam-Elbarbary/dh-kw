@@ -5,9 +5,14 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 // Icon Assets
-const imgArrowDown = "https://www.figma.com/api/mcp/asset/11c6c4cc-49be-4c6e-beee-5f1767680185";
-const imgPhone = "https://www.figma.com/api/mcp/asset/4d564cb0-8338-4267-86a3-dfd6078c6d49";
-const imgEmailSvg = "https://www.figma.com/api/mcp/asset/19365f23-25c4-449c-96f3-68de3e9bcd48";
+// Import assets
+import arrowDownIcon from '../assets/ArrowRight.svg';
+import phoneIcon from '../assets/call.svg';
+
+const imgArrowDown = arrowDownIcon;
+const imgPhone = phoneIcon;
+// Email icon - using inline SVG
+const imgEmailSvg = "data:image/svg+xml,%3Csvg width='12' height='9' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 1H1a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 5L1 2h10L6 5z' fill='%23666'/%3E%3C/svg%3E";
 
 export default function ContactUs() {
   const [formData, setFormData] = useState({

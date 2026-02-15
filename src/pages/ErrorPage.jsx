@@ -2,7 +2,10 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 
-const imgUntitled111 = "https://www.figma.com/api/mcp/asset/f31432a1-167d-4d8b-9ee7-b251ce43e5b4";
+// Import assets
+import logoImage from '../assets/websiteLogo.png';
+
+const imgUntitled111 = logoImage;
 
 export default function ErrorPage({ errorCode = 404, errorMessage = "Page Not Found", errorDescription = "The page you are looking for doesn't exist or has been moved." }) {
   const navigate = useNavigate();

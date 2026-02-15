@@ -4,27 +4,44 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-// Hero Banner Assets
-const imgHeroBackground = "https://www.figma.com/api/mcp/asset/13ca6eee-fe0a-48f0-b246-80f0d10fd5ba";
+// Import assets
+import arrowRightIcon from '../assets/ArrowRight.svg';
+import truckDeliveryIcon from '../assets/truck-delivery.svg';
+import creditCardIcon from '../assets/CreditCard.svg';
+import deliveryReturnIcon from '../assets/delivery-return-01.svg';
+import customerSupportIcon from '../assets/customer-support.svg';
+
+// Product images - using placeholder images from assets
+// You may want to replace these with actual product category images
+import productImage1 from '../assets/aea077bf04af7282f36991b02261f6144abee355 (1).png';
+import productImage2 from '../assets/0e25c65909ff9d8fdace00ffb430dbc3cbf9784b.png';
+import productImage3 from '../assets/bb78ddf69f42960d1b738bd3b005bc00c143cfb6.png';
+import productImage4 from '../assets/95835fab043de209b7a372fca8d7f780a4915f2b.png';
+import blogImage from '../assets/335d3b72fbbc6db1573cca89bf153f548926e796.jpg';
+import heroBackgroundImage from '../assets/Frame 1984079875 (1).png';
+
+// Hero Banner Assets - using the provided hero background image
+const imgHeroBackground = heroBackgroundImage;
 
 // Product Category Assets
-const img69694768AmazonEchoPngClipartTransparentAmazonEchoPng1 = "https://www.figma.com/api/mcp/asset/aea29c88-6458-4770-b05d-bd68b90e2cf6";
-const imgSleekBlackTabletModernDigitalDevice1 = "https://www.figma.com/api/mcp/asset/0f137156-61d8-4c8a-8fb2-027462891154";
-const imgElectronicCollectionComputerMotherboardWithCpuCooler1 = "https://www.figma.com/api/mcp/asset/ce0bdc1e-3f9b-471b-aad7-a36b113a7c3a";
-const imgLaptopTabletPcTvMobilePhone3D1 = "https://www.figma.com/api/mcp/asset/ee4a5d62-9f8a-4d33-a358-56c270b0cc0e";
-const imgArrowRight = "https://www.figma.com/api/mcp/asset/c993c6e9-76bd-4fc1-8f76-8c9f70ebc1a0";
+const img69694768AmazonEchoPngClipartTransparentAmazonEchoPng1 = productImage1;
+const imgSleekBlackTabletModernDigitalDevice1 = productImage2;
+const imgElectronicCollectionComputerMotherboardWithCpuCooler1 = productImage3;
+const imgLaptopTabletPcTvMobilePhone3D1 = productImage4;
+const imgArrowRight = arrowRightIcon;
 
 // Blogs Assets
-const imgBlogImage = "https://www.figma.com/api/mcp/asset/8ce67e9d-6089-4556-b33c-5af5c62e8eb6";
-const imgArrowCircleRight = "https://www.figma.com/api/mcp/asset/308c1800-b9a5-4ba0-8662-74b785f8a2ba";
-const imgArrowCircleRightActive = "https://www.figma.com/api/mcp/asset/fcb02329-047e-40c1-8c02-8dbd43c626c4";
-const imgArrowRightSmall = "https://www.figma.com/api/mcp/asset/d72436df-62de-4301-9262-34ead329d65a";
+const imgBlogImage = blogImage;
+// Arrow circle icons - using ArrowRight with circle styling
+const imgArrowCircleRight = "data:image/svg+xml,%3Csvg width='32' height='32' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='16' cy='16' r='15' fill='none' stroke='%23ccc' stroke-width='2'/%3E%3Cpath d='M12 10l6 6-6 6' stroke='%23ccc' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E";
+const imgArrowCircleRightActive = "data:image/svg+xml,%3Csvg width='32' height='32' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23eea137' stroke='%23eea137' stroke-width='2'/%3E%3Cpath d='M12 10l6 6-6 6' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E";
+const imgArrowRightSmall = arrowRightIcon;
 
 // Features Assets
-const imgShipping = "https://www.figma.com/api/mcp/asset/cc0bd904-724b-48d2-bcf5-3ff820bb8506";
-const imgPayment = "https://www.figma.com/api/mcp/asset/9d5f2920-31dd-4365-9eff-5affe1c4552b";
-const imgExchange = "https://www.figma.com/api/mcp/asset/9b3894d9-7d19-41b2-8c0a-849488cf50c6";
-const imgCustomer = "https://www.figma.com/api/mcp/asset/541fca88-180f-4ff9-8d8d-a97a3de8fa6e";
+const imgShipping = truckDeliveryIcon;
+const imgPayment = creditCardIcon;
+const imgExchange = deliveryReturnIcon;
+const imgCustomer = customerSupportIcon;
 
 // Hero Banner Component
 function HeroBanner() {
@@ -32,7 +49,14 @@ function HeroBanner() {
     <div className="relative w-full h-[300px] sm:h-[400px] md:h-[499px] lg:h-[550px] xl:h-[600px] 2xl:h-[650px]" data-node-id="35:560">
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
         <div className="absolute inset-0 overflow-hidden">
-          <img className="absolute h-[152.5%] left-[-9.55%] max-w-none top-[-25.77%] w-[118.93%]" alt="" src={imgHeroBackground} />
+          <img 
+            className="absolute inset-0 w-full h-full object-cover" 
+            alt="Hero Background" 
+            src={imgHeroBackground}
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
         </div>
         <div className="absolute bg-gradient-to-t from-[rgba(0,101,176,0)] inset-0 to-[rgba(0,101,176,0.2)]" />
       </div>

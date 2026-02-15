@@ -5,10 +5,16 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 // Icon Assets (from existing components)
-const imgArrowDown = "https://www.figma.com/api/mcp/asset/11c6c4cc-49be-4c6e-beee-5f1767680185";
-const imgPhone = "https://www.figma.com/api/mcp/asset/4d564cb0-8338-4267-86a3-dfd6078c6d49"; // From Header
-const imgTruck = "https://www.figma.com/api/mcp/asset/44bb4a15-1b33-43cb-b03c-a87b32237591"; // From Header
-const imgArrowRight = "https://www.figma.com/api/mcp/asset/c993c6e9-76bd-4fc1-8f76-8c9f70ebc1a0";
+// Import assets
+import arrowDownIcon from '../assets/ArrowRight.svg';
+import arrowRightIcon from '../assets/ArrowRight.svg';
+import phoneIcon from '../assets/call.svg';
+import truckIcon from '../assets/Truck.svg';
+
+const imgArrowDown = arrowDownIcon;
+const imgPhone = phoneIcon;
+const imgTruck = truckIcon;
+const imgArrowRight = arrowRightIcon;
 
 export default function HelpCenter() {
   const [openFaq, setOpenFaq] = useState(null);

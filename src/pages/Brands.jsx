@@ -4,7 +4,10 @@
 import { Link } from 'react-router-dom';
 
 // Icon Assets
-const imgArrowDown = "https://www.figma.com/api/mcp/asset/11c6c4cc-49be-4c6e-beee-5f1767680185";
+// Import assets
+import arrowDownIcon from '../assets/ArrowRight.svg';
+
+const imgArrowDown = arrowDownIcon;
 
 export default function Brands() {
   const brands = [

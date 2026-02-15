@@ -4,8 +4,12 @@
 import { Link } from 'react-router-dom';
 
 // Icon Assets
-const imgArrowDown = "https://www.figma.com/api/mcp/asset/11c6c4cc-49be-4c6e-beee-5f1767680185";
-const imgTruck = "https://www.figma.com/api/mcp/asset/44bb4a15-1b33-43cb-b03c-a87b32237591";
+// Import assets
+import arrowDownIcon from '../assets/ArrowRight.svg';
+import truckIcon from '../assets/Truck.svg';
+
+const imgArrowDown = arrowDownIcon;
+const imgTruck = truckIcon;
 
 export default function DeliveryReturn() {
   return (

@@ -5,8 +5,12 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 // Icon Assets (from existing components)
-const imgArrowDown = "https://www.figma.com/api/mcp/asset/11c6c4cc-49be-4c6e-beee-5f1767680185";
-const imgVuesaxLinearUser = "https://www.figma.com/api/mcp/asset/6864330c-0bbe-4530-8845-063f68683f34";
+// Import assets
+import arrowDownIcon from '../assets/ArrowRight.svg';
+import userIcon from '../assets/User.svg';
+
+const imgArrowDown = arrowDownIcon;
+const imgVuesaxLinearUser = userIcon;
 
 export default function BecomeASeller() {
   const [formData, setFormData] = useState({

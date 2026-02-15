@@ -6,21 +6,48 @@ import { useAuth } from '../context/AuthContext';
 import React, { useState, useRef, useEffect } from 'react';
 import ThemeToggle from './ThemeToggle';
 
-const imgUntitled111 = "https://www.figma.com/api/mcp/asset/f31432a1-167d-4d8b-9ee7-b251ce43e5b4";
-const img = "https://www.figma.com/api/mcp/asset/4d564cb0-8338-4267-86a3-dfd6078c6d49";
-const imgLine1 = "https://www.figma.com/api/mcp/asset/3d13583c-17cc-49fa-9981-7ac0daee5848";
-const img1 = "https://www.figma.com/api/mcp/asset/44bb4a15-1b33-43cb-b03c-a87b32237591";
-const img2 = "https://www.figma.com/api/mcp/asset/ecb82ee8-788c-4e28-8a1e-21ac31f85326";
-const img3 = "https://www.figma.com/api/mcp/asset/69fd3785-75a0-4e97-b176-040bfbf2f27c";
-const imgFlat = "https://www.figma.com/api/mcp/asset/dffb8424-3ec8-4a86-a1b5-4d02a9ea4de6";
-const imgGloss = "https://www.figma.com/api/mcp/asset/d6bfa6be-9b1d-4027-9757-840d5570b228";
-const img4 = "https://www.figma.com/api/mcp/asset/20de8cb0-4925-46b3-a332-aba9de662e58";
-const img5 = "https://www.figma.com/api/mcp/asset/5ae7a2bc-9643-45e3-a5c9-fdf5ec2767b0";
-const img6 = "https://www.figma.com/api/mcp/asset/435b1176-2161-45eb-b98f-f5b4d519dc89";
-const imgVuesaxLinearUser = "https://www.figma.com/api/mcp/asset/6864330c-0bbe-4530-8845-063f68683f34";
-const imgElements = "https://www.figma.com/api/mcp/asset/64763ae8-71d8-4332-ab94-11c0b35ba0cb";
-const imgVuesaxLinearHeart = "https://www.figma.com/api/mcp/asset/be2e3cf6-c96e-4aa3-92dd-0bd3886ea905";
-const imgVuesaxOutlineArrowSwapHorizontal = "https://www.figma.com/api/mcp/asset/6c17a39a-5718-4120-a0e9-8b6994ef0a94";
+// Import assets
+import logoImage from '../assets/websiteLogo.png';
+import egyptFlag from '../assets/Egypt.png';
+import phoneIcon from '../assets/call.svg';
+import customerSupportIcon from '../assets/customer-support.svg';
+import deliveryIcon from '../assets/delivery-return-01.svg';
+import handshakeIcon from '../assets/Handshake.svg';
+import notificationIcon from '../assets/notification-bing.svg';
+import userIcon from '../assets/User.svg';
+import shoppingCartIcon from '../assets/shopping-basket-01.svg';
+import wishlistIcon from '../assets/wishlist.svg';
+import compareIcon from '../assets/arrow-swap-horizontal.svg';
+import arrowDownIcon from '../assets/ArrowRight.svg';
+
+// Logo - 3D gold "dh" logo
+const imgUntitled111 = logoImage;
+// Phone/Call icon
+const img = phoneIcon;
+// Divider line - using a simple SVG inline or CSS border instead
+const imgLine1 = "data:image/svg+xml,%3Csvg width='1' height='24' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='0' x2='0' y2='24' stroke='%23ffffff' stroke-opacity='0.3'/%3E%3C/svg%3E";
+// Track Order icon
+const img1 = deliveryIcon;
+// Report Fraud icon - using customer support as placeholder
+const img2 = customerSupportIcon;
+// Become a Seller icon
+const img3 = handshakeIcon;
+// Egypt flag for country selector
+const imgFlat = egyptFlag;
+// Dropdown arrow
+const img4 = arrowDownIcon;
+// Category dropdown arrow
+const img5 = arrowDownIcon;
+// Notification icon
+const img6 = notificationIcon;
+// User icon
+const imgVuesaxLinearUser = userIcon;
+// Shopping cart icon
+const imgElements = shoppingCartIcon;
+// Heart/Favorite icon (wishlist)
+const imgVuesaxLinearHeart = wishlistIcon;
+// Compare icon
+const imgVuesaxOutlineArrowSwapHorizontal = compareIcon;
 
 function User({ className }) {
   return (
@@ -229,15 +256,8 @@ export default function Header() {
         </div>
         <div className="content-stretch flex gap-[6px] sm:gap-[8px] items-center justify-end relative shrink-0 w-full sm:w-auto mt-[8px] sm:mt-0">
           <div className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0">
-            <div className="overflow-clip relative shrink-0 size-[20px]">
-              <div className="absolute contents inset-0">
-                <div className="absolute contents inset-0">
-                  <img alt="" className="block max-w-none size-full" src={imgFlat} />
-                </div>
-              </div>
-              <div className="absolute inset-[12.76%_4.42%_0_0]">
-                <img alt="" className="block max-w-none size-full" src={imgGloss} />
-              </div>
+            <div className="overflow-clip relative shrink-0 size-[20px] rounded-[2px]">
+              <img alt="Egypt" className="block size-full object-cover" src={imgFlat} />
             </div>
             <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[#f2f2f2] text-[14px] sm:text-[15px] lg:text-[14px] text-center" dir="auto">
               egypt

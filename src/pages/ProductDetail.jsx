@@ -3,34 +3,55 @@
 import React, { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
-// Product Image Assets - Using working placeholders until Figma assets are available
-// TODO: Replace with actual Figma asset URLs from your product detail page design
-// To get assets: Open Figma, select product images, right-click > Copy/Paste as > Copy as PNG
-// Or provide the Figma file URL/node ID to extract assets automatically
-const imgMacBookMain = "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600&h=600&fit=crop";
-const imgMacBookThumb1 = "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=100&h=100&fit=crop";
-const imgMacBookThumb2 = "https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=100&h=100&fit=crop";
-const imgMacBookThumb3 = "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=100&h=100&fit=crop";
-const imgMacBookThumb4 = "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=100&h=100&fit=crop";
-const imgMacBookThumb5 = "https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=100&h=100&fit=crop";
-const imgMacBookThumb6 = "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=100&h=100&fit=crop";
-const imgMacBookThumb7 = "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=100&h=100&fit=crop";
+// Import assets
+import productImage1 from '../assets/4290b5299d7820aab27a24eef721fc6a3de6f994.png';
+import productImage2 from '../assets/45ffebea53178df09da5b55aa5ec9c64f9c97219.png';
+import productImage3 from '../assets/495f2db0dba66b830ccfbc2b70ff68519b13ce45.png';
+import productImage4 from '../assets/51514609622e9c097a0531f13c0db834797cda9c.png';
+import productImage5 from '../assets/5d1b5ca4f6671da94d620d7aec269e2d17cf66e0.png';
+import productImage6 from '../assets/709f890284df9f0583ba3f0cbed489bb013b8efb.png';
+import productImage7 from '../assets/76236df7a5ad3774e8e14a241d83f4af473d2f52.png';
+import productImage8 from '../assets/89ed235ee47f8d384c57df36ae75c564312166e3.png';
+import productImage9 from '../assets/95835fab043de209b7a372fca8d7f780a4915f2b.png';
+import productImage10 from '../assets/95835fab043de209b7a372fca8d7f780a4915f2b.png';
+import productImage11 from '../assets/993680a4fb804721053db577fe1e84c4758c415b.png';
+import productImage12 from '../assets/ad7f4ceaa2fcf37913dd3ab0d058af38e9247ccc.png';
+import arrowDownIcon from '../assets/ArrowRight.svg';
+import arrowRightIcon from '../assets/ArrowRight.svg';
+import heartIcon from '../assets/wishlist.svg';
+import shoppingCartIcon from '../assets/shopping-basket-01.svg';
+import compareIcon from '../assets/arrow-swap-horizontal.svg';
+import linkedinIcon from '../assets/Icon-Linkedin.svg';
+import instagramIcon from '../assets/icon-instagram.svg';
+import twitterIcon from '../assets/Icon-Twitter.svg';
+import facebookIcon from '../assets/Icon-Facebook.svg';
+import pinterestIcon from '../assets/Pinterest.svg';
+import copyIcon from '../assets/Copy.svg';
 
-// Icon Assets (from existing components - using exact same assets as Header)
-const imgArrowDown = "https://www.figma.com/api/mcp/asset/11c6c4cc-49be-4c6e-beee-5f1767680185";
-const imgArrowRight = "https://www.figma.com/api/mcp/asset/c993c6e9-76bd-4fc1-8f76-8c9f70ebc1a0";
-const imgVuesaxLinearHeart = "https://www.figma.com/api/mcp/asset/be2e3cf6-c96e-4aa3-92dd-0bd3886ea905"; // Heart icon from Header
-const imgShoppingCart = "https://www.figma.com/api/mcp/asset/281e5eef-36c1-49be-8714-dd8f301bf649";
-const imgVuesaxOutlineArrowSwapHorizontal = "https://www.figma.com/api/mcp/asset/6c17a39a-5718-4120-a0e9-8b6994ef0a94"; // Compare icon from Header
+// Product Image Assets
+const imgMacBookMain = productImage1;
+const imgMacBookThumb1 = productImage1;
+const imgMacBookThumb2 = productImage2;
+const imgMacBookThumb3 = productImage3;
+const imgMacBookThumb4 = productImage4;
+const imgMacBookThumb5 = productImage5;
+const imgMacBookThumb6 = productImage6;
+const imgMacBookThumb7 = productImage7;
 
-// Social Media Icons (from Footer component)
-const imgVector = "https://www.figma.com/api/mcp/asset/d295f00c-f727-4394-ada2-0cca08982b3d"; // LinkedIn
-const imgGroup = "https://www.figma.com/api/mcp/asset/644d434a-e4ac-4929-a260-3720902310b7"; // Instagram
-const imgGroup1 = "https://www.figma.com/api/mcp/asset/7b1806c4-6849-4313-83e9-00ebbf2c4bcd"; // Twitter
-const imgVector1 = "https://www.figma.com/api/mcp/asset/6f6637f9-4c98-4165-8fa9-c262a842a568"; // Facebook
-// Copy icon and Pinterest icon - TODO: Get actual Figma asset IDs
-const imgCopy = "https://www.figma.com/api/mcp/asset/copy-icon-id"; // Two overlapping squares
-const imgPinterest = "https://www.figma.com/api/mcp/asset/pinterest-icon-id"; // Pinterest P logo
+// Icon Assets
+const imgArrowDown = arrowDownIcon;
+const imgArrowRight = arrowRightIcon;
+const imgVuesaxLinearHeart = heartIcon;
+const imgShoppingCart = shoppingCartIcon;
+const imgVuesaxOutlineArrowSwapHorizontal = compareIcon;
+
+// Social Media Icons
+const imgVector = linkedinIcon;
+const imgGroup = instagramIcon;
+const imgGroup1 = twitterIcon;
+const imgVector1 = facebookIcon;
+const imgCopy = copyIcon;
+const imgPinterest = pinterestIcon;
 
 // Icon Components (matching Header/Footer pattern)
 function HeartIcon({ className }) {
@@ -74,11 +95,11 @@ function IconTwitter({ className }) {
 }
 
 // Related Products Images
-const imgProduct1 = "https://www.figma.com/api/mcp/asset/31331607-e3da-4091-a87f-d673768d08a0";
-const imgProduct2 = "https://www.figma.com/api/mcp/asset/397ef9d6-e230-46dc-a591-71cc82d81a35";
-const imgProduct3 = "https://www.figma.com/api/mcp/asset/57cdecfc-ac27-4553-af8c-666330f3a295";
-const imgProduct4 = "https://www.figma.com/api/mcp/asset/6e338bde-c416-445f-9838-e842db794196";
-const imgProduct5 = "https://www.figma.com/api/mcp/asset/2285c162-bbe8-4bdc-9913-5a9447d89870";
+const imgProduct1 = productImage8;
+const imgProduct2 = productImage9;
+const imgProduct3 = productImage10;
+const imgProduct4 = productImage11;
+const imgProduct5 = productImage12;
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -152,7 +173,7 @@ export default function ProductDetail() {
                   alt="MacBook Pro" 
                   className="w-full h-full object-contain"
                   onError={(e) => {
-                    e.target.src = "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600&h=600&fit=crop";
+                    e.target.src = productImage1;
                   }}
                 />
               </div>
@@ -180,7 +201,7 @@ export default function ProductDetail() {
                         alt={`Thumbnail ${idx + 1}`} 
                         className="w-full h-full object-cover bg-[#f5f5f5]"
                         onError={(e) => {
-                          e.target.src = `https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=80&h=80&fit=crop`;
+                          e.target.src = productImage1;
                         }}
                       />
                     </button>
@@ -368,7 +389,7 @@ export default function ProductDetail() {
                   <span className="font-['Poppins'] font-normal text-[#666] text-[12px] sm:text-[14px] whitespace-nowrap">Share product:</span>
                   <div className="flex gap-[6px] sm:gap-[8px] items-center">
                     {/* Copy Icon - Hidden if asset not available */}
-                    {imgCopy && imgCopy !== "https://www.figma.com/api/mcp/asset/copy-icon-id" && (
+                    {imgCopy && (
                       <a 
                         href="#" 
                         className="hover:opacity-70 transition-opacity overflow-clip relative shrink-0 size-[24px]" 
@@ -391,7 +412,7 @@ export default function ProductDetail() {
                       <IconTwitter className="overflow-clip relative shrink-0 size-[24px]" />
                     </a>
                     {/* Pinterest Icon - Hidden if asset not available */}
-                    {imgPinterest && imgPinterest !== "https://www.figma.com/api/mcp/asset/pinterest-icon-id" && (
+                    {imgPinterest && (
                       <a href="#" className="hover:opacity-70 transition-opacity overflow-clip relative shrink-0 size-[24px]">
                         <img src={imgPinterest} alt="Pinterest" className="block max-w-none size-full" onError={(e) => e.target.style.display = 'none'} />
                       </a>
@@ -460,7 +481,7 @@ export default function ProductDetail() {
                       alt="MacBook Pro" 
                       className="w-full rounded-[8px]"
                       onError={(e) => {
-                        e.target.src = "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&h=300&fit=crop";
+                        e.target.src = productImage1;
                       }}
                     />
                   </div>
