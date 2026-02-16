@@ -78,10 +78,11 @@ async function reverseGeocode(lat, lng) {
     const state = addr.state || addr.region || '';
     const city = addr.city || addr.town || addr.village || addr.county || addr.state || '';
     const zipCode = addr.postcode || '';
-    return { addressLine, country: countryValue, state, city, zipCode };
+    const area = addr.suburb || addr.neighbourhood || addr.city_district || '';
+    return { addressLine, country: countryValue, state, city, zipCode, area };
   } catch {
     const addressLine = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-    return { addressLine, country: '', state: '', city: '', zipCode: '' };
+    return { addressLine, country: '', state: '', city: '', zipCode: '', area: '' };
   }
 }
 
@@ -115,6 +116,14 @@ export default function Checkout() {
   const [regionState, setRegionState] = useState('');
   const [city, setCity] = useState('');
   const [zipCode, setZipCode] = useState('');
+  const [addressType, setAddressType] = useState('house');
+  const [buildingHouseNo, setBuildingHouseNo] = useState('');
+  const [paciNumber, setPaciNumber] = useState('');
+  const [streetName, setStreetName] = useState('');
+  const [jaddaAvenue, setJaddaAvenue] = useState('');
+  const [landmark, setLandmark] = useState('');
+  const [area, setArea] = useState('');
+  const [block, setBlock] = useState('');
 
   const handleLocationSelect = useCallback(async (lat, lng) => {
     setMapPosition([lat, lng]);
@@ -126,6 +135,7 @@ export default function Checkout() {
       setRegionState(addr.state);
       setCity(addr.city);
       setZipCode(addr.zipCode);
+      setArea(addr.area || '');
     } catch {
       setAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
     }
@@ -150,6 +160,7 @@ export default function Checkout() {
           setRegionState(addr.state);
           setCity(addr.city);
           setZipCode(addr.zipCode);
+          setArea(addr.area || '');
         } catch {
           setAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
         }
@@ -283,6 +294,104 @@ export default function Checkout() {
                   <p className="font-['Poppins'] text-[12px] text-[#666]">
                     Click on the map to set your delivery address, or use &quot;Locate my position&quot; to use your current location.
                   </p>
+                </div>
+              </div>
+
+              {/* Address Type & Details */}
+              <div className="flex flex-col gap-[20px] w-full">
+                <div className="flex flex-col gap-[10px] w-full">
+                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Address Type</label>
+                  <div className="flex flex-wrap gap-[16px] sm:gap-[24px] items-center">
+                    {['house', 'apartment', 'office'].map((type) => (
+                      <label key={type} className="flex items-center gap-[8px] cursor-pointer">
+                        <input
+                          type="radio"
+                          name="addressType"
+                          value={type}
+                          checked={addressType === type}
+                          onChange={(e) => setAddressType(e.target.value)}
+                          className="w-[16px] h-[16px] accent-[#0e1c47] cursor-pointer"
+                        />
+                        <span className="font-['Poppins'] font-normal text-[14px] text-[#333] capitalize">{type}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-[16px] sm:gap-[20px] w-full">
+                  <div className="flex flex-col gap-[8px] flex-1 w-full">
+                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Building Name / House No <span className="text-[#eea137]">*</span></label>
+                    <input
+                      type="text"
+                      value={buildingHouseNo}
+                      onChange={(e) => setBuildingHouseNo(e.target.value)}
+                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                      placeholder="Building Name / House No"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-[8px] flex-1 w-full">
+                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">PACI Number (optional)</label>
+                    <input
+                      type="text"
+                      value={paciNumber}
+                      onChange={(e) => setPaciNumber(e.target.value)}
+                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                      placeholder="PACI Number (optional)"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-[16px] sm:gap-[20px] w-full">
+                  <div className="flex flex-col gap-[8px] flex-1 w-full">
+                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Street Name <span className="text-[#eea137]">*</span></label>
+                    <input
+                      type="text"
+                      value={streetName}
+                      onChange={(e) => setStreetName(e.target.value)}
+                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                      placeholder="Street Name"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-[8px] flex-1 w-full">
+                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Jadda/Avenue (optional)</label>
+                    <input
+                      type="text"
+                      value={jaddaAvenue}
+                      onChange={(e) => setJaddaAvenue(e.target.value)}
+                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                      placeholder="Jadda/Avenue (optional)"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-[8px] w-full">
+                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Landmark (optional)</label>
+                  <input
+                    type="text"
+                    value={landmark}
+                    onChange={(e) => setLandmark(e.target.value)}
+                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                    placeholder="Landmark (optional)"
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row gap-[16px] sm:gap-[20px] w-full">
+                  <div className="flex flex-col gap-[8px] flex-1 w-full">
+                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Area</label>
+                    <input
+                      type="text"
+                      value={area}
+                      onChange={(e) => setArea(e.target.value)}
+                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full bg-white"
+                      placeholder="Area"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-[8px] flex-1 w-full">
+                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Block</label>
+                    <input
+                      type="text"
+                      value={block}
+                      onChange={(e) => setBlock(e.target.value)}
+                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                      placeholder="Block"
+                    />
+                  </div>
                 </div>
               </div>
 
