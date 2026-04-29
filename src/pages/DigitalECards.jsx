@@ -1,7 +1,9 @@
 // Digital E-Cards page component - exact Figma implementation
 // Based on Figma design - Digital E-Cards Page
 
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getCategories, resolveCountryId } from '../services/catalog.service';
 
 // Import assets
 import arrowDownIcon from '../assets/ArrowRight.svg';
@@ -45,53 +47,49 @@ const imgMexicanFlag = "data:image/svg+xml,%3Csvg width='40' height='40' xmlns='
 const imgIndianFlag = "data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='18' fill='%23ff9933'/%3E%3Ccircle cx='20' cy='20' r='15' fill='%23fff'/%3E%3Ccircle cx='20' cy='20' r='6' fill='%2300066f'/%3E%3C/svg%3E";
 
 export default function DigitalECards() {
-  const categories = [
-    {
-      id: 1,
-      name: "Digital Vouchers",
-      icon: productImage3 // 45ffebea53178df09da5b55aa5ec9c64f9c97219.png
-    },
-    {
-      id: 2,
-      name: "Gaming Vouchers",
-      icon: productImage4 // 495f2db0dba66b830ccfbc2b70ff68519b13ce45.png
-    },
-    {
-      id: 3,
-      name: "Internet Cards",
-      icon: productImage9 // 89ed235ee47f8d384c57df36ae75c564312166e3.png
-    },
-    {
-      id: 4,
-      name: "Gift Cards",
-      icon: imgGiftCard
-    },
-    {
-      id: 5,
-      name: "Telecom",
-      icon: imgTelecom
-    },
-    {
-      id: 6,
-      name: "PlayStation",
-      icon: imgPlayStation
-    },
-    {
-      id: 7,
-      name: "Movie Tickets",
-      icon: productImage7
-    },
-    {
-      id: 8,
-      name: "Streaming Services",
-      icon: productImage8
-    },
-    {
-      id: 9,
-      name: "Spotify",
-      icon: productImage3 // 45ffebea53178df09da5b55aa5ec9c64f9c97219.png
-    }
+  const countryId = useMemo(() => resolveCountryId(1), []);
+  const [apiCategories, setApiCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [categoriesError, setCategoriesError] = useState('');
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        setCategoriesError('');
+        const categoriesList = await getCategories();
+        setApiCategories(categoriesList);
+      } catch (error) {
+        setCategoriesError(error?.response?.data?.message || 'Failed to load categories.');
+        setApiCategories([]);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  const fallbackCategories = [
+    { id: 1, name: 'Digital Vouchers', icon: productImage3 },
+    { id: 2, name: 'Gaming Vouchers', icon: productImage4 },
+    { id: 3, name: 'Internet Cards', icon: productImage9 },
+    { id: 4, name: 'Gift Cards', icon: imgGiftCard },
+    { id: 5, name: 'Telecom', icon: imgTelecom },
+    { id: 6, name: 'PlayStation', icon: imgPlayStation },
+    { id: 7, name: 'Movie Tickets', icon: productImage7 },
+    { id: 8, name: 'Streaming Services', icon: productImage8 },
+    { id: 9, name: 'Spotify', icon: productImage3 },
   ];
+
+  const categories = apiCategories.length > 0
+    ? apiCategories.map((category, index) => ({
+        id: category.id,
+        name: category.name,
+        icon: category.image || [productImage3, productImage4, productImage9, imgGiftCard, imgTelecom, imgPlayStation][index % 6],
+        linkTo: `/search?country_id=${countryId}&category_id=${category.id}`,
+      }))
+    : fallbackCategories.map((category) => ({ ...category, linkTo: '/search' }));
 
   const stores = [
     {
@@ -200,10 +198,20 @@ export default function DigitalECards() {
             Categories
           </h2>
           
+          {loadingCategories ? (
+            <div className="w-full flex justify-center py-[40px]">
+              <p className="font-['Poppins'] font-normal text-[#666] text-[16px]">Loading categories...</p>
+            </div>
+          ) : categoriesError ? (
+            <div className="w-full flex justify-center py-[40px]">
+              <p className="font-['Poppins'] font-normal text-[#8e0909] text-[16px]">{categoriesError}</p>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[20px] sm:gap-[24px] md:gap-[28px] lg:gap-[32px] w-full">
             {categories.map((category) => (
-              <button
+              <Link
                 key={category.id}
+                to={category.linkTo}
                 className="bg-white border border-[#e6e6e6] border-solid flex flex-col items-center justify-center p-[16px] sm:p-[20px] md:p-[24px] rounded-[4px] hover:shadow-lg transition-shadow cursor-pointer group"
               >
                 <div className="flex flex-col gap-[12px] sm:gap-[16px] items-center justify-center w-full">
@@ -223,9 +231,10 @@ export default function DigitalECards() {
                     {category.name}
                   </p>
                 </div>
-              </button>
+              </Link>
             ))}
           </div>
+          )}
         </div>
 
         {/* Stores Section */}

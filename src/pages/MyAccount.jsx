@@ -126,6 +126,18 @@ export default function MyAccount() {
                     Track your order status
                   </p>
                 </Link>
+                <Link
+                  to="/my-tickets"
+                  className="bg-[#f8f9fa] border border-[#e6e6e6] rounded-[4px] p-[20px] sm:p-[24px] hover:border-[#eea137] hover:bg-[#fff4e6] transition-all group"
+                >
+                  <div className="text-[32px] mb-[12px]">🎫</div>
+                  <h3 className="font-['Poppins'] font-semibold text-[18px] sm:text-[20px] text-[#0e1c47] mb-[8px]">
+                    My Tickets
+                  </h3>
+                  <p className="font-['Poppins'] font-normal text-[14px] sm:text-[16px] text-[#666]">
+                    Open and manage support tickets
+                  </p>
+                </Link>
               </div>
             </div>
           </div>

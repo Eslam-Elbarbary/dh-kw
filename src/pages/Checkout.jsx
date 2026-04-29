@@ -1,10 +1,14 @@
 // Checkout page - exact Figma implementation
 // Based on Figma design - Checkout Page
 
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState, useCallback, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { createAddress, deleteAddress, getAddresses } from '../services/address.service';
+import { calculateOrderShipping, createOrder, payOrder } from '../services/orders.service';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 // Fix default marker icon in Leaflet with Vite
 delete L.Icon.Default.prototype._getIconUrl;
@@ -22,8 +26,6 @@ import creditCardIcon from '../assets/CreditCard.svg';
 import amazonIcon from '../assets/amazon-icon-1 1.svg';
 import paypalIcon from '../assets/paypal.png';
 import venmoIcon from '../assets/venmo.svg';
-import productImage1 from '../assets/04eed14fc3631917a17e9d14491e48383aa02358.png';
-import productImage2 from '../assets/0e25c65909ff9d8fdace00ffb430dbc3cbf9784b.png';
 
 // Arrow icon for breadcrumbs
 const imgArrowDown = arrowDownIcon;
@@ -37,10 +39,6 @@ const imgCreditCard = creditCardIcon;
 
 // Arrow right icon for button
 const imgArrowRight = arrowRightIcon;
-
-// Product images for order summary
-const imgCamera = productImage1;
-const imgHeadphones = productImage2;
 
 // Default map center (Kuwait City)
 const DEFAULT_CENTER = [29.3759, 47.9774];
@@ -106,24 +104,164 @@ function ChangeView({ center, zoom }) {
 }
 
 export default function Checkout() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { cart, loadingCart, loadCart } = useCart();
   const [paymentMethod, setPaymentMethod] = useState('card');
-  const [shipToDifferentAddress, setShipToDifferentAddress] = useState(false);
   const [address, setAddress] = useState('');
   const [mapPosition, setMapPosition] = useState(null);
   const [locating, setLocating] = useState(false);
   const [mapError, setMapError] = useState('');
-  const [country, setCountry] = useState('');
-  const [regionState, setRegionState] = useState('');
-  const [city, setCity] = useState('');
-  const [zipCode, setZipCode] = useState('');
   const [addressType, setAddressType] = useState('house');
-  const [buildingHouseNo, setBuildingHouseNo] = useState('');
-  const [paciNumber, setPaciNumber] = useState('');
-  const [streetName, setStreetName] = useState('');
-  const [jaddaAvenue, setJaddaAvenue] = useState('');
-  const [landmark, setLandmark] = useState('');
-  const [area, setArea] = useState('');
-  const [block, setBlock] = useState('');
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [addressesError, setAddressesError] = useState('');
+  const [addressActionLoading, setAddressActionLoading] = useState(false);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState(null);
+  const [contactPhone, setContactPhone] = useState('');
+  const [nextAddressActionAt, setNextAddressActionAt] = useState(0);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [orderNotes, setOrderNotes] = useState('');
+  const [useWallet, setUseWallet] = useState(false);
+  const [usePoints, setUsePoints] = useState(false);
+  const [shippingQuote, setShippingQuote] = useState(null);
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
+  const [checkoutWarning, setCheckoutWarning] = useState('');
+  const [nextCheckoutAttemptAt, setNextCheckoutAttemptAt] = useState(0);
+
+  const normalizeAddressType = (type) => {
+    const raw = String(type || '').trim().toLowerCase();
+    if (!raw) return 'house';
+    return raw;
+  };
+
+  const formatAddressTypeLabel = (type) => {
+    const normalizedType = normalizeAddressType(type);
+    return normalizedType.charAt(0).toUpperCase() + normalizedType.slice(1);
+  };
+
+  const buildConcatenatedAddress = useCallback(() => {
+    const typeLabel = formatAddressTypeLabel(addressType);
+    const normalizedAddress = String(address || '').trim();
+    if (!normalizedAddress) return '';
+    return `[${typeLabel}] ${normalizedAddress}`;
+  }, [addressType, address]);
+
+  const toProfessionalAddressError = (error, fallbackMessage) => {
+    const status = error?.response?.status;
+    const rawMessage = String(error?.response?.data?.message || fallbackMessage || '').trim();
+    const lower = rawMessage.toLowerCase();
+
+    if (status === 429 || lower.includes('too many attempts')) {
+      return 'Too many requests right now. Please wait 15 seconds and try again.';
+    }
+    if (status === 422 || lower.includes('unprocessable')) {
+      return 'Please review your address details and try again.';
+    }
+    if (status >= 500 || lower.includes('sqlstate') || lower.includes('general error') || lower.includes('database')) {
+      return 'We could not process your address at the moment. Please try again shortly.';
+    }
+    if (!rawMessage) {
+      return fallbackMessage || 'Something went wrong. Please try again.';
+    }
+
+    return rawMessage;
+  };
+
+  const loadAddresses = useCallback(async () => {
+    try {
+      setLoadingAddresses(true);
+      setAddressesError('');
+      const list = await getAddresses();
+      setSavedAddresses(list);
+    } catch (error) {
+      setSavedAddresses([]);
+      if (error?.response?.status !== 401) {
+        const status = error?.response?.status;
+        const rawMessage = String(error?.response?.data?.message || '').toLowerCase();
+        if (status === 429 || rawMessage.includes('too many attempts')) {
+          setNextAddressActionAt(Date.now() + 15000);
+          setAddressesError('Too many requests right now. Please wait 15 seconds and try again.');
+        } else {
+          setAddressesError(toProfessionalAddressError(error, 'Unable to load saved addresses right now.'));
+        }
+      }
+    } finally {
+      setLoadingAddresses(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAddresses();
+  }, [loadAddresses]);
+
+  useEffect(() => {
+    if (!selectedSavedAddressId && savedAddresses.length) {
+      applySavedAddress(savedAddresses[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedAddresses, selectedSavedAddressId]);
+
+  useEffect(() => {
+    const fullName = String(user?.name || '').trim();
+    const parts = fullName.split(' ').filter(Boolean);
+    setFirstName(user?.firstName || parts[0] || '');
+    setLastName(user?.lastName || parts.slice(1).join(' ') || '');
+    if (user?.phone) {
+      setContactPhone((prev) => prev || user.phone);
+    }
+  }, [user]);
+
+  const normalizeShippingQuote = useCallback((payload) => {
+    const data = payload?.data || payload || {};
+    return {
+      shipping: Number(data?.total_shipping ?? data?.shipping ?? 0) || 0,
+      discount: Number(data?.discount ?? data?.coupon_discount ?? 0) || 0,
+      total: Number(data?.total ?? data?.grand_total ?? cart.summary?.total ?? 0) || 0,
+    };
+  }, [cart.summary?.total]);
+
+  useEffect(() => {
+    const loadShipping = async () => {
+      if (!selectedSavedAddressId || !cart.items.length) {
+        setShippingQuote(null);
+        return;
+      }
+      try {
+        setShippingLoading(true);
+        const quote = await calculateOrderShipping({ addressId: selectedSavedAddressId });
+        setShippingQuote(normalizeShippingQuote(quote));
+      } catch (error) {
+        const status = error?.response?.status;
+        const message = String(error?.response?.data?.message || '').toLowerCase();
+        const isCartEmptyCase = status === 422 && message.includes('cart is empty');
+        if (isCartEmptyCase) {
+          // Backend can briefly report empty cart due to session sync timing.
+          // Keep checkout usable by falling back to current cart summary.
+          setShippingQuote({
+            shipping: Number(cart.summary?.shipping || 0),
+            discount: Number(cart.summary?.discount || 0),
+            total: Number(cart.summary?.total || 0),
+          });
+          return;
+        }
+        setShippingQuote(null);
+      } finally {
+        setShippingLoading(false);
+      }
+    };
+    loadShipping();
+  }, [
+    selectedSavedAddressId,
+    normalizeShippingQuote,
+    cart.items.length,
+    cart.summary?.shipping,
+    cart.summary?.discount,
+    cart.summary?.total,
+  ]);
 
   const handleLocationSelect = useCallback(async (lat, lng) => {
     setMapPosition([lat, lng]);
@@ -131,11 +269,6 @@ export default function Checkout() {
     try {
       const addr = await reverseGeocode(lat, lng);
       setAddress(addr.addressLine);
-      setCountry(addr.country);
-      setRegionState(addr.state);
-      setCity(addr.city);
-      setZipCode(addr.zipCode);
-      setArea(addr.area || '');
     } catch {
       setAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
     }
@@ -156,11 +289,6 @@ export default function Checkout() {
         try {
           const addr = await reverseGeocode(latitude, longitude);
           setAddress(addr.addressLine);
-          setCountry(addr.country);
-          setRegionState(addr.state);
-          setCity(addr.city);
-          setZipCode(addr.zipCode);
-          setArea(addr.area || '');
         } catch {
           setAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
         }
@@ -173,6 +301,212 @@ export default function Checkout() {
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
   }, []);
+
+  const applySavedAddress = (item) => {
+    if (!item) return;
+    setSelectedSavedAddressId(item.backendId ?? item.id ?? null);
+    setAddress(item.address || '');
+    setAddressType(normalizeAddressType(item.name || item.title || 'house'));
+    setContactPhone(item.phone || '');
+    if (item.latitude && item.longitude) {
+      setMapPosition([item.latitude, item.longitude]);
+    }
+  };
+
+  const mapPaymentMethodToApi = (method) => {
+    if (method === 'cash') return 'cash';
+    if (method === 'paypal') return 'paypal';
+    if (method === 'venmo') return 'venmo';
+    if (method === 'amazon') return 'amazon';
+    return 'sadad';
+  };
+
+  const extractOrderIdFromCreateResponse = (response) => (
+    response?.data?.order?.id
+    || response?.data?.id
+    || response?.order?.id
+    || response?.id
+    || null
+  );
+
+  const persistOrderDraft = ({ orderId, latestCartSnapshot }) => {
+    if (!orderId || !latestCartSnapshot) return;
+    const key = `orderDraft:${orderId}`;
+    const payload = {
+      orderId: String(orderId),
+      createdAt: new Date().toISOString(),
+      items: Array.isArray(latestCartSnapshot.items) ? latestCartSnapshot.items : [],
+      summary: latestCartSnapshot.summary || null,
+      selectedAddressId: selectedSavedAddressId,
+      notes: orderNotes || '',
+      paymentMethod,
+    };
+    sessionStorage.setItem(key, JSON.stringify(payload));
+  };
+
+  const handlePlaceOrder = async () => {
+    if (Date.now() < nextCheckoutAttemptAt) {
+      const waitSeconds = Math.max(1, Math.ceil((nextCheckoutAttemptAt - Date.now()) / 1000));
+      setCheckoutError(`Too many attempts. Please wait ${waitSeconds}s and try again.`);
+      return;
+    }
+
+    if (!cart.items.length) {
+      setCheckoutError('Your cart is empty.');
+      return;
+    }
+    const numericAddressId = Number(selectedSavedAddressId);
+    if (!Number.isFinite(numericAddressId) || numericAddressId <= 0) {
+      setCheckoutError('Please select a saved address.');
+      return;
+    }
+    if (!String(contactPhone || '').trim()) {
+      setCheckoutError('Please provide a contact phone number.');
+      return;
+    }
+
+    try {
+      setCheckoutLoading(true);
+      setCheckoutError('');
+      setCheckoutWarning('');
+
+      let latestCart = await loadCart({ force: true }).catch(() => cart);
+
+      if (!latestCart?.items?.length) {
+        setCheckoutError('Your cart is empty on server. Please go back to cart and refresh it, then retry checkout.');
+        return;
+      }
+
+      const orderResponse = await createOrder({
+        addressId: numericAddressId,
+        couponId: latestCart?.coupon?.id ?? cart?.coupon?.id ?? null,
+        useWallet,
+        usePoints,
+        notes: orderNotes,
+      });
+      const orderId = extractOrderIdFromCreateResponse(orderResponse);
+      if (!orderId) {
+        throw new Error('Order created but order id was not returned.');
+      }
+
+      persistOrderDraft({
+        orderId,
+        latestCartSnapshot: latestCart,
+      });
+
+      if (paymentMethod !== 'cash') {
+        try {
+          await payOrder({
+            orderId,
+            paymentMethod: mapPaymentMethodToApi(paymentMethod),
+          });
+        } catch (paymentError) {
+          const paymentMessage = paymentError?.response?.data?.message || '';
+          sessionStorage.setItem(
+            'checkoutPaymentWarning',
+            paymentMessage || 'Order placed successfully, but payment initialization failed. You can retry payment from My Orders.'
+          );
+        }
+      }
+
+      await loadCart({ force: true }).catch(() => {});
+      navigate(`/track-order?orderId=${encodeURIComponent(orderId)}`);
+    } catch (error) {
+      const backendMessage = error?.response?.data?.message || error?.message || 'Failed to place order.';
+      const errors = error?.response?.data?.errors;
+      const firstValidationMessage = errors && typeof errors === 'object'
+        ? Object.values(errors).flat().find(Boolean)
+        : '';
+      const lowerMessage = String(firstValidationMessage || backendMessage).toLowerCase();
+      const isTooManyAttempts = error?.response?.status === 429 || lowerMessage.includes('too many attempts');
+      if (isTooManyAttempts) {
+        setNextCheckoutAttemptAt(Date.now() + 20000);
+        setCheckoutError('Too many attempts from server. Please wait 20 seconds and try again.');
+      } else {
+        setCheckoutError(firstValidationMessage || backendMessage);
+      }
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const warning = sessionStorage.getItem('checkoutPaymentWarning');
+    if (warning) {
+      setCheckoutWarning(warning);
+      sessionStorage.removeItem('checkoutPaymentWarning');
+    }
+  }, []);
+
+  const handleSaveCurrentAddress = async () => {
+    if (Date.now() < nextAddressActionAt) {
+      const waitSeconds = Math.max(1, Math.ceil((nextAddressActionAt - Date.now()) / 1000));
+      setAddressesError(`Too many attempts. Please wait ${waitSeconds}s before trying again.`);
+      return;
+    }
+
+    const concatenatedAddress = buildConcatenatedAddress();
+    if (!concatenatedAddress) {
+      setAddressesError('Please enter address before saving.');
+      return;
+    }
+    if (!String(contactPhone || '').trim()) {
+      setAddressesError('Please enter phone number before saving.');
+      return;
+    }
+    try {
+      setAddressActionLoading(true);
+      setAddressesError('');
+      await createAddress({
+        name: formatAddressTypeLabel(addressType),
+        phone: contactPhone,
+        address: concatenatedAddress,
+        latitude: mapPosition?.[0] ?? null,
+        longitude: mapPosition?.[1] ?? null,
+      });
+      await loadAddresses();
+    } catch (error) {
+      const status = error?.response?.status;
+      const message = error?.response?.data?.message || 'Unable to save address.';
+      if (status === 429 || String(message).toLowerCase().includes('too many attempts')) {
+        setNextAddressActionAt(Date.now() + 15000);
+        setAddressesError('Too many requests right now. Please wait 15 seconds and try again.');
+      } else {
+        setAddressesError(toProfessionalAddressError(error, 'Unable to save address right now.'));
+      }
+    } finally {
+      setAddressActionLoading(false);
+    }
+  };
+
+  const handleDeleteAddress = async (addressId) => {
+    if (Date.now() < nextAddressActionAt) {
+      const waitSeconds = Math.max(1, Math.ceil((nextAddressActionAt - Date.now()) / 1000));
+      setAddressesError(`Too many attempts. Please wait ${waitSeconds}s before trying again.`);
+      return;
+    }
+
+    try {
+      setAddressActionLoading(true);
+      setAddressesError('');
+      await deleteAddress({ addressId });
+      if (selectedSavedAddressId === addressId) {
+        setSelectedSavedAddressId(null);
+      }
+      await loadAddresses();
+    } catch (error) {
+      const status = error?.response?.status;
+      const message = error?.response?.data?.message || 'Unable to delete address.';
+      if (status === 429 || String(message).toLowerCase().includes('too many attempts')) {
+        setNextAddressActionAt(Date.now() + 15000);
+        setAddressesError('Too many requests right now. Please wait 15 seconds and try again.');
+      } else {
+        setAddressesError(toProfessionalAddressError(error, 'Unable to delete address right now.'));
+      }
+    } finally {
+      setAddressActionLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white relative w-full min-h-screen" data-name="Checkout" data-node-id="35:5064">
@@ -212,6 +546,8 @@ export default function Checkout() {
                   <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">First name</label>
                   <input 
                     type="text" 
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
                     className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
                     placeholder="First name"
                   />
@@ -220,25 +556,20 @@ export default function Checkout() {
                   <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Last name</label>
                   <input 
                     type="text" 
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
                     className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
                     placeholder="Last name"
                   />
                 </div>
               </div>
 
-              {/* Company Name */}
-              <div className="flex flex-col gap-[8px] w-full">
-                <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Company Name (Optional)</label>
-                <input 
-                  type="text" 
-                  className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                  placeholder="Company Name"
-                />
-              </div>
-
               {/* Address with map */}
               <div className="flex flex-col gap-[12px] w-full">
                 <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Address</label>
+                <p className="font-['Poppins'] text-[12px] text-[#666]">
+                  Add your delivery address details below. We will save it securely to your address book.
+                </p>
                 <input 
                   type="text" 
                   value={address}
@@ -246,7 +577,83 @@ export default function Checkout() {
                   className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
                   placeholder="Enter address or pick on map below"
                 />
+                <div className="flex flex-col sm:flex-row gap-[10px] sm:gap-[12px]">
+                  <div className="flex flex-col gap-[6px] w-full sm:w-1/2">
+                    <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">Address Name</label>
+                    <select
+                      value={addressType}
+                      onChange={(e) => setAddressType(e.target.value)}
+                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] py-[10px] font-['Poppins'] font-normal text-[13px] text-[#333] bg-white outline-none focus:border-[#0e1c47] transition-colors w-full"
+                    >
+                      <option value="house">House</option>
+                      <option value="apartment">Apartment</option>
+                      <option value="office">Office</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-[6px] w-full sm:w-1/2">
+                    <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">Contact Phone Number</label>
+                    <input
+                      type="tel"
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] py-[10px] font-['Poppins'] font-normal text-[13px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                      placeholder="01xxxxxxxxx"
+                    />
+                  </div>
+                </div>
                 <div className="flex flex-col gap-[10px] w-full">
+                  <div className="flex items-center justify-between gap-[12px]">
+                    <p className="font-['Poppins'] font-medium text-[13px] text-[#0e1c47]">Saved Addresses</p>
+                    <button
+                      type="button"
+                      onClick={handleSaveCurrentAddress}
+                      disabled={addressActionLoading || Date.now() < nextAddressActionAt}
+                      className="inline-flex items-center justify-center px-[12px] py-[8px] rounded-[4px] bg-[#eea137] text-white font-['Poppins'] font-medium text-[12px] hover:bg-[#d8902f] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {addressActionLoading ? 'Saving...' : 'Save current address'}
+                    </button>
+                  </div>
+                  {loadingAddresses ? (
+                    <p className="font-['Poppins'] text-[12px] text-[#666]">Loading saved addresses...</p>
+                  ) : savedAddresses.length > 0 ? (
+                    <div className="flex flex-col gap-[8px]">
+                      {savedAddresses.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`border rounded-[6px] p-[10px] flex items-center justify-between gap-[10px] ${
+                            selectedSavedAddressId === item.id ? 'border-[#0e1c47] bg-[#f8fbff]' : 'border-[#e4e7e9] bg-white'
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => applySavedAddress(item)}
+                            className="text-left flex-1 min-w-0 cursor-pointer"
+                          >
+                            <p className="font-['Poppins'] font-semibold text-[12px] text-[#0e1c47] truncate">{item.name || item.title}</p>
+                            {item.phone ? (
+                              <p className="font-['Poppins'] font-normal text-[12px] text-[#666] truncate">{item.phone}</p>
+                            ) : null}
+                            <p className="font-['Poppins'] font-normal text-[12px] text-[#666] truncate">{item.address}</p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAddress(item.backendId ?? item.id)}
+                            disabled={addressActionLoading || Date.now() < nextAddressActionAt}
+                            className="text-[#dc2626] font-['Poppins'] font-medium text-[12px] hover:underline disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="font-['Poppins'] text-[12px] text-[#666]">No saved addresses yet.</p>
+                  )}
+                  {addressesError ? (
+                    <div className="rounded-[6px] border border-[#fecaca] bg-[#fff5f5] px-[10px] py-[8px]">
+                      <p className="font-['Poppins'] text-[12px] text-[#b42318]">{addressesError}</p>
+                    </div>
+                  ) : null}
                   <button
                     type="button"
                     onClick={handleLocateMe}
@@ -294,189 +701,10 @@ export default function Checkout() {
                   <p className="font-['Poppins'] text-[12px] text-[#666]">
                     Click on the map to set your delivery address, or use &quot;Locate my position&quot; to use your current location.
                   </p>
+                  <p className="font-['Poppins'] text-[12px] text-[#0e1c47] bg-[#f6f8fc] border border-[#e4e7e9] rounded-[4px] px-[10px] py-[8px]">
+                    Delivery address summary: {buildConcatenatedAddress() || '-'}
+                  </p>
                 </div>
-              </div>
-
-              {/* Address Type & Details */}
-              <div className="flex flex-col gap-[20px] w-full">
-                <div className="flex flex-col gap-[10px] w-full">
-                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Address Type</label>
-                  <div className="flex flex-wrap gap-[16px] sm:gap-[24px] items-center">
-                    {['house', 'apartment', 'office'].map((type) => (
-                      <label key={type} className="flex items-center gap-[8px] cursor-pointer">
-                        <input
-                          type="radio"
-                          name="addressType"
-                          value={type}
-                          checked={addressType === type}
-                          onChange={(e) => setAddressType(e.target.value)}
-                          className="w-[16px] h-[16px] accent-[#0e1c47] cursor-pointer"
-                        />
-                        <span className="font-['Poppins'] font-normal text-[14px] text-[#333] capitalize">{type}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-[16px] sm:gap-[20px] w-full">
-                  <div className="flex flex-col gap-[8px] flex-1 w-full">
-                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Building Name / House No <span className="text-[#eea137]">*</span></label>
-                    <input
-                      type="text"
-                      value={buildingHouseNo}
-                      onChange={(e) => setBuildingHouseNo(e.target.value)}
-                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                      placeholder="Building Name / House No"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-[8px] flex-1 w-full">
-                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">PACI Number (optional)</label>
-                    <input
-                      type="text"
-                      value={paciNumber}
-                      onChange={(e) => setPaciNumber(e.target.value)}
-                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                      placeholder="PACI Number (optional)"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-[16px] sm:gap-[20px] w-full">
-                  <div className="flex flex-col gap-[8px] flex-1 w-full">
-                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Street Name <span className="text-[#eea137]">*</span></label>
-                    <input
-                      type="text"
-                      value={streetName}
-                      onChange={(e) => setStreetName(e.target.value)}
-                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                      placeholder="Street Name"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-[8px] flex-1 w-full">
-                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Jadda/Avenue (optional)</label>
-                    <input
-                      type="text"
-                      value={jaddaAvenue}
-                      onChange={(e) => setJaddaAvenue(e.target.value)}
-                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                      placeholder="Jadda/Avenue (optional)"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-[8px] w-full">
-                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Landmark (optional)</label>
-                  <input
-                    type="text"
-                    value={landmark}
-                    onChange={(e) => setLandmark(e.target.value)}
-                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                    placeholder="Landmark (optional)"
-                  />
-                </div>
-                <div className="flex flex-col sm:flex-row gap-[16px] sm:gap-[20px] w-full">
-                  <div className="flex flex-col gap-[8px] flex-1 w-full">
-                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Area</label>
-                    <input
-                      type="text"
-                      value={area}
-                      onChange={(e) => setArea(e.target.value)}
-                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full bg-white"
-                      placeholder="Area"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-[8px] flex-1 w-full">
-                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Block</label>
-                    <input
-                      type="text"
-                      value={block}
-                      onChange={(e) => setBlock(e.target.value)}
-                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                      placeholder="Block"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Location Details – filled from map when you use Locate my position or click on the map */}
-              <div className="flex flex-col sm:flex-row gap-[16px] sm:gap-[20px] w-full">
-                <div className="flex flex-col gap-[8px] flex-1 w-full">
-                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Country</label>
-                  <select
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
-                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full bg-white"
-                  >
-                    <option value="">Select...</option>
-                    <option value="kuwait">Kuwait</option>
-                    <option value="saudi">Saudi Arabia</option>
-                    <option value="uae">UAE</option>
-                    {country && !['kuwait', 'saudi', 'uae'].includes(country) && (
-                      <option value={country}>{country}</option>
-                    )}
-                  </select>
-                </div>
-                <div className="flex flex-col gap-[8px] flex-1 w-full">
-                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Region/State</label>
-                  <input
-                    type="text"
-                    value={regionState}
-                    onChange={(e) => setRegionState(e.target.value)}
-                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full bg-white"
-                    placeholder="Region/State"
-                  />
-                </div>
-                <div className="flex flex-col gap-[8px] flex-1 w-full">
-                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">City</label>
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full bg-white"
-                    placeholder="City"
-                  />
-                </div>
-                <div className="flex flex-col gap-[8px] flex-1 w-full">
-                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Zip Code</label>
-                  <input
-                    type="text"
-                    value={zipCode}
-                    onChange={(e) => setZipCode(e.target.value)}
-                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                    placeholder="Zip Code"
-                  />
-                </div>
-              </div>
-
-              {/* Contact Information */}
-              <div className="flex flex-col sm:flex-row gap-[16px] sm:gap-[20px] w-full">
-                <div className="flex flex-col gap-[8px] flex-1 w-full">
-                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Email</label>
-                  <input 
-                    type="email" 
-                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                    placeholder="Email"
-                  />
-                </div>
-                <div className="flex flex-col gap-[8px] flex-1 w-full">
-                  <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Phone Number</label>
-                  <input 
-                    type="tel" 
-                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                    placeholder="Phone Number"
-                  />
-                </div>
-              </div>
-
-              {/* Shipping Option */}
-              <div className="flex items-center gap-[8px] w-full">
-                <input 
-                  type="checkbox" 
-                  id="shipDifferent"
-                  checked={shipToDifferentAddress}
-                  onChange={(e) => setShipToDifferentAddress(e.target.checked)}
-                  className="w-[16px] h-[16px] cursor-pointer"
-                />
-                <label htmlFor="shipDifferent" className="font-['Poppins'] font-normal text-[14px] text-[#333] cursor-pointer">
-                  Ship into different address
-                </label>
               </div>
             </div>
             
@@ -585,9 +813,21 @@ export default function Checkout() {
               <div className="flex flex-col gap-[8px] w-full">
                 <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Order Notes (Optional)</label>
                 <textarea 
+                  value={orderNotes}
+                  onChange={(e) => setOrderNotes(e.target.value)}
                   className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full min-h-[100px] resize-y"
                   placeholder="Notes about your order, e.g. special notes for delivery"
                 />
+              </div>
+              <div className="flex flex-col sm:flex-row gap-[12px]">
+                <label className="inline-flex items-center gap-[8px] font-['Poppins'] text-[14px] text-[#333]">
+                  <input type="checkbox" checked={useWallet} onChange={(e) => setUseWallet(e.target.checked)} />
+                  Use wallet balance
+                </label>
+                <label className="inline-flex items-center gap-[8px] font-['Poppins'] text-[14px] text-[#333]">
+                  <input type="checkbox" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} />
+                  Use reward points
+                </label>
               </div>
             </div>
           </div>
@@ -600,78 +840,83 @@ export default function Checkout() {
             
             {/* Order Items */}
             <div className="flex flex-col gap-[16px] w-full">
-              {/* Item 1 */}
-              <div className="flex gap-[12px] items-start w-full">
-                <div className="relative size-[80px] sm:size-[100px] shrink-0 rounded-[4px] overflow-hidden bg-[#f5f5f5]">
-                  <img 
-                    src={imgCamera} 
-                    alt="Canon EOS 1500D DSLR Camera" 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.src = 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=100&h=100&fit=crop';
-                    }}
-                  />
+              {loadingCart ? (
+                <p className="font-['Poppins'] text-[13px] text-[#666]">Loading cart items...</p>
+              ) : cart.items.length === 0 ? (
+                <p className="font-['Poppins'] text-[13px] text-[#666]">Your cart is empty.</p>
+              ) : cart.items.map((item) => (
+                <div key={`${item.id}-${item.productId}`} className="flex gap-[12px] items-start w-full">
+                  <div className="relative size-[80px] sm:size-[100px] shrink-0 rounded-[4px] overflow-hidden bg-[#f5f5f5]">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                    ) : null}
+                  </div>
+                  <div className="flex flex-col gap-[4px] flex-1 min-w-0">
+                    <p className="font-['Poppins'] font-normal text-[14px] text-[#333] line-clamp-2">
+                      {item.name}
+                    </p>
+                    <p className="font-['Poppins'] font-medium text-[14px] text-[#333]">
+                      {item.quantity} x ${Number(item.unitPrice || 0).toFixed(2)}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-[4px] flex-1 min-w-0">
-                  <p className="font-['Poppins'] font-normal text-[14px] text-[#333] line-clamp-2">
-                    Canon EOS 1500D DSLR Camera Body+ 18-...
-                  </p>
-                  <p className="font-['Poppins'] font-medium text-[14px] text-[#333]">
-                    1 x $70
-                  </p>
-                </div>
-              </div>
-              
-              {/* Item 2 */}
-              <div className="flex gap-[12px] items-start w-full">
-                <div className="relative size-[80px] sm:size-[100px] shrink-0 rounded-[4px] overflow-hidden bg-[#f5f5f5]">
-                  <img 
-                    src={imgHeadphones} 
-                    alt="Wired Over-Ear Gaming Headphones" 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop';
-                    }}
-                  />
-                </div>
-                <div className="flex flex-col gap-[4px] flex-1 min-w-0">
-                  <p className="font-['Poppins'] font-normal text-[14px] text-[#333] line-clamp-2">
-                    Wired Over-Ear Gaming Headphones with U...
-                  </p>
-                  <p className="font-['Poppins'] font-medium text-[14px] text-[#333]">
-                    3 x $250
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
 
             {/* Cost Breakdown */}
             <div className="flex flex-col gap-[12px] w-full border-t border-[#e4e7e9] pt-[16px]">
               <div className="flex justify-between items-center w-full">
                 <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Sub-total</p>
-                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">$320</p>
+                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">${Number(cart.summary?.subtotal || 0).toFixed(2)}</p>
               </div>
               <div className="flex justify-between items-center w-full">
                 <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Shipping</p>
-                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">Free</p>
+                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">
+                  {shippingLoading
+                    ? 'Calculating...'
+                    : Number(shippingQuote?.shipping ?? cart.summary?.shipping ?? 0) > 0
+                      ? `$${Number(shippingQuote?.shipping ?? cart.summary?.shipping ?? 0).toFixed(2)}`
+                      : 'Free'}
+                </p>
               </div>
               <div className="flex justify-between items-center w-full">
                 <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Discount</p>
-                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">$24</p>
+                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">
+                  ${Number(shippingQuote?.discount ?? cart.summary?.discount ?? 0).toFixed(2)}
+                </p>
               </div>
               <div className="flex justify-between items-center w-full">
                 <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Tax</p>
-                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">$61.99</p>
+                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">${Number(cart.summary?.tax || 0).toFixed(2)}</p>
               </div>
               <div className="flex justify-between items-center w-full border-t border-[#e4e7e9] pt-[12px] mt-[4px]">
                 <p className="font-['Poppins'] font-semibold text-[16px] sm:text-[18px] text-[#333]">Total</p>
-                <p className="font-['Poppins'] font-semibold text-[16px] sm:text-[18px] text-[#333]">$357.99 USD</p>
+                <p className="font-['Poppins'] font-semibold text-[16px] sm:text-[18px] text-[#333]">
+                  ${Number(shippingQuote?.total ?? cart.summary?.total ?? 0).toFixed(2)} USD
+                </p>
               </div>
             </div>
 
+            {checkoutError ? (
+              <div className="rounded-[6px] border border-[#fecaca] bg-[#fff5f5] px-[10px] py-[8px] w-full">
+                <p className="font-['Poppins'] text-[12px] text-[#b42318]">{checkoutError}</p>
+              </div>
+            ) : null}
+
+            {checkoutWarning ? (
+              <div className="rounded-[6px] border border-[#fde68a] bg-[#fffbeb] px-[10px] py-[8px] w-full">
+                <p className="font-['Poppins'] text-[12px] text-[#92400e]">{checkoutWarning}</p>
+              </div>
+            ) : null}
+
             {/* Process To Check Button */}
-            <button className="bg-[#0e1c47] text-white font-['Poppins'] font-semibold py-[12px] sm:py-[14px] px-[20px] sm:px-[24px] rounded-[4px] hover:bg-[#1a2f5c] transition-colors text-[14px] sm:text-[16px] w-full flex items-center justify-center gap-[8px] cursor-pointer">
-              <span>Process To Check</span>
+            <button
+              type="button"
+              onClick={handlePlaceOrder}
+              disabled={checkoutLoading || loadingCart || !cart.items.length}
+              className="bg-[#0e1c47] text-white font-['Poppins'] font-semibold py-[12px] sm:py-[14px] px-[20px] sm:px-[24px] rounded-[4px] hover:bg-[#1a2f5c] transition-colors text-[14px] sm:text-[16px] w-full flex items-center justify-center gap-[8px] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <span>{checkoutLoading ? 'Placing Order...' : 'Process To Check'}</span>
               <div className="relative size-[16px] sm:size-[18px]">
                 <img 
                   src={imgArrowRight} 

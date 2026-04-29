@@ -1,10 +1,12 @@
 // Shared Header Component used across pages
 // This will be a reusable component based on the Figma design
 
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import React, { useState, useRef, useEffect } from 'react';
 import ThemeToggle from './ThemeToggle';
+import { getCategories, resolveCountryId } from '../services/catalog.service';
 
 // Import assets
 import logoImage from '../assets/websiteLogo.png';
@@ -93,30 +95,67 @@ function ArrowSwapHorizontal({ className }) {
 
 export default function Header() {
   const { isAuthenticated, user, logout } = useAuth();
+  const { cartItemsCount } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showNavCategoryDropdown, setShowNavCategoryDropdown] = useState(false);
+  const [apiCategories, setApiCategories] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const dropdownRef = useRef(null);
   const categoryDropdownRef = useRef(null);
   const navCategoryDropdownRef = useRef(null);
+  const countryId = resolveCountryId(1);
 
-  // Categories data
-  const categories = [
-    { name: 'All Categories', path: '/search' },
-    { name: 'Electronics Devices', path: '/search?category=electronics' },
-    { name: 'Computer & Laptop', path: '/search?category=computers' },
-    { name: 'Computer Accessories', path: '/search?category=accessories' },
-    { name: 'SmartPhone', path: '/search?category=smartphones' },
-    { name: 'Headphone', path: '/search?category=headphones' },
-    { name: 'Mobile Accessories', path: '/search?category=mobile-accessories' },
-    { name: 'Gaming Console', path: '/search?category=gaming' },
-    { name: 'Camera & Photo', path: '/search?category=cameras' },
-    { name: 'TV & Homes Appliances', path: '/search?category=tv' },
-    { name: 'Watchs & Accessories', path: '/search?category=watches' },
-    { name: 'GPS & Navigation', path: '/search?category=gps' },
-    { name: 'Warable Technology', path: '/search?category=wearables' },
-  ];
+  useEffect(() => {
+    const loadHeaderCategories = async () => {
+      try {
+        const categoriesList = await getCategories();
+        setApiCategories(categoriesList);
+      } catch {
+        setApiCategories([]);
+      }
+    };
+
+    loadHeaderCategories();
+  }, []);
+
+  const categories = React.useMemo(() => {
+    const apiList = apiCategories.map((item) => ({
+      id: item.id,
+      name: item.name,
+      path: `/search?country_id=${countryId}&category_id=${item.id}`,
+    }));
+
+    return [
+      { id: 'all', name: 'All Categories', path: `/search?country_id=${countryId}` },
+      ...apiList,
+    ];
+  }, [apiCategories, countryId]);
+
+  const topHeaderCategories = React.useMemo(
+    () => categories.filter((item) => item.id !== 'all').slice(0, 5),
+    [categories]
+  );
+
+  const selectedCategory = React.useMemo(
+    () => categories.find((item) => String(item.id) === String(selectedCategoryId)) || categories[0],
+    [categories, selectedCategoryId]
+  );
+
+  useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    const queryCategoryId = query.get('category_id');
+    const querySearch = query.get('q');
+    setSearchTerm(querySearch || '');
+    if (queryCategoryId) {
+      setSelectedCategoryId(queryCategoryId);
+      return;
+    }
+    setSelectedCategoryId('all');
+  }, [location.search]);
 
   // Close dropdowns when clicking outside or pressing Escape
   useEffect(() => {
@@ -156,8 +195,8 @@ export default function Header() {
     };
   }, [showDropdown, showCategoryDropdown, showNavCategoryDropdown]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setShowDropdown(false);
     navigate('/');
   };
@@ -289,12 +328,22 @@ export default function Header() {
           <form 
             onSubmit={(e) => {
               e.preventDefault();
-              navigate('/search');
+              const query = new URLSearchParams();
+              query.set('country_id', String(countryId));
+              if (selectedCategoryId && selectedCategoryId !== 'all') {
+                query.set('category_id', String(selectedCategoryId));
+              }
+              if (searchTerm.trim()) {
+                query.set('q', searchTerm.trim());
+              }
+              navigate(`/search?${query.toString()}`);
             }}
             className="border border-[rgba(255,255,255,0.2)] border-solid content-stretch flex h-[30px] sm:h-[30px] md:h-[30px] lg:h-[30px] xl:h-[30px] 2xl:h-[40px] items-center justify-between overflow-visible pl-[10px] sm:pl-[12px] md:pl-[14px] lg:pl-[16px] xl:pl-[24px] pr-0 py-0 relative rounded-[4px] shrink-0 w-full sm:w-[480px] md:w-[520px] lg:w-[520px] xl:w-[650px] 2xl:w-[700px] sm:max-w-full sm:flex-1 sm:min-w-0"
           >
             <input 
               type="text" 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[13px] sm:text-[13px] md:text-[14px] lg:text-[14px] text-white bg-transparent border-none outline-none flex-1 min-w-0" 
               placeholder="Search for products" 
             />
@@ -308,7 +357,7 @@ export default function Header() {
                   aria-haspopup="true"
                 >
                   <p className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[13px] sm:text-[14px] lg:text-[14px] text-white whitespace-nowrap">
-                    Category
+                    {selectedCategory?.name || 'All Categories'}
                   </p>
                   <div className={`relative shrink-0 size-[20px] lg:size-[22px] transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`}>
                     <div className="absolute contents inset-0">
@@ -328,14 +377,17 @@ export default function Header() {
                     <div className="absolute left-0 top-full mt-[8px] bg-white dark:bg-[#1e293b] border border-[#e6e6e6] dark:border-[#334155] rounded-[8px] shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-[280px] sm:w-[300px] z-[9999] overflow-hidden animate-[dropdownFadeIn_0.2s_ease-out] max-h-[400px] overflow-y-auto">
                       <div className="py-[4px]">
                         {categories.map((category, index) => (
-                          <Link
+                          <button
                             key={index}
-                            to={category.path}
-                            onClick={() => setShowCategoryDropdown(false)}
-                            className="flex items-center px-[16px] py-[10px] sm:py-[12px] text-[14px] font-['Poppins'] font-medium text-[#0e1c47] dark:text-white hover:bg-[#f8f9fa] dark:hover:bg-[#0f172a] transition-colors duration-150 cursor-pointer"
+                            type="button"
+                            onClick={() => {
+                              setSelectedCategoryId(String(category.id));
+                              setShowCategoryDropdown(false);
+                            }}
+                            className="w-full text-left flex items-center px-[16px] py-[10px] sm:py-[12px] text-[14px] font-['Poppins'] font-medium text-[#0e1c47] dark:text-white hover:bg-[#f8f9fa] dark:hover:bg-[#0f172a] transition-colors duration-150 cursor-pointer"
                           >
                             <span className="whitespace-nowrap">{category.name}</span>
-                          </Link>
+                          </button>
                         ))}
                       </div>
                     </div>
@@ -359,8 +411,13 @@ export default function Header() {
             <Link to="/favorite" className="cursor-pointer hover:opacity-80 transition-opacity">
               <More className="relative shrink-0 size-[18px] sm:size-[19px] md:size-[20px] lg:size-[20px]" />
             </Link>
-            <Link to="/shopping-cart" className="cursor-pointer hover:opacity-80 transition-opacity">
+            <Link to="/shopping-cart" className="cursor-pointer hover:opacity-80 transition-opacity relative">
               <ShoppingBasket className="overflow-clip relative shrink-0 size-[18px] sm:size-[19px] md:size-[20px] lg:size-[20px]" />
+              {cartItemsCount > 0 ? (
+                <span className="absolute -top-[8px] -right-[8px] min-w-[16px] h-[16px] px-[4px] rounded-full bg-[#eea137] text-white text-[10px] leading-[16px] text-center font-['Poppins'] font-semibold">
+                  {cartItemsCount > 99 ? '99+' : cartItemsCount}
+                </span>
+              ) : null}
             </Link>
             <Link to="/notifications" className="relative shrink-0 size-[18px] sm:size-[19px] md:size-[20px] lg:size-[20px] cursor-pointer hover:opacity-80 transition-opacity">
               <div className="absolute contents inset-0">
@@ -445,6 +502,17 @@ export default function Header() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                           </svg>
                           <span className="whitespace-nowrap">My Orders</span>
+                        </Link>
+
+                        <Link
+                          to="/my-tickets"
+                          onClick={() => setShowDropdown(false)}
+                          className="flex items-center gap-[12px] px-[16px] sm:px-[18px] py-[10px] sm:py-[12px] text-[14px] sm:text-[15px] font-['Poppins'] font-medium text-[#0e1c47] hover:bg-[#f8f9fa] transition-colors duration-150 group cursor-pointer"
+                        >
+                          <svg className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] text-[#666] group-hover:text-[#eea137] transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5a2 2 0 002 2h2a2 2 0 002-2m-6 9l2 2 4-4" />
+                          </svg>
+                          <span className="whitespace-nowrap">My Tickets</span>
                         </Link>
                         
                         <Link
@@ -550,32 +618,13 @@ export default function Header() {
           )}
         </div>
         <div className="content-stretch flex flex-wrap gap-[10px] sm:gap-[14px] md:gap-[16px] lg:gap-[14px] items-center justify-center relative shrink-0 w-full sm:w-auto">
-          <Link to="/pc-components" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[7px] relative shrink-0 hover:opacity-80 transition-opacity">
-            <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[13px] sm:text-[14px] md:text-[15px] lg:text-[14px] text-left text-white">{`Computers & Laptops`}</p>
-          </Link>
-          <Link to="/" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[7px] relative shrink-0 hover:opacity-80 transition-opacity">
-            <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[13px] sm:text-[14px] md:text-[15px] lg:text-[14px] text-white">{`Mobiles & Tablets`}</p>
-          </Link>
-          <Link to="/digital-e-cards" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[7px] relative shrink-0 hover:opacity-80 transition-opacity">
-            <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[13px] sm:text-[14px] md:text-[15px] lg:text-[14px] text-white">
-              Smartphones
-            </p>
-          </Link>
-          <Link to="/pc-components" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[7px] relative shrink-0 hover:opacity-80 transition-opacity">
-            <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[13px] sm:text-[14px] md:text-[15px] lg:text-[14px] text-white">
-              Monitors
-            </p>
-          </Link>
-          <Link to="/pc-components" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[7px] relative shrink-0 hover:opacity-80 transition-opacity">
-            <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[13px] sm:text-[14px] md:text-[15px] lg:text-[14px] text-white">
-              Processors
-            </p>
-          </Link>
-          <Link to="/pc-components" className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[7px] relative shrink-0 hover:opacity-80 transition-opacity">
-            <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[13px] sm:text-[14px] md:text-[15px] lg:text-[14px] text-white">
-              Motherboards
-            </p>
-          </Link>
+          {topHeaderCategories.map((category) => (
+            <Link key={category.id} to={category.path} className="content-stretch cursor-pointer flex items-center justify-center px-[4px] py-[6px] sm:py-[7px] relative shrink-0 hover:opacity-80 transition-opacity">
+              <p className="capitalize font-['Poppins'] font-normal leading-[normal] not-italic relative shrink-0 text-[13px] sm:text-[14px] md:text-[15px] lg:text-[14px] text-left text-white">
+                {category.name}
+              </p>
+            </Link>
+          ))}
         </div>
       </div>
     </div>

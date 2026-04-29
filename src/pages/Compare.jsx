@@ -1,8 +1,9 @@
 // Compare page - professional design matching site's visual identity
 // Maintains colors, fonts, styles, and icons from the site
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getProducts, resolveCountryId } from '../services/catalog.service';
 
 // Import assets
 import arrowDownIcon from '../assets/ArrowRight.svg';
@@ -11,56 +12,45 @@ import arrowDownIcon from '../assets/ArrowRight.svg';
 const imgArrowDown = arrowDownIcon;
 
 export default function Compare() {
-  const [compareItems, setCompareItems] = useState([
-    {
-      id: 1,
-      name: "MacBook Pro 16-inch",
-      brand: "Apple",
-      price: 2499.99,
-      originalPrice: 2999.99,
-      image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&h=300&fit=crop",
-      specs: {
-        processor: "M3 Pro",
-        memory: "18GB",
-        storage: "512GB SSD",
-        display: "16.2-inch",
-        battery: "Up to 22 hours",
-        weight: "2.14 kg"
+  const countryId = useMemo(() => resolveCountryId(1), []);
+  const [compareItems, setCompareItems] = useState([]);
+  const [loadingCompare, setLoadingCompare] = useState(false);
+  const [compareError, setCompareError] = useState('');
+
+  useEffect(() => {
+    const loadCompareItems = async () => {
+      try {
+        setLoadingCompare(true);
+        setCompareError('');
+        const productsList = await getProducts({ countryId, perPage: 4, page: 1 });
+        setCompareItems(
+          productsList.slice(0, 3).map((product) => ({
+            id: product.id,
+            name: product.name,
+            brand: product.brand,
+            price: Number(product.priceValue || 0),
+            originalPrice: Number((product.originalPrice || '').replace(/[^0-9.]/g, '')) || null,
+            image: product.image || '',
+            specs: {
+              processor: product.tag || product.category || 'N/A',
+              memory: product.stock > 0 ? 'Available' : 'Out of stock',
+              storage: product.sku || 'N/A',
+              display: product.category || 'N/A',
+              battery: product.rating ? `${product.rating.toFixed(1)} Rating` : 'N/A',
+              weight: product.vendorName || 'N/A',
+            },
+          }))
+        );
+      } catch (error) {
+        setCompareError(error?.response?.data?.message || 'Failed to load products to compare.');
+        setCompareItems([]);
+      } finally {
+        setLoadingCompare(false);
       }
-    },
-    {
-      id: 2,
-      name: "Dell XPS 15",
-      brand: "Dell",
-      price: 1999.99,
-      originalPrice: 2299.99,
-      image: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&h=300&fit=crop",
-      specs: {
-        processor: "Intel i7-13700H",
-        memory: "16GB",
-        storage: "1TB SSD",
-        display: "15.6-inch",
-        battery: "Up to 10 hours",
-        weight: "1.92 kg"
-      }
-    },
-    {
-      id: 3,
-      name: "HP Spectre x360",
-      brand: "HP",
-      price: 1799.99,
-      originalPrice: 2099.99,
-      image: "https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=300&h=300&fit=crop",
-      specs: {
-        processor: "Intel i7-1355U",
-        memory: "16GB",
-        storage: "512GB SSD",
-        display: "13.5-inch",
-        battery: "Up to 17 hours",
-        weight: "1.39 kg"
-      }
-    }
-  ]);
+    };
+
+    loadCompareItems();
+  }, [countryId]);
 
   const removeItem = (id) => {
     setCompareItems(compareItems.filter(item => item.id !== id));
@@ -112,7 +102,15 @@ export default function Compare() {
         </div>
 
         {/* Main Content */}
-        {compareItems.length > 0 ? (
+        {loadingCompare ? (
+          <div className="w-full bg-white dark:bg-[#1e293b] border border-[#e6e6e6] dark:border-[#334155] border-solid rounded-[4px] p-[40px] sm:p-[48px] md:p-[56px] text-center transition-colors duration-300">
+            <p className="font-['Poppins'] font-normal text-[14px] sm:text-[16px] text-[#666] dark:text-[#e5e7eb]">Loading products...</p>
+          </div>
+        ) : compareError ? (
+          <div className="w-full bg-white dark:bg-[#1e293b] border border-[#e6e6e6] dark:border-[#334155] border-solid rounded-[4px] p-[40px] sm:p-[48px] md:p-[56px] text-center transition-colors duration-300">
+            <p className="font-['Poppins'] font-normal text-[14px] sm:text-[16px] text-[#8e0909]">{compareError}</p>
+          </div>
+        ) : compareItems.length > 0 ? (
           <div className="w-full overflow-x-auto">
             <div className="min-w-[800px]">
               {/* Products Grid */}

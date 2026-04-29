@@ -279,6 +279,12 @@ export default function HelpCenter() {
             >
               Report Fraud
             </Link>
+            <Link
+              to="/my-tickets"
+              className="bg-transparent border-2 border-white text-white font-['Poppins'] font-semibold px-[24px] sm:px-[32px] py-[12px] sm:py-[14px] rounded-[4px] hover:bg-white hover:text-[#0e1c47] transition-colors"
+            >
+              My Tickets
+            </Link>
           </div>
         </div>
       </div>

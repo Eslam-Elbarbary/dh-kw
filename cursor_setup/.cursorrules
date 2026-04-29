@@ -1,0 +1,102 @@
+# ─────────────────────────────────────────────
+#  PROJECT RULES — Multi-Vendor Marketplace
+#  Customer-Facing React Frontend
+# ─────────────────────────────────────────────
+
+## Project Context
+This is a completed React frontend for a multi-vendor marketplace.
+The UI is fully built and functional. The only remaining task is
+wiring existing UI components to live backend API endpoints.
+
+## Primary Objective
+> Connect the existing UI to the backend API — nothing more.
+
+---
+
+## ⛔ ABSOLUTE RESTRICTIONS
+
+These rules are non-negotiable. Violating any of them can break
+a large, working codebase.
+
+1. **Never restructure, rename, or move existing files or folders.**
+2. **Never modify component props, interfaces, or existing state shape** unless adding a new data prop.
+3. **Never change any CSS, Tailwind classes, or styling of any kind.**
+4. **Never delete any screen, component, or route.**
+5. **Never install new packages without explicit approval.**
+6. **Never hardcode API URLs, tokens, or credentials.**
+7. **Never generate placeholder UI or skeletons for existing screens.**
+
+---
+
+## ✅ PERMITTED ACTIONS
+
+- Create or edit files inside `/src/services/` or `/src/api/`
+- Create custom hooks inside `/src/hooks/`
+- Add `.env` variables
+- Pass fetched data into existing components via props
+- Add loading / error / empty states **only if the component already has a slot for them**
+
+---
+
+## Data Adaptation Rule (Critical)
+
+When backend response shape differs from what the UI expects:
+
+```
+❌ WRONG → Modify the UI to match the API response
+✅ CORRECT → Transform the API response inside the service layer to match the UI
+```
+
+Example:
+```js
+// API returns: { data: { product_list: [...] } }
+// UI expects:  { products: [...] }
+
+// Fix it in the service — NOT in the component:
+const res = await api.get('/api/products');
+return { products: res.data.data.product_list };
+```
+
+---
+
+## Screens Without a Backend Endpoint
+
+If a screen exists in the UI but has no corresponding API endpoint:
+- Leave it exactly as-is
+- Do not delete it
+- Do not add mock data unless the component currently crashes without it
+- If it crashes, return an empty array or null — the minimum needed
+
+---
+
+## API Endpoints Without a Matching Screen
+
+If a backend endpoint exists but there is no UI screen for it:
+- Create a service function for it in `/src/services/`
+- Do not create any new UI components or pages for it
+
+---
+
+## Authentication
+
+- After a successful login, store the token: `localStorage.setItem('token', token)`
+- Attach to every protected request: `Authorization: Bearer {token}`
+- On 401 response → clear token and redirect to `/login`
+- Never store passwords or sensitive data
+
+---
+
+## HTTP Client Setup
+
+- Use a **single shared axios instance** defined in `/src/services/api.js`
+- Base URL must come from: `import.meta.env.VITE_API_BASE_URL`
+- All service files must import from this single instance — never create a second one
+
+---
+
+## When Uncertain
+
+- Ask before acting
+- Show code diff or plan before applying any change
+- Prefer doing less over doing more
+- One feature at a time — never batch multiple endpoints in one step

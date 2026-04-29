@@ -1,398 +1,178 @@
-// Shopping Cart page component - exact Figma implementation
-// Based on Figma design - Shopping Cart Page
-
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
-
-// Import assets
+import { useCart } from '../context/CartContext';
 import arrowDownIcon from '../assets/ArrowRight.svg';
-import shoppingCartIcon from '../assets/shopping-basket-01.svg';
-import productImage1 from '../assets/04eed14fc3631917a17e9d14491e48383aa02358.png';
-import productImage2 from '../assets/0e25c65909ff9d8fdace00ffb430dbc3cbf9784b.png';
 
-// Icon Assets
 const imgArrowDown = arrowDownIcon;
-// Remove icon - using inline SVG
-const imgRemove = "data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 5l10 10M15 5l-10 10' stroke='%23666' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E";
-// Divider lines
-const imgLine25 = "data:image/svg+xml,%3Csvg width='100%25' height='1' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='0' x2='100%25' y2='0' stroke='%23e4e7e9'/%3E%3C/svg%3E";
-const imgLine26 = "data:image/svg+xml,%3Csvg width='100%25' height='1' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='0' x2='100%25' y2='0' stroke='%23e4e7e9'/%3E%3C/svg%3E";
-const imgShoppingCartSimple = shoppingCartIcon;
-
-// Product Images
-const imgHeadphones = productImage1;
-const imgTV = productImage2;
 
 export default function ShoppingCart() {
-  const [quantities, setQuantities] = useState({
-    1: 3,
-    2: 3,
-    3: 3,
-    4: 1
-  });
+  const {
+    cart,
+    loadingCart,
+    cartError,
+    updateCartItemQuantity,
+    removeCartItem,
+    clearCart,
+    applyCartCoupon,
+  } = useCart();
 
-  const updateQuantity = (id, change) => {
-    setQuantities(prev => ({
-      ...prev,
-      [id]: Math.max(1, prev[id] + change)
-    }));
+  const [busyItemId, setBusyItemId] = useState(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [actionSuccess, setActionSuccess] = useState('');
+
+  const summary = useMemo(
+    () => cart?.summary || { subtotal: 0, shipping: 0, discount: 0, tax: 0, total: 0 },
+    [cart?.summary]
+  );
+
+  const formatMoney = (value) => `$${Number(value || 0).toFixed(2)}`;
+
+  const handleQuantityChange = async (item, delta) => {
+    const currentQuantity = Math.max(1, Number(item.quantity || 1));
+    if (delta < 0 && currentQuantity <= 1) {
+      await handleRemove(item);
+      return;
+    }
+    const nextQuantity = Math.max(1, currentQuantity + delta);
+    try {
+      setBusyItemId(item.id || item.productId);
+      setActionError('');
+      setActionSuccess('');
+      await updateCartItemQuantity({
+        cartItemId: item.id,
+        productId: item.productId,
+        quantity: nextQuantity,
+        variantId: item.variantId,
+      });
+    } catch (error) {
+      setActionError(error?.response?.data?.message || 'Failed to update quantity.');
+    } finally {
+      setBusyItemId(null);
+    }
   };
 
-  const cartItems = [
-    {
-      id: 1,
-      name: "Wired Over-Ear Gaming Headphones with USB",
-      price: 250,
-      image: imgHeadphones,
-      quantity: quantities[1]
-    },
-    {
-      id: 2,
-      name: "Wired Over-Ear Gaming Headphones with USB",
-      price: 250,
-      image: imgHeadphones,
-      quantity: quantities[2]
-    },
-    {
-      id: 3,
-      name: "Wired Over-Ear Gaming Headphones with USB",
-      price: 250,
-      image: imgHeadphones,
-      quantity: quantities[3]
-    },
-    {
-      id: 4,
-      name: "4K UHD LED Smart TV with Chromecast Built-in",
-      originalPrice: 99,
-      price: 70,
-      image: imgTV,
-      quantity: quantities[4]
+  const handleRemove = async (item) => {
+    try {
+      setBusyItemId(item.id || item.productId);
+      setActionError('');
+      setActionSuccess('');
+      await removeCartItem({ cartItemId: item.id, productId: item.productId, variantId: item.variantId });
+    } catch (error) {
+      setActionError(error?.response?.data?.message || 'Failed to remove item.');
+    } finally {
+      setBusyItemId(null);
     }
-  ];
+  };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = 0; // Free
-  const discount = 24;
-  const tax = 61.99;
-  const total = subtotal - discount + tax;
+  const handleClearCart = async () => {
+    try {
+      setActionError('');
+      setActionSuccess('');
+      await clearCart();
+      setActionSuccess('Cart cleared successfully.');
+    } catch (error) {
+      setActionError(error?.response?.data?.message || 'Failed to clear cart.');
+    }
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    try {
+      setCouponBusy(true);
+      setActionError('');
+      setActionSuccess('');
+      await applyCartCoupon({ code: couponCode.trim() });
+      setActionSuccess('Coupon applied successfully.');
+    } catch (error) {
+      setActionError(error?.response?.data?.message || 'Failed to apply coupon.');
+    } finally {
+      setCouponBusy(false);
+    }
+  };
 
   return (
-    <div className="bg-white dark:bg-[#0f172a] relative w-full min-h-screen transition-colors duration-300">
-      <div className="flex flex-col gap-[32px] sm:gap-[36px] md:gap-[40px] items-center relative w-full px-[12px] sm:px-[16px] md:px-[32px] lg:px-[60px] xl:px-[100px] 2xl:px-[140px] py-[24px] sm:py-[32px] md:py-[40px]">
-        {/* Breadcrumb */}
-        <div className="flex gap-[8px] items-center relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-[12px] sm:px-[16px] md:px-[24px] lg:px-0" data-name="Breadcrumb" data-node-id="35:4873">
-          <Link to="/" className="font-['Poppins'] font-normal leading-[20px] text-[#5f6c72] dark:text-white text-[14px] hover:text-[#eea137] transition-colors cursor-pointer" data-node-id="35:4874">
-            Home
-          </Link>
-          <div className="flex items-center justify-center relative size-[18px]">
-            <div className="flex-none rotate-[270deg]">
-              <div className="relative size-[18px]" data-name="arrow-down" data-node-id="35:4875">
-                <div className="absolute contents inset-0">
-                  <img alt="" className="block max-w-none size-full" src={imgArrowDown} onError={(e) => e.target.style.display = 'none'} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <p className="font-['Poppins'] font-medium leading-[20px] text-[#eea137] text-[14px]" data-node-id="35:4884">
-            Shopping Cart
-          </p>
+    <div className="bg-white min-h-screen px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] py-[24px]">
+      <div className="max-w-[1240px] mx-auto">
+        <div className="flex gap-[8px] items-center mb-[20px]">
+          <Link to="/" className="font-['Poppins'] text-[#666] text-[14px] hover:text-[#eea137]">Home</Link>
+          <div className="flex-none rotate-[270deg]"><img alt="" className="size-[18px]" src={imgArrowDown} /></div>
+          <span className="font-['Poppins'] text-[#eea137] text-[14px]">Shopping Cart</span>
         </div>
 
-        {/* Cart Content */}
-        <div className="flex flex-col lg:flex-row gap-[20px] md:gap-[24px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] items-start relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-[12px] sm:px-[16px] md:px-[24px] lg:px-0" data-node-id="35:4889">
-          {/* Shopping Cart Section */}
-          <div className="bg-white dark:bg-[#1e293b] border border-[#e4e7e9] dark:border-[#334155] border-solid flex flex-col items-start relative rounded-[12px] shrink-0 flex-1 w-full lg:flex-[1.75] lg:min-w-[0] lg:max-w-[calc(100%-400px)] transition-colors duration-300" data-name="Shopping Cart" data-node-id="35:4890">
-            {/* Section Title */}
-            <div className="flex items-start px-[16px] sm:px-[20px] md:px-[22px] lg:px-[24px] py-[14px] sm:py-[16px] md:py-[18px] lg:py-[20px] relative shrink-0 w-full border-b border-[#e4e7e9] dark:border-[#334155]" data-name="Heading" data-node-id="35:4891">
-              <p className="font-['Poppins'] font-medium leading-[24px] text-[16px] sm:text-[17px] md:text-[18px] text-black dark:text-white" data-node-id="35:4892">
-                Shopping Cart
-              </p>
+        <div className="flex flex-col lg:flex-row gap-[20px]">
+          <div className="flex-1 border border-[#e4e7e9] rounded-[12px]">
+            <div className="px-[20px] py-[16px] border-b border-[#e4e7e9]">
+              <h1 className="font-['Poppins'] font-semibold text-[20px] text-[#191c1f]">Shopping Cart</h1>
             </div>
 
-            {/* Table Header - Hidden on mobile */}
-            <div className="hidden md:flex bg-[#f2f4f5] dark:bg-[#0f172a] border-b border-[#e4e7e9] dark:border-[#334155] border-solid font-['Poppins'] font-normal gap-[8px] sm:gap-[10px] md:gap-[12px] lg:gap-[14px] xl:gap-[18px] items-center leading-[24px] px-[12px] sm:px-[16px] md:px-[18px] lg:px-[20px] xl:px-[24px] py-[10px] relative shrink-0 w-full transition-colors duration-300" data-name="Sub-Heading" data-node-id="35:4893">
-              <p className="relative shrink-0 flex-1 min-w-[140px] md:min-w-[160px] lg:min-w-[180px] xl:min-w-[200px] text-black dark:text-white text-[13px] sm:text-[14px]" data-node-id="35:4894">
-                Products
-              </p>
-              <p className="relative shrink-0 w-[65px] md:w-[70px] lg:w-[75px] xl:w-[85px] text-center text-black dark:text-white text-[13px] sm:text-[14px]" data-node-id="35:4895">
-                Price
-              </p>
-              <p className="relative shrink-0 w-[110px] md:w-[120px] lg:w-[130px] xl:w-[150px] 2xl:w-[165px] text-center text-black dark:text-white text-[13px] sm:text-[14px]" data-node-id="35:4896">
-                Quantity
-              </p>
-              <p className="relative shrink-0 w-[80px] md:w-[85px] lg:w-[90px] xl:w-[100px] 2xl:w-[110px] text-center text-black dark:text-white text-[13px] sm:text-[14px]" data-node-id="35:4897">
-                Sub-Total
-              </p>
-              <p className="relative shrink-0 w-[20px]"></p>
-            </div>
+            {(cartError || actionError) ? (
+              <p className="mx-[20px] mt-[12px] text-[14px] text-[#b42318] font-['Poppins']">{cartError || actionError}</p>
+            ) : null}
+            {actionSuccess ? (
+              <p className="mx-[20px] mt-[12px] text-[14px] text-[#027a48] font-['Poppins']">{actionSuccess}</p>
+            ) : null}
 
-            {/* Products List */}
-            <div className="flex flex-col gap-[14px] sm:gap-[16px] md:gap-[18px] lg:gap-[20px] items-start p-[12px] sm:p-[14px] md:p-[18px] lg:p-[20px] xl:p-[24px] relative shrink-0 w-full overflow-x-auto" data-name="Products" data-node-id="35:4898">
-              {cartItems.map((item) => (
-                <div key={item.id} className="flex flex-col md:flex-row gap-[12px] md:gap-[12px] lg:gap-[14px] xl:gap-[18px] items-start md:items-center justify-between relative shrink-0 w-full border-b border-[#e4e7e9] dark:border-[#334155] pb-[14px] md:pb-[16px] last:border-b-0 last:pb-0 transition-colors duration-300" data-name="Product" data-node-id={`35:${4899 + item.id}`}>
-                  {/* Product Info */}
-                  <div className="flex gap-[10px] sm:gap-[12px] items-center relative shrink-0 flex-1 w-full md:min-w-[140px] lg:min-w-[160px] xl:min-w-[180px]" data-name="Product" data-node-id={`35:${4900 + item.id}`}>
-                    <div className="relative rounded-[2px] shrink-0 size-[60px] sm:size-[72px]" data-name="Image" data-node-id={`35:${4901 + item.id}`}>
-                      <img 
-                        alt={item.name} 
-                        className="absolute inset-0 max-w-none object-cover pointer-events-none rounded-[2px] size-full" 
-                        src={item.image}
-                        onError={(e) => {
-                          e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop';
-                        }}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-[4px] flex-1 min-w-0">
-                      <p className="font-['Public_Sans'] font-normal leading-[20px] text-[13px] sm:text-[14px] text-black dark:text-white line-clamp-2" data-node-id={`35:${4902 + item.id}`}>
-                        {item.name}
-                      </p>
-                      {/* Mobile Price Display */}
-                      <div className="md:hidden font-['Public_Sans'] font-normal leading-[20px] text-[14px]" data-node-id={`35:${4903 + item.id}-mobile`}>
-                        {item.originalPrice ? (
-                          <>
-                            <span className="line-through text-[#929fa5] dark:text-[#9ca3af] mr-[8px]">
-                              ${item.originalPrice}
-                            </span>
-                            <span className="text-[#475156] dark:text-white font-medium">
-                              ${item.price}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-[#475156] dark:text-white font-medium">
-                            ${item.price}
-                          </span>
-                        )}
+            {loadingCart ? (
+              <p className="p-[20px] font-['Poppins'] text-[#666]">Loading cart...</p>
+            ) : cart.items.length === 0 ? (
+              <div className="p-[20px]">
+                <p className="font-['Poppins'] text-[#666] mb-[12px]">Your cart is empty.</p>
+                <Link to="/search" className="inline-block bg-[#0e1c47] text-white px-[16px] py-[10px] rounded-[4px] font-['Poppins'] text-[14px]">Continue Shopping</Link>
+              </div>
+            ) : (
+              <div className="p-[20px] space-y-[14px]">
+                {cart.items.map((item) => {
+                  return (
+                    <div key={`${item.id}-${item.productId}`} className="border border-[#e4e7e9] rounded-[8px] p-[12px] flex flex-col sm:flex-row sm:items-center gap-[12px]">
+                      <div className="size-[72px] rounded-[4px] overflow-hidden bg-[#f5f5f5] shrink-0">
+                        {item.image ? <img src={item.image} alt={item.name} className="size-full object-cover" /> : null}
                       </div>
-                    </div>
-                    {/* Remove Button - Mobile */}
-                    <button 
-                      className="md:hidden overflow-clip relative shrink-0 size-[20px] cursor-pointer hover:opacity-70 transition-opacity text-black dark:text-white" 
-                      data-name="Remove" 
-                      data-node-id={`35:${4910 + item.id}-mobile`}
-                      aria-label="Remove item"
-                    >
-                      <div className="absolute inset-[3.91%_10.94%]">
-                        <div className="absolute inset-[-4.24%_-5%]">
-                          <img 
-                            alt="Remove" 
-                            className="block max-w-none size-full dark:hidden" 
-                            src={imgRemove}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.parentElement.innerHTML = '<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>';
-                            }}
-                          />
-                          <svg className="hidden dark:block w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-['Poppins'] text-[14px] text-[#191c1f] line-clamp-2">{item.name}</p>
+                        <p className="font-['Poppins'] text-[13px] text-[#666] mt-[2px]">Unit: {formatMoney(item.unitPrice)}</p>
+                        <p className="font-['Poppins'] text-[13px] text-[#0e1c47] mt-[2px]">Sub-total: {formatMoney(item.subtotal)}</p>
                       </div>
-                    </button>
-                  </div>
-
-                  {/* Desktop Layout - Price, Quantity, Sub-Total, Remove */}
-                  <div className="hidden md:flex gap-[8px] sm:gap-[10px] md:gap-[12px] lg:gap-[14px] xl:gap-[18px] items-center justify-end w-full md:w-auto flex-shrink-0" data-node-id="desktop-layout">
-                    {/* Price - Desktop */}
-                    <div className="font-['Public_Sans'] font-normal h-[20px] leading-[20px] relative shrink-0 text-[13px] md:text-[14px] w-[65px] md:w-[70px] lg:w-[75px] xl:w-[85px] text-center" data-node-id={`35:${4903 + item.id}`}>
-                      {item.originalPrice ? (
-                        <>
-                          <span className="line-through text-[#929fa5] dark:text-[#9ca3af] mr-[8px]">
-                            ${item.originalPrice}
-                          </span>
-                          <span className="text-[#475156] dark:text-white">
-                            ${item.price}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-[#475156] dark:text-white">
-                          ${item.price}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Quantity */}
-                    <div className="flex flex-col items-start pl-0 pr-[8px] sm:pr-[10px] md:pr-[12px] lg:pr-[14px] xl:pr-[18px] py-0 relative shrink-0" data-name="Quantity" data-node-id={`35:${4904 + item.id}`}>
-                      <div className="bg-white dark:bg-[#0f172a] border border-[#e4e7e9] dark:border-[#334155] border-solid flex items-center justify-between px-[6px] sm:px-[8px] md:px-[10px] lg:px-[12px] xl:px-[14px] 2xl:px-[18px] py-[8px] sm:py-[10px] md:py-[12px] relative rounded-[3px] shrink-0 w-[105px] sm:w-[110px] md:w-[115px] lg:w-[125px] xl:w-[135px] 2xl:w-[145px] transition-colors duration-300" data-name="Button" data-node-id={`35:${4905 + item.id}`}>
-                        <button 
-                          onClick={() => updateQuantity(item.id, -1)}
-                          className="relative shrink-0 size-[16px] sm:size-[18px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation text-black dark:text-white"
-                          aria-label="Decrease quantity"
-                        >
-                          <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                          </svg>
-                        </button>
-                        <p className="font-['Public_Sans'] font-normal leading-[24px] text-[14px] sm:text-[16px] text-[#475156] dark:text-white" data-node-id={`35:${4907 + item.id}`}>
-                          {String(item.quantity).padStart(2, '0')}
-                        </p>
-                        <button 
-                          onClick={() => updateQuantity(item.id, 1)}
-                          className="relative shrink-0 size-[16px] sm:size-[18px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation text-black dark:text-white"
-                          aria-label="Increase quantity"
-                        >
-                          <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                        </button>
+                      <div className="flex items-center gap-[8px]">
+                        <button type="button" onClick={() => handleQuantityChange(item, -1)} className="w-[30px] h-[30px] border rounded-[4px] cursor-pointer">-</button>
+                        <span className="font-['Poppins'] text-[14px] w-[28px] text-center">{item.quantity}</span>
+                        <button type="button" onClick={() => handleQuantityChange(item, 1)} className="w-[30px] h-[30px] border rounded-[4px] cursor-pointer">+</button>
                       </div>
+                      <button type="button" onClick={() => handleRemove(item)} className="text-[#dc2626] font-['Poppins'] text-[13px] hover:underline cursor-pointer">Remove</button>
                     </div>
-
-                    {/* Sub-Total */}
-                    <p className="font-['Public_Sans'] font-medium leading-[20px] text-[13px] md:text-[14px] text-black dark:text-white w-[80px] md:w-[85px] lg:w-[90px] xl:w-[100px] 2xl:w-[110px] text-center" data-node-id={`35:${4909 + item.id}`}>
-                      ${item.price * item.quantity}
-                    </p>
-
-                    {/* Remove Button - Desktop */}
-                    <button 
-                      className="overflow-clip relative shrink-0 size-[20px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation text-black dark:text-white" 
-                      data-name="Remove" 
-                      data-node-id={`35:${4910 + item.id}`}
-                      aria-label="Remove item"
-                    >
-                      <div className="absolute inset-[3.91%_10.94%]">
-                        <div className="absolute inset-[-4.24%_-5%]">
-                          <img 
-                            alt="Remove" 
-                            className="block max-w-none size-full dark:hidden" 
-                            src={imgRemove}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.parentElement.innerHTML = '<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>';
-                            }}
-                          />
-                          <svg className="hidden dark:block w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-
-                  {/* Mobile Layout - Quantity and Sub-Total */}
-                  <div className="md:hidden flex items-center justify-between w-full gap-[12px]">
-                    <div className="flex items-center gap-[12px]">
-                      <span className="font-['Poppins'] font-normal text-[12px] text-[#666] dark:text-white">Quantity:</span>
-                      <div className="bg-white dark:bg-[#0f172a] border border-[#e4e7e9] dark:border-[#334155] border-solid flex items-center justify-between px-[12px] py-[10px] relative rounded-[3px] shrink-0 w-[100px] transition-colors duration-300" data-name="Button" data-node-id={`35:${4905 + item.id}-mobile`}>
-                        <button 
-                          onClick={() => updateQuantity(item.id, -1)}
-                          className="relative shrink-0 size-[16px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation text-black dark:text-white"
-                          aria-label="Decrease quantity"
-                        >
-                          <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                          </svg>
-                        </button>
-                        <p className="font-['Public_Sans'] font-normal leading-[24px] text-[14px] text-[#475156] dark:text-white">
-                          {String(item.quantity).padStart(2, '0')}
-                        </p>
-                        <button 
-                          onClick={() => updateQuantity(item.id, 1)}
-                          className="relative shrink-0 size-[16px] cursor-pointer hover:opacity-70 transition-opacity touch-manipulation text-black dark:text-white"
-                          aria-label="Increase quantity"
-                        >
-                          <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="font-['Poppins'] font-normal text-[12px] text-[#666] dark:text-white">Sub-Total:</span>
-                      <p className="font-['Public_Sans'] font-medium leading-[20px] text-[14px] text-black dark:text-white">
-                        ${item.price * item.quantity}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Divider */}
-            <div className="h-[1px] relative shrink-0 w-full border-t border-[#e4e7e9] dark:border-[#334155] transition-colors duration-300" data-node-id="35:4996">
-              <img alt="" className="block max-w-none size-full opacity-0" src={imgLine25} onError={(e) => e.target.style.display = 'none'} />
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Cart Totals Section */}
-          <div className="flex flex-col items-start relative shrink-0 w-full lg:w-[350px] xl:w-[380px] 2xl:w-[400px] lg:sticky lg:top-[100px] lg:self-start lg:flex-shrink-0" data-node-id="35:4997">
-            <div className="bg-white dark:bg-[#1e293b] border border-[#e4e7e9] dark:border-[#334155] border-solid flex flex-col gap-[16px] sm:gap-[18px] md:gap-[20px] items-center justify-center p-[16px] sm:p-[18px] md:p-[20px] lg:p-[22px] xl:p-[24px] relative rounded-[12px] shrink-0 w-full transition-colors duration-300" data-name="Cart Totals" data-node-id="35:4998">
-              <p className="font-['Poppins'] font-medium leading-[24px] text-[16px] sm:text-[18px] text-black dark:text-white w-full" data-node-id="35:4999">
-                Cart Totals
-              </p>
-              
-              <div className="flex flex-col gap-[20px] sm:gap-[24px] md:gap-[28px] lg:gap-[32px] items-start relative shrink-0 w-full" data-node-id="35:5000">
-                <div className="flex flex-col gap-[12px] sm:gap-[16px] items-start relative shrink-0 w-full" data-name="Total" data-node-id="35:5001">
-                  <div className="flex flex-col gap-[10px] sm:gap-[12px] items-start pb-[4px] pt-0 px-0 relative shrink-0 w-full" data-name="Content" data-node-id="35:5002">
-                    <div className="flex items-center justify-between leading-[20px] text-[13px] sm:text-[14px] w-full" data-node-id="35:5003">
-                      <p className="font-['Poppins'] font-normal text-[#5f6c72] dark:text-white" data-node-id="35:5004">
-                        Sub-total
-                      </p>
-                      <p className="font-['Poppins'] font-medium text-black dark:text-white" data-node-id="35:5005">
-                        ${subtotal}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between leading-[20px] text-[13px] sm:text-[14px] w-full" data-node-id="35:5006">
-                      <p className="font-['Poppins'] font-normal text-[#5f6c72] dark:text-white" data-node-id="35:5007">
-                        Shipping
-                      </p>
-                      <p className="font-['Poppins'] font-medium text-black dark:text-white" data-node-id="35:5008">
-                        Free
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between leading-[20px] text-[13px] sm:text-[14px] w-full" data-node-id="35:5009">
-                      <p className="font-['Poppins'] font-normal text-[#5f6c72] dark:text-white" data-node-id="35:5010">
-                        Discount
-                      </p>
-                      <p className="font-['Poppins'] font-medium text-black dark:text-white" data-node-id="35:5011">
-                        ${discount}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between leading-[20px] text-[13px] sm:text-[14px] w-full" data-node-id="35:5012">
-                      <p className="font-['Poppins'] font-normal text-[#5f6c72] dark:text-white" data-node-id="35:5013">
-                        Tax
-                      </p>
-                      <p className="font-['Poppins'] font-medium text-black dark:text-white" data-node-id="35:5014">
-                        ${tax}
-                      </p>
-                    </div>
-                  </div>
+          <div className="w-full lg:w-[360px] border border-[#e4e7e9] rounded-[12px] p-[20px] h-fit">
+            <h2 className="font-['Poppins'] font-semibold text-[18px] text-[#191c1f] mb-[12px]">Cart Totals</h2>
+            <div className="space-y-[8px] mb-[16px]">
+              <div className="flex justify-between font-['Poppins'] text-[14px]"><span className="text-[#666]">Sub-total</span><span>{formatMoney(summary.subtotal)}</span></div>
+              <div className="flex justify-between font-['Poppins'] text-[14px]"><span className="text-[#666]">Shipping</span><span>{summary.shipping > 0 ? formatMoney(summary.shipping) : 'Free'}</span></div>
+              <div className="flex justify-between font-['Poppins'] text-[14px]"><span className="text-[#666]">Discount</span><span>{formatMoney(summary.discount)}</span></div>
+              <div className="flex justify-between font-['Poppins'] text-[14px]"><span className="text-[#666]">Tax</span><span>{formatMoney(summary.tax)}</span></div>
+              <div className="border-t pt-[8px] flex justify-between font-['Poppins'] font-semibold text-[16px]"><span>Total</span><span>{formatMoney(summary.total)} USD</span></div>
+            </div>
 
-                  {/* Dashed Line Separator */}
-                  <div className="h-[1px] relative shrink-0 w-full border-t border-dashed border-[#e4e7e9] dark:border-[#334155]" data-node-id="35:5015">
-                    <img alt="" className="block max-w-none size-full opacity-0" src={imgLine26} onError={(e) => e.target.style.display = 'none'} />
-                  </div>
+            <div className="flex gap-[8px] mb-[12px]">
+              <input
+                type="text"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value)}
+                placeholder="Coupon code"
+                className="flex-1 border border-[#e4e7e9] rounded-[4px] px-[10px] py-[9px] font-['Poppins'] text-[13px]"
+              />
+              <button type="button" disabled={couponBusy} onClick={handleApplyCoupon} className="bg-[#eea137] text-white px-[12px] rounded-[4px] font-['Poppins'] text-[13px] disabled:opacity-60">
+                {couponBusy ? 'Applying...' : 'Apply'}
+              </button>
+            </div>
 
-                  {/* Total */}
-                  <div className="flex items-center justify-between leading-[22px] sm:leading-[24px] text-[15px] sm:text-[16px] text-black dark:text-white w-full" data-node-id="35:5016">
-                    <p className="font-['Poppins'] font-normal" data-node-id="35:5017">
-                      Total
-                    </p>
-                    <p className="font-['Poppins'] font-semibold" data-node-id="35:5018">
-                      ${total.toFixed(2)} USD
-                    </p>
-                  </div>
-                </div>
-
-                {/* Shop Now Button */}
-                <Link 
-                  to="/checkout" 
-                  className="bg-[#0e1c47] cursor-pointer flex gap-[8px] sm:gap-[11.273px] h-[44px] sm:h-[45.091px] items-center justify-center px-[16px] sm:px-[20px] md:px-[22.545px] py-0 relative rounded-[4px] shrink-0 w-full hover:bg-[#1a2f5c] transition-colors touch-manipulation" 
-                  data-name="Button" 
-                  data-node-id="35:5019"
-                >
-                  <p className="capitalize font-['Poppins'] font-semibold leading-[normal] text-[14px] sm:text-[15px] md:text-[16px] text-white tracking-[0.192px]" data-node-id="35:5020">
-                    Shop Now
-                  </p>
-                  <div className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[22.545px]" data-name="ShoppingCartSimple" data-node-id="35:5021">
-                    <img 
-                      alt="" 
-                      className="block max-w-none size-full" 
-                      src={imgShoppingCartSimple}
-                      onError={(e) => e.target.style.display = 'none'}
-                    />
-                  </div>
-                </Link>
-              </div>
+            <div className="flex gap-[8px]">
+              <button type="button" onClick={handleClearCart} className="flex-1 border border-[#dc2626] text-[#dc2626] rounded-[4px] py-[10px] font-['Poppins'] text-[13px]">Clear Cart</button>
+              <Link to="/checkout" className="flex-1 bg-[#0e1c47] text-white text-center rounded-[4px] py-[10px] font-['Poppins'] text-[13px]">Checkout</Link>
             </div>
           </div>
         </div>

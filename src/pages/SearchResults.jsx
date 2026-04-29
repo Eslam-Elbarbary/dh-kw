@@ -2,7 +2,8 @@
 // Based on node 35:2469 and 35:3733
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { getCategories, getProducts, resolveCountryId, toggleFavoriteProduct } from '../services/catalog.service';
 
 // Import assets
 import productImage1 from '../assets/2c2703028e858e93057b03391653381259c5700c.png';
@@ -52,6 +53,12 @@ const imgFilterHorizontal = filterHorizontalIcon;
 const imgFilterHorizontalElements = filterHorizontalIcon;
 
 export default function SearchResults() {
+  const location = useLocation();
+  const params = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const countryId = Number(params.get('country_id')) || resolveCountryId(1);
+  const preselectedCategoryId = params.get('category_id');
+  const preselectedVendorId = params.get('vendor_id');
+
   const [showFilter, setShowFilter] = useState(true); // Visible by default on desktop
   const [selectedCategory, setSelectedCategory] = useState('All Categories'); // Show all by default
   const [selectedPriceRange, setSelectedPriceRange] = useState('All Price'); // Show all by default
@@ -65,6 +72,11 @@ export default function SearchResults() {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState('Most Popular');
   const [gridView, setGridView] = useState(2); // 1 = 3 columns, 2 = 4 columns, 3 = 5 columns
+  const [allProducts, setAllProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [productsError, setProductsError] = useState('');
+  const [favoriteBusyId, setFavoriteBusyId] = useState(null);
 
   const toggleBrand = (brand) => {
     setSelectedBrands(prev => 
@@ -82,47 +94,74 @@ export default function SearchResults() {
     );
   };
 
-  // Product images array - using different images for variety
-  const productImages = [
-    productImage1, productImage2, productImage3, productImage4, productImage5,
-    productImage6, productImage7, productImage8, productImage9, productImage10,
-    productImage1, productImage2, productImage3, productImage4, productImage5,
-    productImage6, productImage7, productImage8, productImage9, productImage10,
-    productImage1, productImage2, productImage3, productImage4, productImage5,
-    productImage6, productImage7, productImage8, productImage9, productImage10,
-    productImage1, productImage2, productImage3, productImage4, productImage5,
-    productImage6, productImage7, productImage8, productImage9, productImage10,
-    productImage1, productImage2, productImage3, productImage4, productImage5,
-    productImage6, productImage7, productImage8, productImage9, productImage10
-  ];
+  const handleToggleFavorite = async (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!productId || favoriteBusyId === productId) return;
 
-  // Sample products data with variety for filtering - matching Figma exactly (node 35:3733)
-  const allProducts = Array.from({ length: 50 }, (_, i) => {
-    // Create variety in products for filtering
-    const brands = ['Apple', 'Microsoft', 'LG', 'HP', 'Panasonic', 'Samsung', 'Sony', 'Dell', 'Xiaomi', 'Google', 'Intel', 'One Plus'];
-    const categories = ['Electronics Devices', 'Computer & Laptop', 'Computer Accessories', 'SmartPhone', 'Headphone', 'Mobile Accessories', 'Gaming Console', 'Camera & Photo', 'TV & Homes Appliances', 'Watchs & Accessories', 'GPS & Navigation', 'Warable Technology'];
-    const tags = ['Game', 'iPhone', 'TV', 'Asus Laptops', 'Macbook', 'SSD', 'Graphics Card', 'Power Bank', 'Smart TV', 'Speaker', 'Tablet', 'Microwave', 'Samsung'];
-    
-    // Vary prices for filtering
-    const basePrice = 200 + (i * 50) + Math.floor(Math.random() * 300);
-    const salePrice = basePrice;
-    const originalPrice = Math.floor(salePrice * 1.3);
-    
-    return {
-      id: i + 1,
-      name: "4K UHD LED Smart TV with Chromecast Built-in",
-      brand: brands[i % brands.length],
-      category: categories[i % categories.length],
-      tag: tags[i % tags.length],
-      originalPrice: `$${originalPrice.toLocaleString()}`,
-      salePrice: `$${salePrice}`,
-      priceValue: salePrice, // For numeric comparison
-      image: productImages[i],
-      badges: i % 4 === 0 ? ['32% OFF', 'Only 10 Left'] : i % 4 === 1 ? ['32% OFF', 'Only 10 Left'] : [],
-      popularity: Math.floor(Math.random() * 100),
-      rating: 3 + Math.random() * 2
+    setFavoriteBusyId(productId);
+    setProductsError('');
+    setAllProducts((prev) =>
+      prev.map((item) =>
+        item.id === productId ? { ...item, isFavorite: !Boolean(item.isFavorite) } : item
+      )
+    );
+
+    try {
+      await toggleFavoriteProduct({ productId });
+    } catch (error) {
+      setAllProducts((prev) =>
+        prev.map((item) =>
+          item.id === productId ? { ...item, isFavorite: !Boolean(item.isFavorite) } : item
+        )
+      );
+      setProductsError(error?.response?.data?.message || 'Failed to update favorite.');
+    } finally {
+      setFavoriteBusyId(null);
+    }
+  };
+
+  useEffect(() => {
+    const loadCatalog = async () => {
+      try {
+        setLoadingProducts(true);
+        setProductsError('');
+
+        const [productsList, categoriesList] = await Promise.all([
+          getProducts({
+            countryId,
+            perPage: 100,
+            page: 1,
+            categoryId: preselectedCategoryId || undefined,
+            vendorId: preselectedVendorId || undefined,
+          }),
+          getCategories(),
+        ]);
+
+        setAllProducts(productsList);
+        setCategories(categoriesList);
+      } catch (error) {
+        setProductsError(error?.response?.data?.message || 'Failed to load products.');
+        setAllProducts([]);
+      } finally {
+        setLoadingProducts(false);
+      }
     };
-  });
+
+    loadCatalog();
+  }, [countryId, preselectedCategoryId, preselectedVendorId]);
+
+  useEffect(() => {
+    if (!preselectedCategoryId || categories.length === 0) return;
+    const match = categories.find((item) => String(item.id) === String(preselectedCategoryId));
+    if (match) setSelectedCategory(match.name);
+  }, [categories, preselectedCategoryId]);
+
+  useEffect(() => {
+    if (!preselectedVendorId || allProducts.length === 0) return;
+    const match = allProducts.find((item) => String(item.vendorId) === String(preselectedVendorId));
+    if (match?.vendorName) setSelectedBrands([match.vendorName]);
+  }, [allProducts, preselectedVendorId]);
 
   // Filter products based on selected filters
   const getFilteredProducts = () => {
@@ -201,6 +240,14 @@ export default function SearchResults() {
 
   const filteredProducts = getFilteredProducts();
   const sortedProducts = getSortedProducts(filteredProducts);
+  const brandOptions = React.useMemo(
+    () => [...new Set(allProducts.map((item) => item.vendorName || item.brand).filter(Boolean))],
+    [allProducts]
+  );
+  const tagOptions = React.useMemo(
+    () => [...new Set(allProducts.map((item) => item.tag).filter(Boolean))],
+    [allProducts]
+  );
   
   // Pagination
   const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
@@ -232,6 +279,7 @@ export default function SearchResults() {
   };
 
   const productsPerRow = gridView === 1 ? 3 : gridView === 2 ? 4 : 5;
+  const categoryOptions = ['All Categories', ...categories.map((item) => item.name)];
 
   return (
     <div className="bg-white dark:bg-[#0f172a] relative w-full min-h-screen transition-colors duration-300">
@@ -423,7 +471,16 @@ export default function SearchResults() {
                 </p>
               </div>
 
-              {paginatedProducts.length === 0 ? (
+              {loadingProducts ? (
+                <div className="flex flex-col items-center justify-center py-[60px]">
+                  <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">Loading products...</p>
+                </div>
+              ) : productsError ? (
+                <div className="flex flex-col items-center justify-center py-[60px]">
+                  <p className="font-['Poppins'] font-semibold text-[#8e0909] text-[16px] mb-[8px]">Unable to load products</p>
+                  <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">{productsError}</p>
+                </div>
+              ) : paginatedProducts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-[60px]">
                   <p className="font-['Poppins'] font-semibold text-[#191c1f] dark:text-white text-[18px] mb-[8px]">No products found</p>
                   <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">Try adjusting your filters</p>
@@ -449,12 +506,35 @@ export default function SearchResults() {
                           data-node-id={rowStart === 0 && idx === 0 ? "35:3856" : undefined}
                         >
                           {/* Product Image */}
-                          <div className="h-[159.537px] relative w-full" data-name="Image" data-node-id="35:3857">
-                            <img 
-                              alt={product.name}
-                              className="absolute inset-0 w-full h-full object-cover pointer-events-none" 
-                              src={product.image} 
-                            />
+                          <div className="h-[159.537px] relative w-full bg-[#f5f5f5] dark:bg-[#0f172a] flex items-center justify-center" data-name="Image" data-node-id="35:3857">
+                            {product.image ? (
+                              <img
+                                alt={product.name}
+                                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                                src={product.image}
+                              />
+                            ) : (
+                              <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[12px] text-center px-[8px]">
+                                No image from API
+                              </p>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={(event) => handleToggleFavorite(event, product.id)}
+                              aria-label={product.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                              title={product.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                              className={`absolute top-[10px] right-[10px] z-10 inline-flex items-center justify-center size-[34px] rounded-full border shadow-sm transition-all duration-200 ${
+                                product.isFavorite
+                                  ? 'bg-[#fee2e2] text-[#dc2626] border-[#fecaca]'
+                                  : 'bg-white text-[#0e1c47] border-[#e2e8f0] hover:text-[#dc2626] hover:border-[#fecaca] hover:shadow-md'
+                              } ${favoriteBusyId === product.id ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'} focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0e1c47] focus-visible:ring-offset-1`}
+                              disabled={favoriteBusyId === product.id}
+                            >
+                              <svg className="size-[16px]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 21s-6.716-4.438-9.193-8.11C1.205 10.518 1 8.41 1 7.5 1 4.462 3.462 2 6.5 2c2.06 0 3.854 1.133 4.5 2.81C11.646 3.133 13.44 2 15.5 2 18.538 2 21 4.462 21 7.5c0 .91-.205 3.018-1.807 5.39C18.716 16.562 12 21 12 21z" />
+                              </svg>
+                            </button>
                             
                             {/* Badges */}
                             {product.badges.length > 0 && (
@@ -636,21 +716,7 @@ export default function SearchResults() {
                     Category
                   </p>
                   <div className="flex flex-col gap-[12.039px] items-start w-full" data-name="Radio" data-node-id="35:4176">
-                    {[
-                      'All Categories',
-                      'Electronics Devices',
-                      'Computer & Laptop',
-                      'Computer Accessories',
-                      'SmartPhone',
-                      'Headphone',
-                      'Mobile Accessories',
-                      'Gaming Console',
-                      'Camera & Photo',
-                      'TV & Homes Appliances',
-                      'Watchs & Accessories',
-                      'GPS & Navigation',
-                      'Warable Technology'
-                    ].map((category, idx) => (
+                    {categoryOptions.map((category, idx) => (
                       <label
                         key={category}
                         className="flex gap-[8.026px] items-start cursor-pointer w-full"
@@ -765,15 +831,7 @@ export default function SearchResults() {
                     popular Brands
                   </p>
                   <div className="flex flex-col gap-[12.039px] items-start w-full" data-name="CheckBox" data-node-id="35:4252">
-                    {[
-                      ['Apple', 'Google'],
-                      ['Microsoft', 'Samsung'],
-                      ['Dell', 'HP'],
-                      ['Symphony', 'Xiaomi'],
-                      ['Sony', 'Panasonic'],
-                      ['LG', 'Intel'],
-                      ['One Plus']
-                    ].map((row, rowIdx) => (
+                    {(brandOptions.length > 0 ? brandOptions.map((brand) => [brand]) : [['No brand data']]).map((row, rowIdx) => (
                       <div key={rowIdx} className="flex gap-[8.026px] items-start w-full" data-name="Row">
                         {row.map((brand, brandIdx) => {
                           const isChecked = selectedBrands.includes(brand);
@@ -802,6 +860,7 @@ export default function SearchResults() {
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={() => toggleBrand(brand)}
+                                disabled={brand === 'No brand data'}
                                 className="hidden"
                               />
                               <p className="font-['Poppins'] font-semibold leading-[20.065px] text-[#475156] dark:text-[#9ca3af] text-[13px] sm:text-[14.045px]">
@@ -826,12 +885,7 @@ export default function SearchResults() {
                     Popular Tag
                   </p>
                   <div className="flex flex-col gap-[8.026px] items-start w-full" data-name="Tag" data-node-id="35:4308">
-                    {[
-                      ['Game', 'iPhone', 'TV', 'Asus Laptops'],
-                      ['Macbook', 'SSD', 'Graphics Card'],
-                      ['Power Bank', 'Smart TV', 'Speaker'],
-                      ['Tablet', 'Microwave', 'Samsung']
-                    ].map((row, rowIdx) => (
+                    {(tagOptions.length > 0 ? [tagOptions] : [['No tags from API']]).map((row, rowIdx) => (
                       <div key={rowIdx} className="flex gap-[8.026px] items-start flex-wrap" data-name="Row">
                         {row.map((tag) => {
                           const isSelected = selectedTags.includes(tag);
@@ -839,6 +893,7 @@ export default function SearchResults() {
                             <button
                               key={tag}
                               onClick={() => toggleTag(tag)}
+                              disabled={tag === 'No tags from API'}
                               className={`border border-solid flex items-center justify-center px-[12.039px] py-[6.019px] rounded-[2px] cursor-pointer transition-colors ${
                                 isSelected
                                   ? 'bg-[#0e1c47] dark:bg-[#eea137] text-white border-[#0e1c47] dark:border-[#eea137]'

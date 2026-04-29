@@ -1,110 +1,76 @@
 // Favorites page component - exact Figma implementation
 // Based on Figma design - Favorites/Wishlist Page
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getFavoriteList, resolveCountryId, toggleFavoriteProduct } from '../services/catalog.service';
+import { useCart } from '../context/CartContext';
 
 // Import assets
 import arrowDownIcon from '../assets/ArrowRight.svg';
 import heartIcon from '../assets/wishlist.svg';
 import shoppingCartIcon from '../assets/shopping-basket-01.svg';
-import productImage1 from '../assets/04eed14fc3631917a17e9d14491e48383aa02358.png';
-import productImage2 from '../assets/0e25c65909ff9d8fdace00ffb430dbc3cbf9784b.png';
-import productImage3 from '../assets/231250f17fa15df76d3e6b21fd9b1518b663f444.png';
-import productImage4 from '../assets/26a18289fe1664427df3d41a562c2d7f8e974028.png';
-import productImage5 from '../assets/40d3df5cca44080e3e772bfb623497a0b6ea9dd3.png';
 
 // Icon Assets
 const imgArrowDown = arrowDownIcon;
 const imgHeart = heartIcon;
-const imgHeart3 = heartIcon;
 const imgShoppingCart = shoppingCartIcon;
-const imgRegularCaretDown = arrowDownIcon;
-
-// Product Image Assets
-const imgProduct1 = productImage1;
-const imgProduct2 = productImage2;
-const imgProduct3 = productImage3;
-const imgProduct4 = productImage4;
-const imgProduct5 = productImage5;
-const imgProductImage = productImage1;
 
 export default function Favorites() {
-  // Sample favorite products data
-  const favoriteProducts = [
-    {
-      id: 1,
-      name: "4K UHD LED Smart TV with Chromecast Built-in",
-      brand: "Brand Name",
-      originalPrice: "$1,50",
-      salePrice: "$865",
-      image: imgProductImage,
-      badges: ['32% OFF', 'Only 10 Left']
-    },
-    {
-      id: 2,
-      name: "Bose Sport Earbuds Wireless Earphones",
-      brand: "Brand Name",
-      originalPrice: "$2,500",
-      salePrice: "$2,300",
-      image: imgProduct1,
-      badges: ['32% OFF']
-    },
-    {
-      id: 3,
-      name: "Sony WH-1000XM4 Wireless Headphones",
-      brand: "Brand Name",
-      originalPrice: "$1,200",
-      salePrice: "$999",
-      image: imgProduct2,
-      badges: []
-    },
-    {
-      id: 4,
-      name: "Apple AirPods Pro with MagSafe Case",
-      brand: "Brand Name",
-      originalPrice: "$899",
-      salePrice: "$799",
-      image: imgProduct3,
-      badges: ['HOT']
-    },
-    {
-      id: 5,
-      name: "Samsung Galaxy Watch 4 Classic",
-      brand: "Brand Name",
-      originalPrice: "$1,100",
-      salePrice: "$950",
-      image: imgProduct4,
-      badges: ['Only 10 Left']
-    },
-    {
-      id: 6,
-      name: "Canon EOS R5 Mirrorless Camera",
-      brand: "Brand Name",
-      originalPrice: "$3,500",
-      salePrice: "$3,200",
-      image: imgProduct5,
-      badges: ['32% OFF', 'Only 10 Left']
-    },
-    {
-      id: 7,
-      name: "LG OLED 55-inch 4K Smart TV",
-      brand: "Brand Name",
-      originalPrice: "$1,800",
-      salePrice: "$1,650",
-      image: imgProductImage,
-      badges: []
-    },
-    {
-      id: 8,
-      name: "JBL Flip 6 Portable Bluetooth Speaker",
-      brand: "Brand Name",
-      originalPrice: "$299",
-      salePrice: "$249",
-      image: imgProduct1,
-      badges: ['HOT']
+  const { addToCart } = useCart();
+  const countryId = useMemo(() => resolveCountryId(1), []);
+  const [favoriteProducts, setFavoriteProducts] = useState([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const [favoritesError, setFavoritesError] = useState('');
+
+  useEffect(() => {
+    const loadFavorites = async () => {
+      try {
+        setLoadingFavorites(true);
+        setFavoritesError('');
+        const productsList = await getFavoriteList({ countryId, perPage: 50, page: 1 });
+        setFavoriteProducts(
+          productsList.map((product) => ({
+            id: product.id,
+            name: product.name,
+            brand: product.brand,
+            originalPrice: product.originalPrice,
+            salePrice: product.salePrice,
+            image: product.image || '',
+            badges: Array.isArray(product.badges) ? product.badges : [],
+          })).filter((product) => Boolean(product.image))
+        );
+      } catch (error) {
+        setFavoritesError(error?.response?.data?.message || 'Failed to load favorites.');
+        setFavoriteProducts([]);
+      } finally {
+        setLoadingFavorites(false);
+      }
+    };
+
+    loadFavorites();
+  }, [countryId]);
+
+  const removeFavorite = async (productId) => {
+    const previous = favoriteProducts;
+    setFavoriteProducts((prev) => prev.filter((item) => item.id !== productId));
+    try {
+      await toggleFavoriteProduct({ productId });
+    } catch (error) {
+      setFavoriteProducts(previous);
+      setFavoritesError(error?.response?.data?.message || 'Failed to remove favorite.');
     }
-  ];
+  };
+
+  const handleAddToCart = async (productId) => {
+    if (!productId) return;
+    try {
+      setFavoritesError('');
+      await addToCart({ productId, quantity: 1 });
+    } catch (error) {
+      setFavoritesError(error?.response?.data?.message || 'Failed to add item to cart.');
+    }
+  };
 
   return (
     <div className="bg-white relative w-full min-h-screen">
@@ -145,8 +111,17 @@ export default function Favorites() {
       {/* Products Grid */}
       <div className="px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] xl:px-[120px] 2xl:px-[140px] pb-[40px] sm:pb-[60px] md:pb-[80px]">
         <div className="max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto">
+          {loadingFavorites ? (
+            <div className="flex flex-col items-center justify-center py-[60px] sm:py-[80px] md:py-[100px] w-full">
+              <p className="font-['Poppins'] font-normal text-[#666] text-[14px] sm:text-[16px]">Loading favorites...</p>
+            </div>
+          ) : favoritesError ? (
+            <div className="flex flex-col items-center justify-center py-[60px] sm:py-[80px] md:py-[100px] w-full">
+              <p className="font-['Poppins'] font-normal text-[#8e0909] text-[14px] sm:text-[16px]">{favoritesError}</p>
+            </div>
+          ) : (
           <div className="flex flex-wrap gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px]">
-            {favoriteProducts.map((product, idx) => (
+            {favoriteProducts.map((product) => (
               <div
                 key={product.id}
                 className="bg-white border-[#e4e7e9] border-[0.849px] border-solid flex flex-col gap-[6.789px] items-start overflow-hidden p-[13.578px] rounded-[3.394px] w-full sm:w-[calc(50%-8px)] md:w-[calc(33.333%-13.333px)] lg:w-[calc(25%-18px)] xl:w-[calc(20%-19.2px)] hover:shadow-lg transition-shadow cursor-pointer group"
@@ -158,9 +133,6 @@ export default function Favorites() {
                     src={product.image}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onError={(e) => {
-                      e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop';
-                    }}
                   />
                   
                   {/* Badges */}
@@ -184,40 +156,30 @@ export default function Favorites() {
                   )}
 
                   {/* Action Buttons */}
-                  <div className="absolute top-[8px] right-[8px] flex flex-col gap-[8px] items-end opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-[8px] right-[8px] flex flex-col gap-[8px] items-end opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <button
+                      type="button"
+                      onClick={() => removeFavorite(product.id)}
                       className="bg-white rounded-full p-[6px] sm:p-[8px] hover:bg-[#f0f0f0] transition-colors shadow-md"
                       aria-label="Remove from favorites"
                     >
-                      <div className="relative size-[16px] sm:size-[18px]">
-                        <img
-                          src={imgHeart3}
-                          alt="Remove from favorites"
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            if (e.target.nextElementSibling) {
-                              e.target.nextElementSibling.style.display = 'block';
-                            }
-                          }}
-                        />
-                      </div>
+                      <svg className="size-[16px] sm:size-[18px] text-[#dc2626]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 21s-6.716-4.438-9.193-8.11C1.205 10.518 1 8.41 1 7.5 1 4.462 3.462 2 6.5 2c2.06 0 3.854 1.133 4.5 2.81C11.646 3.133 13.44 2 15.5 2 18.538 2 21 4.462 21 7.5c0 .91-.205 3.018-1.807 5.39C18.716 16.562 12 21 12 21z" />
+                      </svg>
                     </button>
-                    <Link
-                      to="/shopping-cart"
+                    <button
+                      type="button"
+                      onClick={() => handleAddToCart(product.id)}
                       className="bg-white rounded-full p-[6px] sm:p-[8px] hover:bg-[#f0f0f0] transition-colors shadow-md"
                       aria-label="Add to cart"
                     >
-                      <div className="relative size-[16px] sm:size-[18px]">
-                        <img
-                          src={imgShoppingCart}
-                          alt="Add to cart"
-                          className="w-full h-full object-contain"
-                          style={{ filter: 'brightness(0) saturate(100%)' }}
-                          onError={(e) => e.target.style.display = 'none'}
-                        />
-                      </div>
-                    </Link>
+                      <img
+                        src={imgShoppingCart}
+                        alt="Add to cart"
+                        className="size-[16px] sm:size-[18px] object-contain"
+                        style={{ filter: 'brightness(0) saturate(100%)' }}
+                      />
+                    </button>
                   </div>
                 </div>
 
@@ -256,9 +218,10 @@ export default function Favorites() {
               </div>
             ))}
           </div>
+          )}
 
           {/* Empty State (if no favorites) */}
-          {favoriteProducts.length === 0 && (
+          {!loadingFavorites && !favoritesError && favoriteProducts.length === 0 && (
             <div className="flex flex-col items-center justify-center py-[60px] sm:py-[80px] md:py-[100px]">
               <div className="relative size-[120px] sm:size-[150px] mb-[24px] sm:mb-[32px]">
                 <img

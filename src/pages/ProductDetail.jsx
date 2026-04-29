@@ -1,7 +1,22 @@
 // Product Detail page component - exact Figma implementation
 // Based on Figma design - Product Detail Page
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
+import {
+  getProduct,
+  getProducts,
+  getCategory,
+  getVendor,
+  toggleFavoriteProduct,
+  resolveCountryId,
+} from '../services/catalog.service';
+import {
+  rateProduct,
+  rateVendor,
+  reportProduct,
+  reportVendor,
+} from '../services/ratings-reports.service';
 
 // Import assets
 import productImage1 from '../assets/4290b5299d7820aab27a24eef721fc6a3de6f994.png';
@@ -27,16 +42,6 @@ import twitterIcon from '../assets/Icon-Twitter.svg';
 import facebookIcon from '../assets/Icon-Facebook.svg';
 import pinterestIcon from '../assets/Pinterest.svg';
 import copyIcon from '../assets/Copy.svg';
-
-// Product Image Assets
-const imgMacBookMain = productImage1;
-const imgMacBookThumb1 = productImage1;
-const imgMacBookThumb2 = productImage2;
-const imgMacBookThumb3 = productImage3;
-const imgMacBookThumb4 = productImage4;
-const imgMacBookThumb5 = productImage5;
-const imgMacBookThumb6 = productImage6;
-const imgMacBookThumb7 = productImage7;
 
 // Icon Assets
 const imgArrowDown = arrowDownIcon;
@@ -94,38 +99,350 @@ function IconTwitter({ className }) {
   );
 }
 
-// Related Products Images
-const imgProduct1 = productImage8;
-const imgProduct2 = productImage9;
-const imgProduct3 = productImage10;
-const imgProduct4 = productImage11;
-const imgProduct5 = productImage12;
-
 export default function ProductDetail() {
+  const { addToCart } = useCart();
   const { id } = useParams();
   const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedColor, setSelectedColor] = useState('gray');
-  const [selectedMemory, setSelectedMemory] = useState('16GB');
-  const [selectedSize, setSelectedSize] = useState('14-inch');
-  const [selectedStorage, setSelectedStorage] = useState('1TB');
+  const [selectedVariants, setSelectedVariants] = useState({});
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('description');
+  const [productData, setProductData] = useState(null);
+  const [productCategory, setProductCategory] = useState(null);
+  const [productVendor, setProductVendor] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [loadingProduct, setLoadingProduct] = useState(false);
+  const [productError, setProductError] = useState('');
+  const [ratingComment, setRatingComment] = useState('');
+  const [reportReason, setReportReason] = useState('');
+  const [ratingValueInput, setRatingValueInput] = useState(5);
+  const [reportTarget, setReportTarget] = useState('product');
+  const [rateTarget, setRateTarget] = useState('product');
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
+  const [feedbackSuccess, setFeedbackSuccess] = useState('');
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
+  const [cartBusy, setCartBusy] = useState(false);
+  const countryId = resolveCountryId(1);
 
-  const thumbnails = [
-    imgMacBookThumb1, imgMacBookThumb2, imgMacBookThumb3, 
-    imgMacBookThumb4, imgMacBookThumb5, imgMacBookThumb6, imgMacBookThumb7
-  ];
+  useEffect(() => {
+    const loadProduct = async () => {
+      if (!id) return;
 
-  const relatedProducts = [
-    { id: 1, name: "Bose Sport Earbuds Wireless Earphones", brand: "Brand Name", price: "$2,300", image: imgProduct1, badges: ['Only 10 Left'] },
-    { id: 2, name: "Bose Sport Earbuds Wireless Earphones", brand: "Brand Name", price: "$2,300", image: imgProduct2, badges: ['32% OFF', 'Only 10 Left'] },
-    { id: 3, name: "Bose Sport Earbuds Wireless Earphones", brand: "Brand Name", price: "$2,300", image: imgProduct3, badges: ['HOT'] },
-    { id: 4, name: "Bose Sport Earbuds Wireless Earphones", brand: "Brand Name", price: "$2,300", image: imgProduct4, badges: [] },
-    { id: 5, name: "Bose Sport Earbuds Wireless Earphones", brand: "Brand Name", price: "$2,300", image: imgProduct5, badges: [] },
-  ];
+      try {
+        setLoadingProduct(true);
+        setProductError('');
+        const singleProduct = await getProduct({ id, countryId });
+        const relatedParams = {
+          countryId,
+          perPage: 10,
+          page: 1,
+          categoryId: singleProduct?.categoryId || undefined,
+          vendorId: singleProduct?.vendorId || undefined,
+        };
+        const [productsList, categoryDetails, vendorDetails] = await Promise.all([
+          getProducts(relatedParams),
+          singleProduct?.categoryId ? getCategory({ id: singleProduct.categoryId }) : Promise.resolve(null),
+          singleProduct?.vendorId ? getVendor({ id: singleProduct.vendorId }) : Promise.resolve(null),
+        ]);
 
-  const increaseQuantity = () => setQuantity(prev => prev + 1);
-  const decreaseQuantity = () => setQuantity(prev => Math.max(1, prev - 1));
+        setProductData(singleProduct);
+        setProductCategory(categoryDetails);
+        setProductVendor(vendorDetails);
+        setSelectedImage(0);
+        setRelatedProducts(
+          productsList
+            .filter((item) => String(item.id) !== String(id))
+            .slice(0, 5)
+            .map((item) => ({
+              id: item.id,
+              name: item.name,
+              brand: item.brand,
+              price: item.salePrice,
+              image: item.image || '',
+              badges: [],
+            }))
+            .filter((item) => item.image)
+        );
+      } catch (error) {
+        setProductError(error?.response?.data?.message || 'Failed to load product details.');
+        setProductCategory(null);
+        setProductVendor(null);
+      } finally {
+        setLoadingProduct(false);
+      }
+    };
+
+    loadProduct();
+  }, [id, countryId]);
+
+  const thumbnails = productData?.images?.length
+    ? productData.images
+    : productData?.image
+    ? [productData.image]
+    : [];
+
+  const ratingValue = Math.max(0, Math.min(5, Number(productData?.rating || 0)));
+  const ratingCount = Number(productData?.ratingCount || 0);
+  const discountLabel = useMemo(() => {
+    if (!productData?.discount) return '';
+    if (productData.discountType === 'percentage') return `${productData.discount}% OFF`;
+    return `$${productData.discount} OFF`;
+  }, [productData]);
+
+  const variantGroups = useMemo(() => {
+    const groups = {};
+    const variants = Array.isArray(productData?.variants) ? productData.variants : [];
+    variants.forEach((variant) => {
+      const key = variant?.attribute || variant?.type || variant?.group || 'Option';
+      const optionsSource = Array.isArray(variant?.options)
+        ? variant.options
+        : Array.isArray(variant?.values)
+        ? variant.values
+        : variant?.value
+        ? [variant.value]
+        : [];
+      const values = optionsSource
+        .map((item) => {
+          if (typeof item === 'string') {
+            return { value: item, variantId: variant?.id ?? variant?.variant_id ?? null };
+          }
+          const value = item?.value || item?.name;
+          if (!value) return null;
+          return {
+            value,
+            // Backend cart endpoint expects the parent product-variant id.
+            variantId:
+              variant?.id
+              ?? variant?.variant_id
+              ?? item?.variant_id
+              ?? item?.variant?.id
+              ?? item?.variant_option?.variant_id
+              ?? item?.id
+              ?? null,
+          };
+        })
+        .filter(Boolean);
+
+      // Some APIs return flat variant rows with only a name (no options/values array).
+      if (values.length === 0 && variant?.name) {
+        if (!groups.Option) groups.Option = new Set();
+        groups.Option.add(JSON.stringify({
+          value: String(variant.name),
+          variantId: variant?.id ?? variant?.variant_id ?? null,
+        }));
+        return;
+      }
+
+      if (!groups[key]) groups[key] = new Set();
+      values.forEach((valueObj) => groups[key].add(JSON.stringify(valueObj)));
+    });
+
+    return Object.entries(groups).map(([name, set]) => ({
+      name,
+      values: [...set]
+        .map((item) => {
+          try {
+            return JSON.parse(item);
+          } catch {
+            return { value: String(item), variantId: null };
+          }
+        })
+        .filter((item) => item?.value),
+    }));
+  }, [productData]);
+  const selectedVariantId = useMemo(() => {
+    const selectedIds = variantGroups
+      .map((group) => {
+        const selectedValue = selectedVariants[group.name] || group.values[0]?.value;
+        const selectedOption = group.values.find((item) => item.value === selectedValue);
+        return selectedOption?.variantId;
+      })
+      .filter((value) => value !== null && value !== undefined && value !== '');
+
+    if (selectedIds.length === 0) {
+      const firstVariant = Array.isArray(productData?.variants) ? productData.variants[0] : null;
+      return firstVariant?.id ?? firstVariant?.variant_id ?? null;
+    }
+    return selectedIds[0];
+  }, [selectedVariants, variantGroups, productData?.variants]);
+  const additionalInfo = useMemo(() => {
+    const entries = [];
+    if (productData?.sku) entries.push({ label: 'SKU', value: productData.sku });
+    if (productData?.slug) entries.push({ label: 'Slug', value: productData.slug });
+    if (productData?.category) entries.push({ label: 'Category', value: productData.category });
+    if (productVendor?.name) entries.push({ label: 'Vendor', value: productVendor.name });
+    if (productData?.stock !== undefined && productData?.stock !== null) {
+      entries.push({ label: 'Stock', value: String(productData.stock) });
+    }
+    if (productData?.discount) {
+      entries.push({ label: 'Discount', value: discountLabel });
+    }
+    if (variantGroups.length > 0) {
+      entries.push({
+        label: 'Variants',
+        value: variantGroups
+          .map((group) => `${group.name}: ${group.values.map((item) => item.value).join(', ')}`)
+          .join(' | '),
+      });
+    }
+    return entries;
+  }, [productData, productVendor, discountLabel, variantGroups]);
+  const featureItems = useMemo(() => {
+    if (!productData) return [];
+    const items = [];
+    if ((productData.stock ?? 0) > 0) items.push('In stock');
+    if (productData.isFeatured) items.push('Featured product');
+    if (productData.isNew) items.push('New arrival');
+    if (productData.isBookable) items.push('Bookable');
+    if (productData.isActive) items.push('Active listing');
+    return items;
+  }, [productData]);
+  const normalizedDescription = useMemo(() => {
+    const raw = productData?.description || '';
+    if (!raw) return 'Product description is not available.';
+
+    // Convert common HTML block tags into readable line breaks, then strip tags.
+    const withBreaks = String(raw)
+      .replace(/<\s*br\s*\/?>/gi, '\n')
+      .replace(/<\s*\/p\s*>/gi, '\n')
+      .replace(/<\s*p[^>]*>/gi, '')
+      .replace(/<\s*\/li\s*>/gi, '\n')
+      .replace(/<\s*li[^>]*>/gi, '- ');
+
+    const withoutTags = withBreaks.replace(/<[^>]+>/g, '');
+
+    // Decode basic HTML entities safely in browser context.
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = withoutTags;
+    const decoded = textarea.value;
+
+    return decoded
+      .replace(/\n{3,}/g, '\n\n')
+      .trim() || 'Product description is not available.';
+  }, [productData?.description]);
+
+  useEffect(() => {
+    if (variantGroups.length === 0) return;
+    setSelectedVariants((prev) => {
+      const next = { ...prev };
+      variantGroups.forEach((group) => {
+        if (!next[group.name] && group.values[0]?.value) {
+          next[group.name] = group.values[0].value;
+        }
+      });
+      return next;
+    });
+  }, [variantGroups]);
+
+  const increaseQuantity = () => setQuantity((prev) => prev + 1);
+  const decreaseQuantity = () => setQuantity((prev) => Math.max(1, prev - 1));
+  const isFavorite = Boolean(productData?.isFavorite);
+
+  const handleToggleFavorite = async () => {
+    if (!productData?.id || favoriteBusy) return;
+    const previous = productData;
+    setFavoriteBusy(true);
+    setProductError('');
+    setProductData((prev) => (prev ? { ...prev, isFavorite: !Boolean(prev.isFavorite) } : prev));
+    try {
+      await toggleFavoriteProduct({ productId: productData.id });
+    } catch (error) {
+      setProductData(previous);
+      setProductError(error?.response?.data?.message || 'Failed to update favorites.');
+    } finally {
+      setFavoriteBusy(false);
+    }
+  };
+
+  const handleAddToCart = async () => {
+    if (!productData?.id || cartBusy) return;
+    if (variantGroups.length > 0 && !selectedVariantId) {
+      setProductError('Please choose a valid product variant before adding to cart.');
+      return;
+    }
+    try {
+      setCartBusy(true);
+      setProductError('');
+      await addToCart({ productId: productData.id, quantity, variantId: selectedVariantId });
+    } catch (error) {
+      const responseData = error?.response?.data;
+      const validationErrors = responseData?.errors && typeof responseData.errors === 'object'
+        ? Object.values(responseData.errors).flat().filter(Boolean)
+        : [];
+      const errorMessage = validationErrors.length > 0
+        ? validationErrors.join(' ')
+        : (responseData?.message || error?.message || 'Failed to add product to cart.');
+      setProductError(errorMessage);
+    } finally {
+      setCartBusy(false);
+    }
+  };
+
+  const resolveApiErrorMessage = (error, fallback) => {
+    const responseData = error?.response?.data;
+    const validationErrors = responseData?.errors && typeof responseData.errors === 'object'
+      ? Object.values(responseData.errors).flat().filter(Boolean)
+      : [];
+    if (validationErrors.length > 0) return validationErrors.join(' ');
+    return responseData?.message || fallback;
+  };
+
+  const handleSubmitRating = async (e) => {
+    e.preventDefault();
+    if (feedbackBusy) return;
+    if (String(ratingComment || '').trim().length === 0) {
+      setFeedbackError('Please add a short comment with your rating.');
+      setFeedbackSuccess('');
+      return;
+    }
+    try {
+      setFeedbackBusy(true);
+      setFeedbackError('');
+      setFeedbackSuccess('');
+      if (rateTarget === 'vendor') {
+        if (!productVendor?.id) throw new Error('Vendor is not available for rating.');
+        await rateVendor({ vendorId: productVendor.id, rating: ratingValueInput, comment: ratingComment });
+        setFeedbackSuccess('Vendor rating submitted successfully.');
+      } else {
+        await rateProduct({ productId: productData?.id, rating: ratingValueInput, comment: ratingComment });
+        setFeedbackSuccess('Product rating submitted successfully.');
+      }
+      setRatingComment('');
+      setRatingValueInput(5);
+    } catch (error) {
+      setFeedbackError(resolveApiErrorMessage(error, 'Unable to submit rating right now.'));
+    } finally {
+      setFeedbackBusy(false);
+    }
+  };
+
+  const handleSubmitReport = async (e) => {
+    e.preventDefault();
+    if (feedbackBusy) return;
+    if (String(reportReason || '').trim().length < 3) {
+      setFeedbackError('Please provide a clear report reason (at least 3 characters).');
+      setFeedbackSuccess('');
+      return;
+    }
+    try {
+      setFeedbackBusy(true);
+      setFeedbackError('');
+      setFeedbackSuccess('');
+      if (reportTarget === 'vendor') {
+        if (!productVendor?.id) throw new Error('Vendor is not available for reporting.');
+        await reportVendor({ vendorId: productVendor.id, reason: reportReason });
+        setFeedbackSuccess('Vendor report submitted successfully.');
+      } else {
+        await reportProduct({ productId: productData?.id, reason: reportReason });
+        setFeedbackSuccess('Product report submitted successfully.');
+      }
+      setReportReason('');
+    } catch (error) {
+      setFeedbackError(resolveApiErrorMessage(error, 'Unable to submit report right now.'));
+    } finally {
+      setFeedbackBusy(false);
+    }
+  };
 
   return (
     <div className="bg-white relative w-full min-h-screen">
@@ -154,7 +471,7 @@ export default function ProductDetail() {
               </div>
             </div>
             <span className="font-['Poppins'] font-normal leading-[20px] text-[#eea137] text-[14px]">
-              Electronics Devices
+              {productCategory?.name || productData?.category || 'Product'}
             </span>
           </div>
         </div>
@@ -168,14 +485,15 @@ export default function ProductDetail() {
             <div className="flex-1 w-full lg:max-w-[50%] lg:flex-shrink-0">
               {/* Main Image */}
               <div className="bg-[#f5f5f5] rounded-[8px] mb-[12px] sm:mb-[16px] aspect-square flex items-center justify-center overflow-hidden min-h-[250px] sm:min-h-[300px] md:min-h-[400px]">
-                <img 
-                  src={thumbnails[selectedImage] || imgMacBookMain} 
-                  alt="MacBook Pro" 
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    e.target.src = productImage1;
-                  }}
-                />
+                {thumbnails[selectedImage] ? (
+                  <img
+                    src={thumbnails[selectedImage]}
+                    alt={productData?.name || 'Product'}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <p className="font-['Poppins'] font-normal text-[#666] text-[14px]">No product image from API</p>
+                )}
               </div>
               
               {/* Thumbnail Gallery */}
@@ -200,9 +518,6 @@ export default function ProductDetail() {
                         src={thumb} 
                         alt={`Thumbnail ${idx + 1}`} 
                         className="w-full h-full object-cover bg-[#f5f5f5]"
-                        onError={(e) => {
-                          e.target.src = productImage1;
-                        }}
                       />
                     </button>
                   ))}
@@ -223,121 +538,105 @@ export default function ProductDetail() {
               <div className="flex flex-wrap gap-[8px] items-center mb-[12px]">
                 <div className="flex gap-[2px]">
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <span key={star} className={`text-[16px] sm:text-[18px] ${star <= 4 ? 'text-[#ffc107]' : 'text-[#e0e0e0]'}`}>★</span>
+                    <span key={star} className={`text-[16px] sm:text-[18px] ${star <= Math.round(ratingValue) ? 'text-[#ffc107]' : 'text-[#e0e0e0]'}`}>★</span>
                   ))}
                 </div>
                 <span className="font-['Poppins'] font-normal text-[#666] text-[12px] sm:text-[14px]">
-                  4.7 (21,671 User feedback)
+                  {ratingValue.toFixed(1)} ({ratingCount.toLocaleString()} User feedback)
                 </span>
               </div>
 
               {/* Product Title */}
               <h1 className="font-['Poppins'] font-semibold leading-[24px] sm:leading-[28px] md:leading-[32px] text-[#191c1f] text-[18px] sm:text-[22px] md:text-[24px] lg:text-[28px] mb-[12px] sm:mb-[16px]">
-                2020 Apple MacBook Pro with Apple M1 Chip (13-inch, 8GB RAM, 256GB SSD Storage) - Space Gray
+                {loadingProduct ? 'Loading product...' : (productData?.name || 'Product details')}
               </h1>
+              {productError ? (
+                <p className="font-['Poppins'] font-normal text-[#8e0909] text-[14px] mb-[12px]">{productError}</p>
+              ) : null}
 
               {/* Product Information */}
               <div className="flex flex-col gap-[8px] mb-[24px]">
                 <div className="flex gap-[8px]">
                   <span className="font-['Poppins'] font-semibold text-[#191c1f] text-[14px]">Sku:</span>
-                  <span className="font-['Poppins'] font-normal text-[#666] text-[14px]">A264671</span>
+                  <span className="font-['Poppins'] font-normal text-[#666] text-[14px]">{productData?.sku || 'N/A'}</span>
                 </div>
                 <div className="flex gap-[8px]">
                   <span className="font-['Poppins'] font-semibold text-[#191c1f] text-[14px]">Brand:</span>
-                  <span className="font-['Poppins'] font-normal text-[#666] text-[14px]">Apple</span>
+                  <span className="font-['Poppins'] font-normal text-[#666] text-[14px]">{productVendor?.name || productData?.brand || 'Brand'}</span>
                 </div>
                 <div className="flex gap-[8px]">
                   <span className="font-['Poppins'] font-semibold text-[#191c1f] text-[14px]">Availability:</span>
-                  <span className="font-['Poppins'] font-normal text-[#00a651] text-[14px]">In Stock</span>
+                  <span className="font-['Poppins'] font-normal text-[#00a651] text-[14px]">{(productData?.stock ?? 0) > 0 ? 'In Stock' : 'Out of Stock'}</span>
                 </div>
                 <div className="flex gap-[8px]">
                   <span className="font-['Poppins'] font-semibold text-[#191c1f] text-[14px]">Category:</span>
-                  <span className="font-['Poppins'] font-normal text-[#666] text-[14px]">Electronics Devices</span>
+                  <span className="font-['Poppins'] font-normal text-[#666] text-[14px]">{productData?.category || 'Category'}</span>
                 </div>
               </div>
 
               {/* Pricing */}
               <div className="flex gap-[12px] items-center mb-[24px]">
                 <span className="font-['Poppins'] font-semibold line-through text-[#929fa5] text-[20px]">
-                  $250.00
+                  {productData?.originalPrice || '$0'}
                 </span>
                 <span className="font-['Poppins'] font-semibold text-[#ff9500] text-[28px]">
-                  $125.00
+                  {productData?.salePrice || '$0'}
                 </span>
-                <span className="bg-[#fc0] px-[8px] py-[4px] rounded-[4px] font-['Poppins'] font-semibold text-[#191c1f] text-[12px]">
-                  32% OFF
-                </span>
+                {discountLabel ? (
+                  <span className="bg-[#fc0] px-[8px] py-[4px] rounded-[4px] font-['Poppins'] font-semibold text-[#191c1f] text-[12px]">
+                    {discountLabel}
+                  </span>
+                ) : null}
               </div>
 
               {/* Configuration Options */}
-              <div className="flex flex-col gap-[16px] sm:gap-[20px] mb-[24px] sm:mb-[32px]">
-                {/* Color */}
-                <div>
-                  <label className="block font-['Poppins'] font-semibold text-[#191c1f] text-[13px] sm:text-[14px] mb-[8px]">
-                    Color
-                  </label>
-                  <div className="flex gap-[12px]">
-                    <button
-                      onClick={() => setSelectedColor('gray')}
-                      className={`size-[36px] sm:size-[40px] rounded-full border-2 transition-all ${
-                        selectedColor === 'gray' ? 'border-[#0e1c47] scale-110' : 'border-[#e4e7e9]'
-                      } bg-[#4a4a4a]`}
-                    />
-                    <button
-                      onClick={() => setSelectedColor('white')}
-                      className={`size-[36px] sm:size-[40px] rounded-full border-2 transition-all ${
-                        selectedColor === 'white' ? 'border-[#0e1c47] scale-110' : 'border-[#e4e7e9]'
-                      } bg-white`}
-                    />
-                  </div>
+              {variantGroups.length > 0 ? (
+                <div className="flex flex-col gap-[16px] sm:gap-[20px] mb-[24px] sm:mb-[32px] p-[16px] rounded-[8px] border border-[#e4e7e9] bg-[#fafafa]">
+                  <p className="font-['Poppins'] font-semibold text-[#191c1f] text-[14px] sm:text-[15px]">
+                    Choose variant
+                  </p>
+                  {variantGroups.map((group) => (
+                    <div key={group.name}>
+                      <label className="block font-['Poppins'] font-semibold text-[#191c1f] text-[13px] sm:text-[14px] mb-[8px]">
+                        {group.name}
+                      </label>
+                      {group.values.length <= 5 ? (
+                        <div className="flex flex-wrap gap-[8px]">
+                          {group.values.map((value) => {
+                            const isSelected = (selectedVariants[group.name] || group.values[0]?.value) === value.value;
+                            return (
+                              <button
+                                key={`${group.name}-${value.value}`}
+                                type="button"
+                                onClick={() => setSelectedVariants((prev) => ({ ...prev, [group.name]: value.value }))}
+                                className={`px-[10px] py-[8px] rounded-[6px] border text-[12px] sm:text-[13px] font-['Poppins'] transition-colors ${
+                                  isSelected
+                                    ? 'bg-[#0e1c47] text-white border-[#0e1c47]'
+                                    : 'bg-white text-[#191c1f] border-[#d0d7de] hover:border-[#0e1c47]'
+                                }`}
+                              >
+                                {value.value}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <select
+                          value={selectedVariants[group.name] || group.values[0]?.value || ''}
+                          onChange={(e) => setSelectedVariants((prev) => ({ ...prev, [group.name]: e.target.value }))}
+                          className="w-full max-w-full sm:max-w-[300px] border border-[#d0d7de] rounded-[6px] px-[12px] py-[10px] font-['Poppins'] text-[13px] sm:text-[14px] focus:outline-none focus:border-[#0e1c47] bg-white"
+                        >
+                          {group.values.map((value) => (
+                            <option key={`${group.name}-${value.value}`} value={value.value}>
+                              {value.value}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  ))}
                 </div>
-
-                {/* Memory */}
-                <div>
-                  <label className="block font-['Poppins'] font-semibold text-[#191c1f] text-[13px] sm:text-[14px] mb-[8px]">
-                    Memory
-                  </label>
-                  <select
-                    value={selectedMemory}
-                    onChange={(e) => setSelectedMemory(e.target.value)}
-                    className="w-full max-w-full sm:max-w-[300px] border border-[#e4e7e9] rounded-[4px] px-[12px] py-[10px] font-['Poppins'] text-[13px] sm:text-[14px] focus:outline-none focus:border-[#0e1c47]"
-                  >
-                    <option value="16GB">16GB unified memory</option>
-                    <option value="32GB">32GB unified memory</option>
-                  </select>
-                </div>
-
-                {/* Size */}
-                <div>
-                  <label className="block font-['Poppins'] font-semibold text-[#191c1f] text-[13px] sm:text-[14px] mb-[8px]">
-                    Size
-                  </label>
-                  <select
-                    value={selectedSize}
-                    onChange={(e) => setSelectedSize(e.target.value)}
-                    className="w-full max-w-full sm:max-w-[300px] border border-[#e4e7e9] rounded-[4px] px-[12px] py-[10px] font-['Poppins'] text-[13px] sm:text-[14px] focus:outline-none focus:border-[#0e1c47]"
-                  >
-                    <option value="14-inch">14-inch Liquid Retina XDR display</option>
-                    <option value="16-inch">16-inch Liquid Retina XDR display</option>
-                  </select>
-                </div>
-
-                {/* Storage */}
-                <div>
-                  <label className="block font-['Poppins'] font-semibold text-[#191c1f] text-[13px] sm:text-[14px] mb-[8px]">
-                    Storage
-                  </label>
-                  <select
-                    value={selectedStorage}
-                    onChange={(e) => setSelectedStorage(e.target.value)}
-                    className="w-full max-w-full sm:max-w-[300px] border border-[#e4e7e9] rounded-[4px] px-[12px] py-[10px] font-['Poppins'] text-[13px] sm:text-[14px] focus:outline-none focus:border-[#0e1c47]"
-                  >
-                    <option value="1TB">1TB SSD Storage</option>
-                    <option value="512GB">512GB SSD Storage</option>
-                    <option value="256GB">256GB SSD Storage</option>
-                  </select>
-                </div>
-              </div>
+              ) : null}
 
               {/* Quantity and Action Buttons */}
               <div className="flex flex-col gap-[16px] sm:gap-[20px] mb-[24px] sm:mb-[32px]">
@@ -363,9 +662,14 @@ export default function ProductDetail() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-[10px] sm:gap-[12px]">
-                  <button className="flex-1 bg-[#0e1c47] text-white font-['Poppins'] font-semibold py-[12px] sm:py-[14px] px-[20px] sm:px-[24px] rounded-[4px] hover:bg-[#1a2f5c] transition-colors flex items-center justify-center gap-[8px] text-[13px] sm:text-[14px]">
+                  <button
+                    type="button"
+                    onClick={handleAddToCart}
+                    disabled={cartBusy || !productData?.id}
+                    className="flex-1 bg-[#0e1c47] text-white font-['Poppins'] font-semibold py-[12px] sm:py-[14px] px-[20px] sm:px-[24px] rounded-[4px] hover:bg-[#1a2f5c] transition-colors flex items-center justify-center gap-[8px] text-[13px] sm:text-[14px] disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
                     <img src={imgShoppingCart} alt="Cart" className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px]" />
-                    ADD TO CARD
+                    {cartBusy ? 'ADDING...' : 'ADD TO CART'}
                   </button>
                   <button className="flex-1 bg-[#ff9500] text-white font-['Poppins'] font-semibold py-[12px] sm:py-[14px] px-[20px] sm:px-[24px] rounded-[4px] hover:bg-[#e68600] transition-colors text-[13px] sm:text-[14px]">
                     BUY NOW
@@ -376,9 +680,16 @@ export default function ProductDetail() {
               {/* Additional Actions */}
               <div className="flex flex-col gap-[12px] sm:gap-[16px] mb-[24px] sm:mb-[32px]">
                 <div className="flex flex-wrap gap-[16px] sm:gap-[24px]">
-                  <button className="flex items-center gap-[6px] sm:gap-[8px] font-['Poppins'] font-normal text-[#666] text-[12px] sm:text-[14px] hover:text-[#0e1c47] transition-colors">
+                  <button
+                    type="button"
+                    onClick={handleToggleFavorite}
+                    disabled={favoriteBusy || !productData?.id}
+                    className={`flex items-center gap-[6px] sm:gap-[8px] font-['Poppins'] font-normal text-[12px] sm:text-[14px] transition-colors ${
+                      isFavorite ? 'text-[#dc2626]' : 'text-[#666] hover:text-[#0e1c47]'
+                    } ${favoriteBusy ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  >
                     <HeartIcon className="relative shrink-0 size-[16px] sm:size-[18px]" />
-                    Add to Wishlist
+                    {isFavorite ? 'Remove from Wishlist' : 'Add to Wishlist'}
                   </button>
                   <button className="flex items-center gap-[6px] sm:gap-[8px] font-['Poppins'] font-normal text-[#666] text-[12px] sm:text-[14px] hover:text-[#0e1c47] transition-colors">
                     <CompareIcon className="relative shrink-0 size-[16px] sm:size-[18px]" />
@@ -476,62 +787,153 @@ export default function ProductDetail() {
               {activeTab === 'description' && (
                 <div className="flex flex-col lg:flex-row gap-[20px] sm:gap-[24px]">
                   <div className="w-full lg:w-[300px] flex-shrink-0">
-                    <img 
-                      src={imgMacBookMain} 
-                      alt="MacBook Pro" 
-                      className="w-full rounded-[8px]"
-                      onError={(e) => {
-                        e.target.src = productImage1;
-                      }}
-                    />
+                    {thumbnails[0] ? (
+                      <img
+                        src={thumbnails[0]}
+                        alt={productData?.name || 'Product'}
+                        className="w-full rounded-[8px]"
+                      />
+                    ) : null}
                   </div>
                   <div className="flex-1 w-full">
                     <p className="font-['Poppins'] font-normal text-[#666] text-[13px] sm:text-[14px] leading-[22px] sm:leading-[24px] mb-[12px] sm:mb-[16px]">
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+                      {normalizedDescription}
                     </p>
                     <p className="font-['Poppins'] font-normal text-[#666] text-[13px] sm:text-[14px] leading-[22px] sm:leading-[24px]">
-                      Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                      {productData?.brand ? `Brand: ${productData.brand}` : 'Additional product details will appear here.'}
                     </p>
                   </div>
                 </div>
               )}
               {activeTab === 'additional' && (
-                <div>
+                additionalInfo.length > 0 ? (
+                  <div className="space-y-[8px]">
+                    {additionalInfo.map((item) => (
+                      <div key={item.label} className="flex flex-wrap gap-[8px]">
+                        <span className="font-['Poppins'] font-semibold text-[#191c1f] text-[13px] sm:text-[14px]">{item.label}:</span>
+                        <span className="font-['Poppins'] font-normal text-[#666] text-[13px] sm:text-[14px] break-words">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
                   <p className="font-['Poppins'] font-normal text-[#666] text-[14px]">
-                    Additional information will be displayed here.
+                    No additional information returned by API.
                   </p>
-                </div>
+                )
               )}
               {activeTab === 'reviews' && (
                 <div>
-                  <p className="font-['Poppins'] font-normal text-[#666] text-[14px]">
-                    No reviews yet. Be the first to review this product.
-                  </p>
+                  {ratingCount > 0 ? (
+                    <p className="font-['Poppins'] font-normal text-[#666] text-[14px]">
+                      Average rating: {ratingValue.toFixed(1)} from {ratingCount.toLocaleString()} reviews.
+                    </p>
+                  ) : (
+                    <p className="font-['Poppins'] font-normal text-[#666] text-[14px]">
+                      No review details returned by API.
+                    </p>
+                  )}
+                  <div className="mt-[16px] grid grid-cols-1 lg:grid-cols-2 gap-[16px]">
+                    <form onSubmit={handleSubmitRating} className="border border-[#e4e7e9] rounded-[8px] p-[12px] sm:p-[14px]">
+                      <h4 className="font-['Poppins'] font-semibold text-[#191c1f] text-[14px] mb-[10px]">Rate</h4>
+                      <label className="block font-['Poppins'] text-[12px] text-[#666] mb-[6px]">Target</label>
+                      <select
+                        value={rateTarget}
+                        onChange={(e) => setRateTarget(e.target.value)}
+                        className="w-full border border-[#d0d7de] rounded-[6px] px-[10px] py-[8px] text-[13px] font-['Poppins'] mb-[10px]"
+                      >
+                        <option value="product">Product</option>
+                        <option value="vendor" disabled={!productVendor?.id}>Vendor</option>
+                      </select>
+                      <label className="block font-['Poppins'] text-[12px] text-[#666] mb-[6px]">Rating</label>
+                      <select
+                        value={ratingValueInput}
+                        onChange={(e) => setRatingValueInput(Number(e.target.value))}
+                        className="w-full border border-[#d0d7de] rounded-[6px] px-[10px] py-[8px] text-[13px] font-['Poppins'] mb-[10px]"
+                      >
+                        {[5, 4, 3, 2, 1].map((value) => (
+                          <option key={value} value={value}>{value} Star{value > 1 ? 's' : ''}</option>
+                        ))}
+                      </select>
+                      <label className="block font-['Poppins'] text-[12px] text-[#666] mb-[6px]">Comment</label>
+                      <textarea
+                        value={ratingComment}
+                        onChange={(e) => setRatingComment(e.target.value)}
+                        rows={3}
+                        className="w-full border border-[#d0d7de] rounded-[6px] px-[10px] py-[8px] text-[13px] font-['Poppins'] mb-[10px]"
+                        placeholder="Share your experience"
+                      />
+                      <button
+                        type="submit"
+                        disabled={feedbackBusy || !productData?.id}
+                        className="bg-[#0e1c47] text-white font-['Poppins'] font-semibold px-[16px] py-[9px] rounded-[4px] text-[12px] disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {feedbackBusy ? 'Submitting...' : 'Submit Rating'}
+                      </button>
+                    </form>
+
+                    <form onSubmit={handleSubmitReport} className="border border-[#e4e7e9] rounded-[8px] p-[12px] sm:p-[14px]">
+                      <h4 className="font-['Poppins'] font-semibold text-[#191c1f] text-[14px] mb-[10px]">Report</h4>
+                      <label className="block font-['Poppins'] text-[12px] text-[#666] mb-[6px]">Target</label>
+                      <select
+                        value={reportTarget}
+                        onChange={(e) => setReportTarget(e.target.value)}
+                        className="w-full border border-[#d0d7de] rounded-[6px] px-[10px] py-[8px] text-[13px] font-['Poppins'] mb-[10px]"
+                      >
+                        <option value="product">Product</option>
+                        <option value="vendor" disabled={!productVendor?.id}>Vendor</option>
+                      </select>
+                      <label className="block font-['Poppins'] text-[12px] text-[#666] mb-[6px]">Reason</label>
+                      <textarea
+                        value={reportReason}
+                        onChange={(e) => setReportReason(e.target.value)}
+                        rows={3}
+                        className="w-full border border-[#d0d7de] rounded-[6px] px-[10px] py-[8px] text-[13px] font-['Poppins'] mb-[10px]"
+                        placeholder="Describe the issue"
+                      />
+                      <button
+                        type="submit"
+                        disabled={feedbackBusy || !productData?.id}
+                        className="bg-[#b91c1c] text-white font-['Poppins'] font-semibold px-[16px] py-[9px] rounded-[4px] text-[12px] disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {feedbackBusy ? 'Submitting...' : 'Submit Report'}
+                      </button>
+                    </form>
+                  </div>
+                  {feedbackError ? (
+                    <p className="font-['Poppins'] font-normal text-[#8e0909] text-[13px] mt-[12px]">{feedbackError}</p>
+                  ) : null}
+                  {feedbackSuccess ? (
+                    <p className="font-['Poppins'] font-normal text-[#00a651] text-[13px] mt-[12px]">{feedbackSuccess}</p>
+                  ) : null}
                 </div>
               )}
             </div>
             <div className="w-full lg:w-[300px] flex-shrink-0 mt-[24px] lg:mt-0">
               <h3 className="font-['Poppins'] font-semibold text-[#191c1f] text-[16px] sm:text-[18px] mb-[12px] sm:mb-[16px]">Feature</h3>
               <div className="flex flex-col gap-[10px] sm:gap-[12px]">
-                {['Free 1 Year Warranty', 'Free Shipping & Fasted Delivery', '100% Money-back guarantee', '24/7 Customer support', 'Secure payment method'].map((feature, idx) => (
-                  <div key={idx} className="flex items-center gap-[10px] sm:gap-[12px]">
+                {featureItems.length > 0 ? featureItems.map((feature) => (
+                  <div key={feature} className="flex items-center gap-[10px] sm:gap-[12px]">
                     <span className="text-[#00a651] text-[18px] sm:text-[20px]">✓</span>
                     <span className="font-['Poppins'] font-normal text-[#666] text-[13px] sm:text-[14px]">{feature}</span>
                   </div>
-                ))}
+                )) : (
+                  <p className="font-['Poppins'] font-normal text-[#666] text-[13px] sm:text-[14px]">
+                    No feature flags returned by API.
+                  </p>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Related Products Sections */}
-      {['Compatible With Your Setup', 'You Might Like It', 'Recommended For You'].map((sectionTitle, sectionIdx) => (
-        <div key={sectionIdx} className="bg-white px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] xl:px-[120px] 2xl:px-[140px] py-[24px] sm:py-[32px] md:py-[40px]">
+      {/* Related Products Section */}
+      {relatedProducts.length > 0 ? (
+        <div className="bg-white px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] xl:px-[120px] 2xl:px-[140px] py-[24px] sm:py-[32px] md:py-[40px]">
           <div className="max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-[12px] sm:gap-0 mb-[20px] sm:mb-[24px]">
               <h2 className="font-['Poppins'] font-semibold text-[#191c1f] text-[20px] sm:text-[24px] md:text-[28px]">
-                {sectionTitle}
+                Related Products
               </h2>
               <div className="flex flex-wrap gap-[12px] sm:gap-[16px] items-center w-full sm:w-auto">
                 <Link to="/search" className="font-['Poppins'] font-normal text-[#666] text-[12px] sm:text-[14px] hover:text-[#0e1c47] transition-colors whitespace-nowrap">
@@ -551,7 +953,7 @@ export default function ProductDetail() {
               {relatedProducts.map((product) => (
                 <Link
                   key={product.id}
-                  to="/product/1"
+                  to={`/product/${product.id}`}
                   className="flex-shrink-0 md:flex-shrink-0 w-[160px] sm:w-[180px] md:w-[calc((100%-80px)/5)] lg:w-[calc((100%-80px)/5)] bg-white border border-[#e4e7e9] rounded-[8px] overflow-hidden hover:shadow-lg transition-shadow"
                 >
                   <div className="relative h-[140px] sm:h-[160px] md:h-[180px] bg-[#f5f5f5]">
@@ -589,7 +991,7 @@ export default function ProductDetail() {
             </div>
           </div>
         </div>
-      ))}
+      ) : null}
     </div>
   );
 }

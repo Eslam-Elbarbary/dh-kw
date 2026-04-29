@@ -1,37 +1,113 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getCurrentUser, logoutRequest } from '../services/auth.service';
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  const normalizeUser = (rawProfile) => {
+    const source = rawProfile?.user || rawProfile?.data?.user || rawProfile?.data || rawProfile || {};
+    const fullName = String(source?.name || '').trim();
+    const fallbackFirstName = fullName.split(' ').slice(0, 1).join(' ');
+    const fallbackLastName = fullName.split(' ').slice(1).join(' ');
+    const firstName = source?.firstName || source?.first_name || fallbackFirstName || '';
+    const lastName = source?.lastName || source?.last_name || fallbackLastName || '';
+    const normalizedName = [firstName, lastName].filter(Boolean).join(' ').trim() || fullName || '';
+
+    return {
+      ...source,
+      firstName,
+      lastName,
+      name: normalizedName,
+      email: source?.email || '',
+      phone: source?.phone || '',
+      country_id: source?.country_id ?? source?.countryId ?? null,
+    };
+  };
+
+  const persistProfile = (profile) => {
+    const normalizedProfile = normalizeUser(profile);
+    setUser(normalizedProfile);
+    setIsAuthenticated(true);
+    localStorage.setItem('user', JSON.stringify(normalizedProfile));
+    localStorage.setItem('isAuthenticated', 'true');
+    const profileCountryId = normalizedProfile?.country_id ?? normalizedProfile?.countryId;
+    if (profileCountryId) {
+      localStorage.setItem('selectedCountryId', String(profileCountryId));
+    }
+  };
+
+  const refreshUser = async () => {
+    const userResponse = await getCurrentUser();
+    const profile = userResponse?.data ?? userResponse;
+    if (profile) {
+      persistProfile(profile);
+    }
+    return profile;
+  };
 
   // Check localStorage on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    const isAuth = localStorage.getItem('isAuthenticated') === 'true';
-    if (savedUser && isAuth) {
-      setUser(JSON.parse(savedUser));
-      setIsAuthenticated(true);
-    }
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('token');
+      const savedUser = localStorage.getItem('user');
+      const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+
+      if (!token) {
+        setIsAuthLoading(false);
+        return;
+      }
+
+      if (savedUser && isAuth) {
+        setUser(normalizeUser(JSON.parse(savedUser)));
+        setIsAuthenticated(true);
+      }
+
+      try {
+        await refreshUser();
+      } catch {
+        setUser(null);
+        setIsAuthenticated(false);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('isAuthenticated');
+      } finally {
+        setIsAuthLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   const login = (userData) => {
-    setUser(userData);
+    const normalizedProfile = normalizeUser(userData);
+    setUser(normalizedProfile);
     setIsAuthenticated(true);
-    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('user', JSON.stringify(normalizedProfile));
     localStorage.setItem('isAuthenticated', 'true');
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      if (localStorage.getItem('token')) {
+        await logoutRequest();
+      }
+    } catch {
+      // Ignore API logout errors and always clear local session.
+    }
+
     setUser(null);
     setIsAuthenticated(false);
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('isAuthenticated');
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isAuthLoading, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

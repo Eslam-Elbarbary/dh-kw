@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider, Outlet, useLocation } from 'react-
 import { useState, useEffect } from 'react';
 import './App.css';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -9,6 +10,7 @@ import ScrollToTop from './components/ScrollToTop';
 import SignUp from './pages/SignUp';
 import SignIn from './pages/SignIn';
 import VerificationCode from './pages/VerificationCode';
+import ForgotPassword from './pages/ForgotPassword';
 import ShoppingCart from './pages/ShoppingCart';
 import DigitalECards from './pages/DigitalECards';
 import Home from './pages/Home';
@@ -33,6 +35,7 @@ import MyProfile from './pages/MyProfile';
 import MyOrders from './pages/MyOrders';
 import Compare from './pages/Compare';
 import Notifications from './pages/Notifications';
+import MyTickets from './pages/MyTickets';
 import ErrorPage from './pages/ErrorPage';
 import { PageLoader } from './components/Loader';
 
@@ -167,6 +170,10 @@ const router = createBrowserRouter([
         element: <Notifications />,
       },
       {
+        path: '/my-tickets',
+        element: <MyTickets />,
+      },
+      {
         path: '*',
         element: <ErrorPage />,
       },
@@ -184,13 +191,19 @@ const router = createBrowserRouter([
     path: '/verification',
     element: <VerificationCode />,
   },
+  {
+    path: '/forgot-password',
+    element: <ForgotPassword />,
+  },
 ]);
 
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <CartProvider>
+          <RouterProvider router={router} />
+        </CartProvider>
       </AuthProvider>
     </ThemeProvider>
   );

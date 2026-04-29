@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { getCategories, getProducts, getSliders, getVendors, resolveCountryId } from '../services/catalog.service';
 
 // Import assets
 import arrowRightIcon from '../assets/ArrowRight.svg';
@@ -44,7 +45,27 @@ const imgExchange = deliveryReturnIcon;
 const imgCustomer = customerSupportIcon;
 
 // Hero Banner Component
-function HeroBanner() {
+function HeroBanner({ sliders = [] }) {
+  const safeSliders = Array.isArray(sliders) ? sliders.filter((item) => Boolean(item?.image)) : [];
+  const [activeSlide, setActiveSlide] = React.useState(0);
+
+  React.useEffect(() => {
+    setActiveSlide(0);
+  }, [safeSliders.length]);
+
+  React.useEffect(() => {
+    if (safeSliders.length <= 1) return undefined;
+    const interval = window.setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % safeSliders.length);
+    }, 4000);
+    return () => window.clearInterval(interval);
+  }, [safeSliders.length]);
+
+  const currentSlide = safeSliders[activeSlide] || null;
+  const sliderImage = currentSlide?.image || imgHeroBackground;
+  const sliderTitle = currentSlide?.title || 'Exclusive Collection';
+  const sliderSubtitle = currentSlide?.subtitle || 'Special offer today';
+
   return (
     <div className="relative w-full h-[300px] sm:h-[400px] md:h-[499px] lg:h-[550px] xl:h-[600px] 2xl:h-[650px]" data-node-id="35:560">
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
@@ -52,14 +73,39 @@ function HeroBanner() {
           <img 
             className="absolute inset-0 w-full h-full object-cover" 
             alt="Hero Background" 
-            src={imgHeroBackground}
+            src={sliderImage}
             onError={(e) => {
-              e.target.style.display = 'none';
+              e.target.src = imgHeroBackground;
             }}
           />
         </div>
         <div className="absolute bg-gradient-to-t from-[rgba(0,101,176,0)] inset-0 to-[rgba(0,101,176,0.2)]" />
       </div>
+      <div className="absolute inset-0 flex items-end sm:items-center px-[16px] sm:px-[32px] md:px-[60px] lg:px-[100px] xl:px-[120px] pb-[24px] sm:pb-0">
+        <div className="max-w-[520px] bg-black/20 backdrop-blur-[1px] rounded-[8px] p-[12px] sm:p-[16px] md:p-[20px]">
+          <h2 className="font-['Poppins'] font-semibold text-white text-[22px] sm:text-[30px] md:text-[36px] leading-[1.2] mb-[6px]">
+            {sliderTitle}
+          </h2>
+          <p className="font-['Poppins'] font-normal text-white/90 text-[13px] sm:text-[15px] md:text-[16px] leading-[1.4] line-clamp-3">
+            {sliderSubtitle}
+          </p>
+        </div>
+      </div>
+      {safeSliders.length > 1 ? (
+        <div className="absolute bottom-[14px] left-1/2 -translate-x-1/2 flex items-center gap-[8px] z-10">
+          {safeSliders.map((slide, idx) => (
+            <button
+              key={slide.id || `${slide.image}-${idx}`}
+              type="button"
+              onClick={() => setActiveSlide(idx)}
+              className={`h-[8px] rounded-full transition-all duration-200 ${
+                idx === activeSlide ? 'w-[24px] bg-[#eea137]' : 'w-[8px] bg-white/70 hover:bg-white'
+              }`}
+              aria-label={`Show slide ${idx + 1}`}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -67,9 +113,9 @@ function HeroBanner() {
 // Product Category Card Component
 function ProductCategoryCard({ title, mainImage, mainImageAlt, linkText, subCategories, linkTo = "/" }) {
   return (
-    <Link to={linkTo} className="bg-white border border-[#e6e6e6] border-solid flex items-center overflow-hidden p-[10px] sm:p-[12px] md:p-[16px] lg:p-[20px] xl:p-[24px] 2xl:p-[28px] relative rounded-[4px] shrink-0 w-full sm:w-auto sm:flex-1 max-w-full sm:max-w-[368px] lg:max-w-[360px] xl:max-w-[380px] 2xl:max-w-[400px] cursor-pointer hover:shadow-lg transition-shadow">
+    <Link to={linkTo} className="bg-white border border-[#e6e6e6] border-solid flex items-center overflow-hidden p-[10px] sm:p-[12px] md:p-[16px] lg:p-[20px] xl:p-[24px] 2xl:p-[28px] relative rounded-[8px] shrink-0 w-full sm:w-auto sm:flex-1 max-w-full sm:max-w-[368px] lg:max-w-[360px] xl:max-w-[380px] 2xl:max-w-[400px] cursor-pointer hover:shadow-lg transition-shadow">
       <div className="flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-center relative shrink-0 w-full">
-        <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[26px] xl:text-[28px] 2xl:text-[30px] text-black text-center" dir="auto">
+        <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[26px] xl:text-[28px] 2xl:text-[30px] text-black text-center line-clamp-1 w-full" dir="auto">
           {title}
         </p>
         <div className="flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-start relative shrink-0 w-full">
@@ -77,11 +123,15 @@ function ProductCategoryCard({ title, mainImage, mainImageAlt, linkText, subCate
           <div className="flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-start relative shrink-0 w-full">
             <div className="bg-[#0e1c47] flex flex-col h-[120px] sm:h-[140px] md:h-[168px] lg:h-[180px] xl:h-[200px] 2xl:h-[220px] items-center justify-center overflow-clip px-[40px] sm:px-[50px] md:px-[67px] lg:px-[75px] xl:px-[85px] 2xl:px-[95px] py-[12px] sm:py-[16px] md:py-[20px] lg:py-[24px] xl:py-[28px] relative rounded-[4px] shrink-0 w-full">
               <div className="flex items-center relative shrink-0">
-                <img alt={mainImageAlt} className="h-[70px] w-[120px] sm:h-[85px] sm:w-[150px] md:h-[102px] md:w-[180px] lg:h-[110px] lg:w-[200px] xl:h-[120px] xl:w-[220px] 2xl:h-[130px] 2xl:w-[240px] object-contain" src={mainImage} />
+                {mainImage ? (
+                  <img alt={mainImageAlt} className="h-[70px] w-[120px] sm:h-[85px] sm:w-[150px] md:h-[102px] md:w-[180px] lg:h-[110px] lg:w-[200px] xl:h-[120px] xl:w-[220px] 2xl:h-[130px] 2xl:w-[240px] object-contain" src={mainImage} />
+                ) : (
+                  <p className="font-['Poppins'] font-normal text-white text-[12px] sm:text-[14px] text-center">No image</p>
+                )}
               </div>
             </div>
             <div className="flex gap-[12px] sm:gap-[14px] md:gap-[16px] items-center justify-center relative shrink-0 w-full">
-              <p className="capitalize font-['Poppins'] font-medium leading-[normal] not-italic relative shrink-0 text-[16px] sm:text-[18px] md:text-[20px] lg:text-[22px] xl:text-[24px] text-black text-center" dir="auto">
+              <p className="capitalize font-['Poppins'] font-medium leading-[normal] not-italic relative shrink-0 text-[16px] sm:text-[18px] md:text-[20px] lg:text-[22px] xl:text-[24px] text-black text-center line-clamp-1 max-w-[85%]" dir="auto">
                 {linkText}
               </p>
               <div className="relative shrink-0 size-[20px] sm:size-[22px] md:size-[24px] lg:size-[26px] xl:size-[28px]">
@@ -92,19 +142,20 @@ function ProductCategoryCard({ title, mainImage, mainImageAlt, linkText, subCate
           {/* Sub Categories */}
           <div className="flex gap-[12px] sm:gap-[14px] md:gap-[16px] items-center relative shrink-0 w-full">
             {subCategories.map((sub, index) => (
-              <div key={index} className="flex flex-[1_0_0] flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-start justify-center min-h-px min-w-px relative shrink-0">
+              <div key={index} className="flex flex-[1_0_0] flex-col gap-[10px] sm:gap-[12px] md:gap-[14px] items-start justify-start min-h-px min-w-px relative shrink-0">
                 <div className="bg-[#0e1c47] flex flex-col items-start overflow-clip p-[12px] sm:p-[16px] md:p-[20px] relative rounded-[4px] shrink-0 w-full">
-                  <div className="flex flex-col items-center justify-center relative shrink-0 w-full">
-                    <img alt={sub.imageAlt} className="h-[90px] w-[60px] sm:h-[110px] sm:w-[75px] md:h-[128px] md:w-[86.116px] object-contain" src={sub.image} />
+                  <div className="flex flex-col items-center justify-center relative shrink-0 w-full min-h-[90px] sm:min-h-[110px] md:min-h-[128px]">
+                    {sub.image ? (
+                      <img alt={sub.imageAlt} className="h-[90px] w-[60px] sm:h-[110px] sm:w-[75px] md:h-[128px] md:w-[86.116px] object-contain" src={sub.image} />
+                    ) : (
+                      <p className="font-['Poppins'] font-normal text-white text-[10px] sm:text-[12px] text-center">No image</p>
+                    )}
                   </div>
                 </div>
-                <div className="flex gap-[12px] sm:gap-[14px] md:gap-[16px] items-center justify-center relative shrink-0 w-full">
-                  <p className="capitalize font-['Poppins'] font-medium leading-[normal] not-italic relative shrink-0 text-[14px] sm:text-[16px] md:text-[20px] lg:text-[22px] xl:text-[24px] text-black text-center" dir="auto">
+                <div className="flex items-center justify-center relative shrink-0 w-full min-h-[50px] px-[2px]">
+                  <p className="capitalize font-['Poppins'] font-medium leading-[1.25] not-italic relative text-[13px] sm:text-[14px] md:text-[15px] lg:text-[16px] xl:text-[17px] text-black text-center line-clamp-2 break-words w-full max-w-full overflow-hidden" dir="auto">
                     {sub.linkText}
                   </p>
-                  <div className="relative shrink-0 size-[18px] sm:size-[20px] md:size-[24px] lg:size-[26px] xl:size-[28px]">
-                    <img alt="" className="block max-w-none size-full" src={imgArrowRight} />
-                  </div>
                 </div>
               </div>
             ))}
@@ -340,71 +391,146 @@ function FeaturesSection() {
 }
 
 export default function Home() {
-  const productCategories = [
-    {
-      title: "Digital E-Cards",
-      mainImage: img69694768AmazonEchoPngClipartTransparentAmazonEchoPng1,
-      mainImageAlt: "Digital E-Cards",
-      linkText: "Digital E-Cards",
-      linkTo: "/digital-e-cards",
-      subCategories: [
-        { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" },
-        { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" }
-      ]
-    },
-    {
-      title: "PC Components",
-      mainImage: imgElectronicCollectionComputerMotherboardWithCpuCooler1,
-      mainImageAlt: "PC Components",
-      linkText: "PC Components",
-      linkTo: "/pc-components",
-      subCategories: [
-        { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" },
-        { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" }
-      ]
-    },
-    {
-      title: "mobiles & tablets",
-      mainImage: imgLaptopTabletPcTvMobilePhone3D1,
-      mainImageAlt: "Mobiles & Tablets",
-      linkText: "Digital E-Cards",
-      linkTo: "/digital-e-cards",
-      subCategories: [
-        { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" },
-        { image: imgSleekBlackTabletModernDigitalDevice1, imageAlt: "Tablet", linkText: "tablets" }
-      ]
-    }
-  ];
+  const [apiCategories, setApiCategories] = React.useState([]);
+  const [apiCategoryProducts, setApiCategoryProducts] = React.useState({});
+  const [apiVendors, setApiVendors] = React.useState([]);
+  const [apiVendorProducts, setApiVendorProducts] = React.useState({});
+  const [sliders, setSliders] = React.useState([]);
+  const [loadingHomeData, setLoadingHomeData] = React.useState(true);
+  const countryId = React.useMemo(() => resolveCountryId(1), []);
+
+  React.useEffect(() => {
+    const loadHomeData = async () => {
+      try {
+        setLoadingHomeData(true);
+        const [categoriesList, vendorsList, slidersList] = await Promise.all([
+          getCategories(),
+          getVendors(),
+          getSliders(),
+        ]);
+        const topCategories = categoriesList.slice(0, 3);
+        const categoryProductPairs = await Promise.all(
+          topCategories.map(async (category) => {
+            const list = await getProducts({
+              countryId,
+              categoryId: category.id,
+              perPage: 2,
+              page: 1,
+            });
+            return [category.id, list];
+          })
+        );
+        const topVendors = vendorsList.slice(0, 3);
+        const vendorProductPairs = await Promise.all(
+          topVendors.map(async (vendor) => {
+            const list = await getProducts({
+              countryId,
+              vendorId: vendor.id,
+              perPage: 2,
+              page: 1,
+            });
+            return [vendor.id, list];
+          })
+        );
+        setApiCategories(topCategories);
+        setApiCategoryProducts(Object.fromEntries(categoryProductPairs));
+        setApiVendors(topVendors);
+        setApiVendorProducts(Object.fromEntries(vendorProductPairs));
+        setSliders(Array.isArray(slidersList) ? slidersList : []);
+      } catch {
+        setApiCategories([]);
+        setApiCategoryProducts({});
+        setApiVendors([]);
+        setApiVendorProducts({});
+        setSliders([]);
+      } finally {
+        setLoadingHomeData(false);
+      }
+    };
+
+    loadHomeData();
+  }, [countryId]);
+
+  const productCategories = apiCategories.map((category) => {
+      const previews = apiCategoryProducts[category.id] || [];
+      const mainPreview = previews[0];
+
+      return {
+        title: category.name,
+        mainImage: category.image || mainPreview?.image || '',
+        mainImageAlt: category.name,
+        linkText: category.name,
+        linkTo: `/search?country_id=${countryId}&category_id=${category.id}`,
+        subCategories: previews.length > 0
+          ? previews.map((item) => ({
+              image: item.image || '',
+              imageAlt: item.name || `${category.name} item`,
+              linkText: item.name || 'Product',
+            }))
+          : [],
+      };
+    });
+
+  const vendorCards = apiVendors.map((vendor) => {
+    const previews = apiVendorProducts[vendor.id] || [];
+    const mainPreview = previews[0];
+
+    return {
+      title: vendor.name,
+      mainImage: vendor.image || mainPreview?.image || '',
+      mainImageAlt: vendor.name,
+      linkText: `Shop ${vendor.name}`,
+      linkTo: `/search?country_id=${countryId}&vendor_id=${vendor.id}`,
+      subCategories: previews.length > 0
+        ? previews.map((item) => ({
+            image: item.image || '',
+            imageAlt: item.name || `${vendor.name} product`,
+            linkText: item.name || 'Product',
+          }))
+        : [],
+    };
+  });
 
   return (
     <div className="bg-white relative w-full min-h-screen" data-name="home" data-node-id="35:497">
       <div className="flex flex-col gap-[24px] sm:gap-[32px] md:gap-[40px] items-center relative w-full" data-node-id="35:498">
         {/* Hero Banner */}
         <div className="w-full" data-node-id="35:500">
-          <HeroBanner />
+          <HeroBanner sliders={sliders} />
         </div>
 
         {/* Product Categories Section */}
         <div className="flex flex-col gap-[20px] sm:gap-[24px] md:gap-[28px] lg:gap-[32px] xl:gap-[36px] 2xl:gap-[40px] items-center relative w-full px-[12px] sm:px-[16px] md:px-[24px] lg:px-[60px] xl:px-[80px] 2xl:px-[100px]" data-node-id="35:561">
+          <div className="w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto">
+            <p className="font-['Poppins'] font-semibold text-[#0e1c47] text-[22px] sm:text-[26px]">Top Categories</p>
+          </div>
           {/* First Row */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto" data-node-id="35:9481">
-            {productCategories.map((category, index) => (
-              <ProductCategoryCard key={index} {...category} linkTo={category.linkTo} />
-            ))}
+            {loadingHomeData ? (
+              <p className="font-['Poppins'] font-normal text-[#666] text-[16px] py-[20px]">Loading categories...</p>
+            ) : productCategories.length > 0 ? (
+              productCategories.map((category, index) => (
+                <ProductCategoryCard key={index} {...category} linkTo={category.linkTo} />
+              ))
+            ) : (
+              <p className="font-['Poppins'] font-normal text-[#666] text-[16px] py-[20px]">No categories available.</p>
+            )}
           </div>
 
+          <div className="w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto">
+            <p className="font-['Poppins'] font-semibold text-[#0e1c47] text-[22px] sm:text-[26px]">Top Vendors</p>
+          </div>
           {/* Second Row */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto" data-node-id="35:9604">
-            {productCategories.map((category, index) => (
-              <ProductCategoryCard key={index} {...category} linkTo={category.linkTo} />
-            ))}
-          </div>
-
-          {/* Third Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto" data-node-id="35:9358">
-            {productCategories.map((category, index) => (
-              <ProductCategoryCard key={index} {...category} linkTo={category.linkTo} />
-            ))}
+            {loadingHomeData ? (
+              <p className="font-['Poppins'] font-normal text-[#666] text-[16px] py-[20px]">Loading vendors...</p>
+            ) : vendorCards.length > 0 ? (
+              vendorCards.map((vendor, index) => (
+                <ProductCategoryCard key={index} {...vendor} linkTo={vendor.linkTo} />
+              ))
+            ) : (
+              <p className="font-['Poppins'] font-normal text-[#666] text-[16px] py-[20px]">No vendors available.</p>
+            )}
           </div>
         </div>
 

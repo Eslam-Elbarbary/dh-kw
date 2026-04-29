@@ -1,4 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { registerRequest } from '../services/auth.service';
+import { getCountries } from '../services/meta.service';
 
 // Import assets
 import flagIcon from '../assets/Layer 1.svg';
@@ -9,11 +12,66 @@ const imgGroup = "data:image/svg+xml,%3Csvg width='20' height='13' xmlns='http:/
 
 export default function SignUp() {
   const navigate = useNavigate();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  const [countries, setCountries] = useState([]);
+  const [countryId, setCountryId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSignUp = () => {
-    // Navigate to verification page after sign up
-    // User data will be saved after verification is complete
-    navigate('/verification');
+  useEffect(() => {
+    const loadCountries = async () => {
+      try {
+        const list = await getCountries();
+        setCountries(list);
+        if (list.length > 0) {
+          setCountryId(String(list[0].id));
+        }
+      } catch {
+        setCountries([]);
+      }
+    };
+
+    loadCountries();
+  }, []);
+
+  const handleSignUp = async () => {
+    setError('');
+
+    if (!firstName.trim() || !lastName.trim() || !phone.trim() || !email.trim() || !password.trim() || !passwordConfirmation.trim() || !countryId) {
+      setError('Please fill all required fields.');
+      return;
+    }
+
+    if (password !== passwordConfirmation) {
+      setError('Password confirmation does not match.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await registerRequest({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        password,
+        passwordConfirmation,
+        countryId: Number(countryId),
+      });
+      localStorage.setItem('selectedCountryId', String(countryId));
+      localStorage.setItem('pendingVerificationEmail', email.trim());
+      navigate('/verification');
+    } catch (err) {
+      const message = err?.response?.data?.message || 'Sign up failed. Please try again.';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -39,7 +97,7 @@ export default function SignUp() {
               </p>
             </div>
             <div className="content-stretch flex items-start relative shrink-0 w-full" data-node-id="35:4744">
-              <input type="text" className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 w-full capitalize font-['Poppins'] font-normal text-[#999] text-[16px]" placeholder="Enter your first name" data-node-id="35:4745" />
+              <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 w-full capitalize font-['Poppins'] font-normal text-[#999] text-[16px]" placeholder="Enter your first name" data-node-id="35:4745" />
             </div>
           </div>
           <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full" data-node-id="39:3229">
@@ -49,7 +107,7 @@ export default function SignUp() {
               </p>
             </div>
             <div className="content-stretch flex items-start relative shrink-0 w-full" data-node-id="39:3231">
-              <input type="text" className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 w-full capitalize font-['Poppins'] font-normal text-[#999] text-[16px]" placeholder="Enter your last name" data-node-id="39:3232" />
+              <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 w-full capitalize font-['Poppins'] font-normal text-[#999] text-[16px]" placeholder="Enter your last name" data-node-id="39:3232" />
             </div>
           </div>
           <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full" data-node-id="35:4747">
@@ -69,7 +127,7 @@ export default function SignUp() {
                   <p className="leading-[normal]">+966</p>
                 </div>
               </div>
-              <input type="tel" className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 capitalize font-['Poppins'] font-normal text-[#999] text-[16px]" placeholder="Enter your Phone Number" data-node-id="35:4760" />
+              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 capitalize font-['Poppins'] font-normal text-[#999] text-[16px]" placeholder="Enter your Phone Number" data-node-id="35:4760" />
             </div>
           </div>
           <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full" data-node-id="35:4762">
@@ -79,7 +137,31 @@ export default function SignUp() {
               </p>
             </div>
             <div className="content-stretch flex items-start relative shrink-0 w-full" data-node-id="35:4764">
-              <input type="email" className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 w-full capitalize font-['Poppins'] font-normal text-[#999] text-[16px]" placeholder="Enter your Email" data-node-id="35:4765" />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 w-full capitalize font-['Poppins'] font-normal text-[#999] text-[16px]" placeholder="Enter your Email" data-node-id="35:4765" />
+            </div>
+          </div>
+          <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full">
+            <div className="flex flex-col font-['Poppins'] font-semibold h-[32px] justify-center leading-[0] not-italic relative shrink-0 text-[#121212] text-[18px] w-full">
+              <p className="leading-[normal] whitespace-pre-wrap" dir="auto">
+                Country
+              </p>
+            </div>
+            <div className="content-stretch flex items-start relative shrink-0 w-full">
+              <select
+                value={countryId}
+                onChange={(e) => setCountryId(e.target.value)}
+                className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 w-full font-['Poppins'] font-normal text-[#999] text-[16px] bg-white"
+              >
+                {countries.length === 0 ? (
+                  <option value="">No countries available</option>
+                ) : (
+                  countries.map((country) => (
+                    <option key={country.id} value={country.id}>
+                      {country.name}
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
           </div>
           <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full" data-node-id="35:4767">
@@ -89,7 +171,7 @@ export default function SignUp() {
               </p>
             </div>
             <div className="border border-[#e6e6e6] border-solid content-stretch flex h-[48px] items-center justify-between p-[8px] relative rounded-[4px] shrink-0 w-full" data-node-id="35:4769">
-              <input type="password" className="capitalize flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#999] text-[16px] flex-1 outline-none border-none bg-transparent" placeholder="Enter your password" data-node-id="35:4770" />
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="capitalize flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#999] text-[16px] flex-1 outline-none border-none bg-transparent" placeholder="Enter your password" data-node-id="35:4770" />
               <div className="h-[13px] overflow-clip relative shrink-0 w-[20px]" data-name="Frame" data-node-id="35:4771">
                 <div className="absolute contents inset-[0_0_7.69%_0]" data-name="Group" data-node-id="35:4772">
                   <div className="absolute inset-[0_0_7.69%_0]" data-name="Group" data-node-id="35:4773">
@@ -106,7 +188,7 @@ export default function SignUp() {
               </p>
             </div>
             <div className="border border-[#e6e6e6] border-solid content-stretch flex h-[48px] items-center justify-between p-[8px] relative rounded-[4px] shrink-0 w-full" data-node-id="35:4777">
-              <input type="password" className="capitalize flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#999] text-[16px] flex-1 outline-none border-none bg-transparent" placeholder="Confirm your password" data-node-id="35:4778" />
+              <input type="password" value={passwordConfirmation} onChange={(e) => setPasswordConfirmation(e.target.value)} className="capitalize flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#999] text-[16px] flex-1 outline-none border-none bg-transparent" placeholder="Confirm your password" data-node-id="35:4778" />
               <div className="h-[13px] overflow-clip relative shrink-0 w-[20px]" data-name="Frame" data-node-id="35:4779">
                 <div className="absolute contents inset-[0_0_7.69%_0]" data-name="Group" data-node-id="35:4780">
                   <div className="absolute inset-[0_0_7.69%_0]" data-name="Group" data-node-id="35:4781">
@@ -136,10 +218,13 @@ export default function SignUp() {
           </div>
         </div>
         <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full" data-name="cta" data-node-id="35:4790">
-          <button onClick={handleSignUp} className="bg-[#0e1c47] content-stretch cursor-pointer flex h-[56px] items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:opacity-90 transition-opacity" data-name="btn-01" data-node-id="35:4791">
+          {error ? (
+            <div className="text-[#8e0909] text-[14px] font-['Poppins'] w-full">{error}</div>
+          ) : null}
+          <button onClick={handleSignUp} disabled={loading} className="bg-[#0e1c47] content-stretch cursor-pointer flex h-[56px] items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed" data-name="btn-01" data-node-id="35:4791">
             <div className="capitalize flex flex-col font-['Poppins'] font-semibold justify-center leading-[0] not-italic relative shrink-0 text-[18px] text-left text-white tracking-[-0.18px] whitespace-nowrap" data-node-id="35:4792">
               <p className="leading-[1.2]" dir="auto">
-                Sign up
+                {loading ? 'Signing up...' : 'Sign up'}
               </p>
             </div>
           </button>

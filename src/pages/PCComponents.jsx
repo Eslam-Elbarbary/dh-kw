@@ -1,8 +1,10 @@
 // PC Components page component - exact Figma implementation
 // Based on Figma design - PC Components Page
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { getCategories, getProducts, resolveCountryId } from '../services/catalog.service';
+import { useCart } from '../context/CartContext';
 
 // Import assets
 import arrowDownIcon from '../assets/ArrowRight.svg';
@@ -34,12 +36,18 @@ const imgProduct4 = productImage4;
 const imgProduct5 = productImage5;
 
 export default function PCComponents() {
+  const { addToCart } = useCart();
   const navigate = useNavigate();
+  const countryId = useMemo(() => resolveCountryId(1), []);
   const [showFilter, setShowFilter] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('Most Popular');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [allProducts, setAllProducts] = useState([]);
+  const [categoryOptions, setCategoryOptions] = useState(['All Categories']);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [productsError, setProductsError] = useState('');
   
   // Filter states
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
@@ -55,39 +63,35 @@ export default function PCComponents() {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
 
-  // Sample products data with variety for filtering
-  const allProducts = Array.from({ length: 50 }, (_, i) => {
-    const brands = ['Brand Name', 'ASUS', 'MSI', 'Gigabyte', 'EVGA', 'Corsair', 'NVIDIA', 'AMD', 'Intel', 'Samsung'];
-    const categories = ['Motherboard', 'Graphics Card', 'Processor', 'RAM', 'Storage', 'Power Supply', 'Case', 'Cooling', 'Monitor', 'Keyboard'];
-    const names = [
-      'Bose Sport Earbuds Wireless Earphones',
-      'ASUS ROG Strix Gaming Motherboard',
-      'NVIDIA RTX 4090 Graphics Card',
-      'Intel Core i9-13900K Processor',
-      'Corsair Vengeance DDR5 RAM',
-      'Samsung 980 PRO SSD',
-      'EVGA SuperNOVA Power Supply',
-      'Fractal Design PC Case',
-      'Noctua CPU Cooler',
-      'ASUS ROG Gaming Monitor'
-    ];
-    
-    const basePrice = 100 + (i * 100) + Math.floor(Math.random() * 500);
-    const priceValue = basePrice;
-    
-    return {
-      id: i + 1,
-      name: names[i % names.length],
-      brand: brands[i % brands.length],
-      category: categories[i % categories.length],
-      price: `$${priceValue.toLocaleString()}`,
-      priceValue: priceValue,
-      image: [imgProduct1, imgProduct2, imgProduct3, imgProduct4, imgProduct5][i % 5],
-      badges: i % 5 === 0 ? ['Only 10 Left'] : i % 5 === 1 ? ['32% OFF', 'Only 10 Left'] : i % 5 === 2 ? ['HOT'] : [],
-      popularity: Math.floor(Math.random() * 100),
-      rating: 3 + Math.random() * 2
+  useEffect(() => {
+    const loadCatalogData = async () => {
+      try {
+        setLoadingProducts(true);
+        setProductsError('');
+        const [productsList, categoriesList] = await Promise.all([
+          getProducts({ countryId, perPage: 100, page: 1 }),
+          getCategories(),
+        ]);
+
+        const mappedProducts = productsList.map((product) => ({
+          ...product,
+          image: product.image || '',
+          price: product.salePrice || `$${product.priceValue?.toLocaleString?.() || 0}`,
+          badges: Array.isArray(product.badges) ? product.badges : [],
+        })).filter((product) => Boolean(product.image));
+
+        setAllProducts(mappedProducts);
+        setCategoryOptions(['All Categories', ...categoriesList.map((item) => item.name)]);
+      } catch (error) {
+        setProductsError(error?.response?.data?.message || 'Failed to load products.');
+        setAllProducts([]);
+      } finally {
+        setLoadingProducts(false);
+      }
     };
-  });
+
+    loadCatalogData();
+  }, [countryId]);
 
   // Filter products
   const getFilteredProducts = () => {
@@ -191,13 +195,12 @@ export default function PCComponents() {
     );
   };
 
-  // PC Components for assembly (sample data)
-  const pcComponents = [
-    { id: 1, name: 'Motherboard', price: 299, image: imgMotherboard },
-    { id: 2, name: 'Processor', price: 399, image: imgMotherboard },
-    { id: 3, name: 'Graphics Card', price: 599, image: imgMotherboard },
-    { id: 4, name: 'RAM', price: 149, image: imgMotherboard }
-  ];
+  const pcComponents = sortedProducts.slice(0, 4).map((product) => ({
+    id: product.id,
+    name: product.name,
+    price: product.priceValue || 0,
+    image: product.image || '',
+  }));
 
   const totalPrice = pcComponents.reduce((sum, comp) => sum + comp.price, 0);
   const assemblyFee = 99;
@@ -217,30 +220,31 @@ export default function PCComponents() {
   // Confirm action
   const handleConfirm = async () => {
     setIsLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsLoading(false);
-    setShowModal(false);
-    
-    // Show success notification
-    setNotificationMessage(
-      modalType === 'assemble' 
-        ? `All components and assembly service added to cart! Total: $${(totalPrice + assemblyFee).toLocaleString()}`
-        : `All components added to cart! Total: $${totalPrice.toLocaleString()}`
-    );
-    setShowNotification(true);
-    
-    // Auto-hide notification after 5 seconds
-    setTimeout(() => {
-      setShowNotification(false);
-    }, 5000);
-    
-    // Redirect to cart after a short delay
-    setTimeout(() => {
-      navigate('/shopping-cart');
-    }, 2000);
+    try {
+      for (const component of pcComponents) {
+        if (component?.id) {
+          // Sequential requests keep backend cart updates predictable.
+          // eslint-disable-next-line no-await-in-loop
+          await addToCart({ productId: component.id, quantity: 1 });
+        }
+      }
+
+      setShowModal(false);
+      setNotificationMessage(
+        modalType === 'assemble'
+          ? `All components added to cart. Assembly service request has been noted. Total: $${(totalPrice + assemblyFee).toLocaleString()}`
+          : `All components added to cart! Total: $${totalPrice.toLocaleString()}`
+      );
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 5000);
+      setTimeout(() => navigate('/shopping-cart'), 1200);
+    } catch (error) {
+      setNotificationMessage(error?.response?.data?.message || 'Failed to add components to cart.');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 5000);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Close modal
@@ -347,17 +351,20 @@ export default function PCComponents() {
             <div className="flex flex-col lg:flex-row items-center justify-between gap-[20px] sm:gap-[24px] md:gap-[32px]">
               {/* Component Images with Plus Signs */}
               <div className="flex flex-wrap items-center justify-center gap-[8px] sm:gap-[12px] md:gap-[16px] lg:gap-[20px] flex-1 w-full">
-                {[1, 2, 3, 4].map((item, idx) => (
-                  <React.Fragment key={item}>
+                {pcComponents.map((item, idx) => (
+                  <React.Fragment key={item.id}>
                     <div className="bg-white rounded-[8px] p-[8px] sm:p-[12px] md:p-[16px] border border-[#e4e7e9] w-[100px] sm:w-[120px] md:w-[140px] lg:w-[160px] xl:w-[180px] aspect-square flex items-center justify-center">
-                      <img 
-                        src={imgMotherboard} 
-                        alt={`Component ${item}`}
-                        className="w-full h-full object-contain"
-                        onError={(e) => {
-                          e.target.src = "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=200&h=200&fit=crop";
-                        }}
-                      />
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <p className="font-['Poppins'] font-normal text-[#666] text-[12px] text-center px-[6px]">
+                          No image from API
+                        </p>
+                      )}
                     </div>
                     {idx < 3 && (
                       <div className="flex items-center justify-center size-[20px] sm:size-[24px] md:size-[28px] lg:size-[32px] flex-shrink-0">
@@ -436,7 +443,7 @@ export default function PCComponents() {
                     Category
                   </p>
                   <div className="flex flex-col gap-[12px] items-start w-full">
-                    {['All Categories', 'Motherboard', 'Graphics Card', 'Processor', 'RAM', 'Storage', 'Power Supply', 'Case', 'Cooling', 'Monitor', 'Keyboard'].map((category) => (
+                    {categoryOptions.map((category) => (
                       <label
                         key={category}
                         className="flex gap-[8px] items-start cursor-pointer w-full"
@@ -536,7 +543,7 @@ export default function PCComponents() {
                     Popular Brands
                   </p>
                   <div className="flex flex-col gap-[12px] items-start w-full">
-                    {['Brand Name', 'ASUS', 'MSI', 'Gigabyte', 'EVGA', 'Corsair', 'NVIDIA', 'AMD', 'Intel', 'Samsung'].map((brand) => {
+                    {[...new Set(allProducts.map((item) => item.brand).filter(Boolean))].map((brand) => {
                       const isChecked = selectedBrands.includes(brand);
                       return (
                         <label
@@ -587,7 +594,16 @@ export default function PCComponents() {
               </div>
 
               {/* Product Grid - 5 columns on large screens */}
-              {paginatedProducts.length === 0 ? (
+              {loadingProducts ? (
+                <div className="flex flex-col items-center justify-center py-[60px]">
+                  <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">Loading products...</p>
+                </div>
+              ) : productsError ? (
+                <div className="flex flex-col items-center justify-center py-[60px]">
+                  <p className="font-['Poppins'] font-semibold text-[#8e0909] text-[18px] mb-[8px]">Unable to load products</p>
+                  <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">{productsError}</p>
+                </div>
+              ) : paginatedProducts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-[60px]">
                   <p className="font-['Poppins'] font-semibold text-[#191c1f] dark:text-white text-[18px] mb-[8px]">No products found</p>
                   <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">Try adjusting your search or filters</p>
