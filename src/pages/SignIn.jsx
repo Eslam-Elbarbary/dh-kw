@@ -83,7 +83,13 @@ export default function SignIn() {
         localStorage.setItem('selectedCountryId', String(profileCountryId));
       }
       login(profile);
-      navigate('/');
+      const redirectTarget = sessionStorage.getItem('signInRedirect');
+      if (redirectTarget) {
+        sessionStorage.removeItem('signInRedirect');
+        navigate(redirectTarget);
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       setError(getReadableError(err));
     } finally {

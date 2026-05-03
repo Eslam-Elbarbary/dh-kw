@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext';
 import React, { useState, useRef, useEffect } from 'react';
 import ThemeToggle from './ThemeToggle';
 import { getCategories, resolveCountryId } from '../services/catalog.service';
+import { VENDOR_REGISTER_URL } from '../utils/vendorUrls';
 
 // Import assets
 import logoImage from '../assets/websiteLogo.png';
@@ -284,14 +285,19 @@ export default function Header() {
               </div>
             </div>
           </div>
-          <Link to="/become-a-seller" className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
+          <a
+            href={VENDOR_REGISTER_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+          >
             <div className="relative shrink-0 size-[16px]">
               <div className="absolute contents inset-0">
                 <img alt="" className="block max-w-none size-full" src={img3} />
               </div>
             </div>
             <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[12px] md:text-[12px] lg:text-[12px] text-center hidden lg:block" dir="auto">{` Become a Seller`}</p>
-          </Link>
+          </a>
         </div>
         <div className="content-stretch flex gap-[6px] sm:gap-[8px] items-center justify-end relative shrink-0 w-full sm:w-auto mt-[8px] sm:mt-0">
           <div className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0">

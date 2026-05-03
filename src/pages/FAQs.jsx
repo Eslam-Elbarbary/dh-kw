@@ -42,7 +42,7 @@ export default function FAQs() {
       id: 5,
       category: "Account",
       question: "How do I create an account?",
-      answer: "Click on 'Sign In' in the header, then select 'Sign Up'. Enter your phone number and follow the verification process to create your account."
+      answer: "Click on 'Sign In' in the header, then select 'Sign Up'. Enter your details and email; we send a verification code to your email to activate your account."
     },
     {
       id: 6,

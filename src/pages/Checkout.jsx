@@ -6,7 +6,14 @@ import { useState, useCallback, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { createAddress, deleteAddress, getAddresses } from '../services/address.service';
-import { calculateOrderShipping, createOrder, payOrder } from '../services/orders.service';
+import {
+  calculateOrderShipping,
+  createOrder,
+  payOrder,
+  extractOrderPaymentUrl,
+  navigateToPaymentGateway,
+  openPaymentGatewayPlaceholderTab,
+} from '../services/orders.service';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -21,20 +28,10 @@ L.Icon.Default.mergeOptions({
 // Import assets
 import arrowDownIcon from '../assets/ArrowRight.svg';
 import arrowRightIcon from '../assets/ArrowRight.svg';
-import currencyDollarIcon from '../assets/CurrencyDollar.svg';
 import creditCardIcon from '../assets/CreditCard.svg';
-import amazonIcon from '../assets/amazon-icon-1 1.svg';
-import paypalIcon from '../assets/paypal.png';
-import venmoIcon from '../assets/venmo.svg';
-
 // Arrow icon for breadcrumbs
 const imgArrowDown = arrowDownIcon;
 
-// Payment method icons
-const imgCashOnDelivery = currencyDollarIcon;
-const imgVenmo = venmoIcon;
-const imgPayPal = paypalIcon;
-const imgAmazonPay = amazonIcon;
 const imgCreditCard = creditCardIcon;
 
 // Arrow right icon for button
@@ -107,7 +104,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { cart, loadingCart, loadCart } = useCart();
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [paymentMethod, setPaymentMethod] = useState('sadad');
   const [address, setAddress] = useState('');
   const [mapPosition, setMapPosition] = useState(null);
   const [locating, setLocating] = useState(false);
@@ -314,10 +311,7 @@ export default function Checkout() {
   };
 
   const mapPaymentMethodToApi = (method) => {
-    if (method === 'cash') return 'cash';
-    if (method === 'paypal') return 'paypal';
-    if (method === 'venmo') return 'venmo';
-    if (method === 'amazon') return 'amazon';
+    if (method === 'tabby') return 'tabby';
     return 'sadad';
   };
 
@@ -365,6 +359,8 @@ export default function Checkout() {
       return;
     }
 
+    const paymentTab = openPaymentGatewayPlaceholderTab();
+
     try {
       setCheckoutLoading(true);
       setCheckoutError('');
@@ -373,6 +369,7 @@ export default function Checkout() {
       let latestCart = await loadCart({ force: true }).catch(() => cart);
 
       if (!latestCart?.items?.length) {
+        paymentTab?.close();
         setCheckoutError('Your cart is empty on server. Please go back to cart and refresh it, then retry checkout.');
         return;
       }
@@ -394,24 +391,36 @@ export default function Checkout() {
         latestCartSnapshot: latestCart,
       });
 
-      if (paymentMethod !== 'cash') {
-        try {
-          await payOrder({
-            orderId,
-            paymentMethod: mapPaymentMethodToApi(paymentMethod),
-          });
-        } catch (paymentError) {
-          const paymentMessage = paymentError?.response?.data?.message || '';
-          sessionStorage.setItem(
-            'checkoutPaymentWarning',
-            paymentMessage || 'Order placed successfully, but payment initialization failed. You can retry payment from My Orders.'
-          );
+      try {
+        const payResponse = await payOrder({
+          orderId,
+          paymentMethod: mapPaymentMethodToApi(paymentMethod),
+        });
+        const paymentUrl = extractOrderPaymentUrl(payResponse);
+        await loadCart({ force: true }).catch(() => {});
+        if (paymentUrl) {
+          navigateToPaymentGateway(paymentUrl, paymentTab);
+          navigate(`/track-order?orderId=${encodeURIComponent(orderId)}`);
+          return;
         }
+        paymentTab?.close();
+        sessionStorage.setItem(
+          'checkoutPaymentWarning',
+          'Order placed successfully, but no payment link was returned. You can retry payment from My Orders.'
+        );
+      } catch (paymentError) {
+        paymentTab?.close();
+        const paymentMessage = paymentError?.response?.data?.message || '';
+        sessionStorage.setItem(
+          'checkoutPaymentWarning',
+          paymentMessage || 'Order placed successfully, but payment initialization failed. You can retry payment from My Orders.'
+        );
       }
 
       await loadCart({ force: true }).catch(() => {});
       navigate(`/track-order?orderId=${encodeURIComponent(orderId)}`);
     } catch (error) {
+      paymentTab?.close();
       const backendMessage = error?.response?.data?.message || error?.message || 'Failed to place order.';
       const errors = error?.response?.data?.errors;
       const firstValidationMessage = errors && typeof errors === 'object'
@@ -717,11 +726,8 @@ export default function Checkout() {
               {/* Payment Methods */}
               <div className="flex flex-wrap gap-[12px] sm:gap-[16px] w-full">
                 {[
-                  { id: 'cash', label: 'Cash on Delivery', icon: imgCashOnDelivery },
-                  { id: 'venmo', label: 'Venmo', icon: imgVenmo },
-                  { id: 'paypal', label: 'Paypal', icon: imgPayPal },
-                  { id: 'amazon', label: 'Amazon Pay', icon: imgAmazonPay },
-                  { id: 'card', label: 'Debit/Credit Card', icon: imgCreditCard }
+                  { id: 'sadad', label: 'Sadad', icon: imgCreditCard },
+                  { id: 'tabby', label: 'Tabby', icon: imgCreditCard },
                 ].map((method) => (
                   <div key={method.id} className="flex flex-col items-center gap-[8px]">
                     <button
@@ -734,19 +740,15 @@ export default function Checkout() {
                       }`}
                     >
                       <div className="relative size-[40px] sm:size-[48px] min-w-[40px] min-h-[40px] flex items-center justify-center shrink-0">
-                        {method.id === 'cash' ? (
-                          <div className="text-[24px] sm:text-[28px]">$</div>
-                        ) : (
-                          <img 
-                            src={method.icon} 
-                            alt={method.label} 
-                            className="max-w-full max-h-full w-auto h-auto object-contain"
-                            loading="eager"
-                            onError={(e) => {
-                              e.target.src = 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=100&h=100&fit=crop';
-                            }}
-                          />
-                        )}
+                        <img
+                          src={method.icon}
+                          alt={method.label}
+                          className="max-w-full max-h-full w-auto h-auto object-contain"
+                          loading="eager"
+                          onError={(e) => {
+                            e.target.src = 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=100&h=100&fit=crop';
+                          }}
+                        />
                       </div>
                       <p className="font-['Poppins'] font-normal text-[12px] sm:text-[13px] text-[#333] text-center leading-tight">
                         {method.label}
@@ -764,45 +766,10 @@ export default function Checkout() {
                 ))}
               </div>
 
-              {/* Card Details - Show when Debit/Credit Card is selected */}
-              {paymentMethod === 'card' && (
-                <div className="flex flex-col gap-[16px] sm:gap-[20px] w-full mt-[8px]">
-                  <div className="flex flex-col gap-[8px] w-full">
-                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Name on Card</label>
-                    <input 
-                      type="text" 
-                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                      placeholder="Name on Card"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-[8px] w-full">
-                    <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Card Number</label>
-                    <input 
-                      type="text" 
-                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                      placeholder="Card Number"
-                    />
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-[16px] sm:gap-[20px] w-full">
-                    <div className="flex flex-col gap-[8px] flex-1 w-full">
-                      <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Expire Date</label>
-                      <input 
-                        type="text" 
-                        className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                        placeholder="DD/YY"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-[8px] flex-1 w-full">
-                      <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">CVC</label>
-                      <input 
-                        type="text" 
-                        className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                        placeholder="CVC"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
+              <p className="font-['Poppins'] text-[13px] sm:text-[14px] text-[#666] w-full mt-[4px] max-w-[520px]">
+                After you place the order, you will be redirected to{' '}
+                {paymentMethod === 'tabby' ? 'Tabby' : 'Sadad'} to complete payment securely.
+              </p>
             </div>
             
             {/* Additional Information */}

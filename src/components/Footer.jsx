@@ -110,9 +110,6 @@ export default function Footer() {
                 <p className="leading-[19.5px]">My Account</p>
               </div>
               <div className="content-stretch flex flex-col font-['Poppins'] font-medium gap-[8px] sm:gap-[10px] md:gap-[12px] items-start leading-[0] not-italic relative shrink-0 text-[#f2f2f2] text-[13px] sm:text-[14px] w-full whitespace-nowrap" data-node-id="35:5044">
-                <Link to="/brands" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5045">
-                  <p className="leading-[19.5px]">Brands</p>
-                </Link>
                 <Link to="/returns" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5046">
                   <p className="leading-[19.5px]">Returns</p>
                 </Link>

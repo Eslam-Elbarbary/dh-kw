@@ -1,7 +1,7 @@
 // Contact Us page - professional design matching site's visual identity
 // Maintains colors, fonts, styles, and icons from the site
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 // Icon Assets
@@ -22,6 +22,27 @@ export default function ContactUs() {
     subject: '',
     message: ''
   });
+  const [successOpen, setSuccessOpen] = useState(false);
+  const continueBtnRef = useRef(null);
+
+  const closeSuccess = useCallback(() => {
+    setSuccessOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!successOpen) return undefined;
+    continueBtnRef.current?.focus();
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') closeSuccess();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [successOpen, closeSuccess]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -33,9 +54,7 @@ export default function ContactUs() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle form submission
-    console.log('Form submitted:', formData);
-    alert('Thank you for contacting us! We will get back to you soon.');
+    setSuccessOpen(true);
     setFormData({
       name: '',
       email: '',
@@ -47,6 +66,46 @@ export default function ContactUs() {
 
   return (
     <div className="bg-white relative w-full min-h-screen">
+      {successOpen ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-[16px] sm:p-[24px]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="contact-success-title"
+          aria-describedby="contact-success-desc"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#0e1c47]/45 backdrop-blur-[2px] cursor-default"
+            aria-label="Close dialog"
+            onClick={closeSuccess}
+          />
+          <div className="relative w-full max-w-[420px] bg-white rounded-[8px] shadow-[0_20px_50px_rgba(14,28,71,0.18)] border border-[#e6e6e6] p-[28px] sm:p-[32px]">
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-[16px] flex size-[56px] items-center justify-center rounded-full bg-[#ecfdf5] border border-[#a7f3d0]">
+                <svg className="size-[28px] text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 id="contact-success-title" className="font-['Poppins'] font-semibold text-[22px] sm:text-[24px] text-[#0e1c47] mb-[10px]">
+                Thank you for reaching out
+              </h2>
+              <p id="contact-success-desc" className="font-['Poppins'] text-[14px] sm:text-[15px] text-[#666] leading-relaxed mb-[24px]">
+                Your message has been received. Our team will review it and get back to you as soon as possible.
+              </p>
+              <button
+                ref={continueBtnRef}
+                type="button"
+                onClick={closeSuccess}
+                className="w-full sm:w-auto min-w-[200px] bg-[#0e1c47] text-white font-['Poppins'] font-semibold px-[28px] py-[12px] rounded-[4px] text-[15px] hover:bg-[#152a5c] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#eea137] focus-visible:ring-offset-2"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-[32px] sm:gap-[40px] md:gap-[48px] items-start relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-[12px] sm:px-[16px] md:px-[24px] lg:px-[40px] xl:px-[100px] py-[24px] sm:py-[32px] md:py-[40px]">
         
         {/* Breadcrumb */}

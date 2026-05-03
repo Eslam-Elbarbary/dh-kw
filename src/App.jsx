@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider, Outlet, useLocation } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, useLocation, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import './App.css';
 import { AuthProvider } from './context/AuthContext';
@@ -12,7 +12,10 @@ import SignIn from './pages/SignIn';
 import VerificationCode from './pages/VerificationCode';
 import ForgotPassword from './pages/ForgotPassword';
 import ShoppingCart from './pages/ShoppingCart';
-import DigitalECards from './pages/DigitalECards';
+import DigitalProductsList from './pages/DigitalProductsList';
+import DigitalProductDetail from './pages/DigitalProductDetail';
+import DigitalCategoriesList from './pages/DigitalCategoriesList';
+import DigitalCategoryDetail from './pages/DigitalCategoryDetail';
 import Home from './pages/Home';
 import Checkout from './pages/Checkout';
 import SearchResults from './pages/SearchResults';
@@ -22,22 +25,33 @@ import Favorites from './pages/Favorites';
 import ReportFraud from './pages/ReportFraud';
 import TrackOrder from './pages/TrackOrder';
 import HelpCenter from './pages/HelpCenter';
-import BecomeASeller from './pages/BecomeASeller';
+import { VENDOR_REGISTER_URL } from './utils/vendorUrls';
 import AboutUs from './pages/AboutUs';
 import FAQs from './pages/FAQs';
 import ContactUs from './pages/ContactUs';
 import DeliveryReturn from './pages/DeliveryReturn';
 import MyAccount from './pages/MyAccount';
-import Brands from './pages/Brands';
 import Returns from './pages/Returns';
 import SiteMap from './pages/SiteMap';
 import MyProfile from './pages/MyProfile';
 import MyOrders from './pages/MyOrders';
+import DigitalOrderDetail from './pages/DigitalOrderDetail';
 import Compare from './pages/Compare';
 import Notifications from './pages/Notifications';
 import MyTickets from './pages/MyTickets';
 import ErrorPage from './pages/ErrorPage';
 import { PageLoader } from './components/Loader';
+
+function VendorRegisterRedirect() {
+  useEffect(() => {
+    window.location.replace(VENDOR_REGISTER_URL);
+  }, []);
+  return (
+    <div className="min-h-[40vh] flex items-center justify-center font-['Poppins'] text-[#666] dark:text-[#94a3b8] px-[16px] text-center text-[15px]">
+      Redirecting to vendor registration…
+    </div>
+  );
+}
 
 function AppLayout() {
   const location = useLocation();
@@ -75,7 +89,23 @@ const router = createBrowserRouter([
       },
       {
         path: '/digital-e-cards',
-        element: <DigitalECards />,
+        element: <Navigate to="/digital-products" replace />,
+      },
+      {
+        path: '/digital-products',
+        element: <DigitalProductsList />,
+      },
+      {
+        path: '/digital-categories',
+        element: <DigitalCategoriesList />,
+      },
+      {
+        path: '/digital-category/:id',
+        element: <DigitalCategoryDetail />,
+      },
+      {
+        path: '/digital-product/:id',
+        element: <DigitalProductDetail />,
       },
       {
         path: '/shopping-cart',
@@ -119,7 +149,7 @@ const router = createBrowserRouter([
       },
       {
         path: '/become-a-seller',
-        element: <BecomeASeller />,
+        element: <VendorRegisterRedirect />,
       },
       {
         path: '/about-us',
@@ -142,10 +172,6 @@ const router = createBrowserRouter([
         element: <MyAccount />,
       },
       {
-        path: '/brands',
-        element: <Brands />,
-      },
-      {
         path: '/returns',
         element: <Returns />,
       },
@@ -160,6 +186,10 @@ const router = createBrowserRouter([
       {
         path: '/my-orders',
         element: <MyOrders />,
+      },
+      {
+        path: '/digital-order/:id',
+        element: <DigitalOrderDetail />,
       },
       {
         path: '/compare',

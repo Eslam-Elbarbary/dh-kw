@@ -1,14 +1,36 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { registerRequest } from '../services/auth.service';
 import { getCountries } from '../services/meta.service';
+import { combineDialAndNationalPhone } from '../utils/phoneE164';
 
 // Import assets
 import flagIcon from '../assets/Layer 1.svg';
 
 const imgLayer1 = flagIcon;
-// Eye icon for password visibility - using inline SVG
-const imgGroup = "data:image/svg+xml,%3Csvg width='20' height='13' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 0C5.5 0 1.73 3.11 0 7.5c1.73 4.39 5.5 7.5 10 7.5s8.27-3.11 10-7.5C18.27 3.11 14.5 0 10 0zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z' fill='%23999'/%3E%3C/svg%3E";
+
+function PasswordVisibilityToggle({ visible, onToggle, labelShow, labelHide }) {
+  return (
+    <button
+      type="button"
+      className="shrink-0 flex items-center justify-center size-[36px] rounded-[4px] text-[#999] hover:text-[#0e1c47] hover:bg-[#f5f5f5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0e1c47]/25 transition-colors"
+      onClick={onToggle}
+      aria-label={visible ? labelHide : labelShow}
+    >
+      {visible ? (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+          <line x1="1" y1="1" x2="23" y2="23" />
+        </svg>
+      ) : (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      )}
+    </button>
+  );
+}
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -22,6 +44,8 @@ export default function SignUp() {
   const [countryId, setCountryId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     const loadCountries = async () => {
@@ -29,7 +53,9 @@ export default function SignUp() {
         const list = await getCountries();
         setCountries(list);
         if (list.length > 0) {
-          setCountryId(String(list[0].id));
+          const saved = localStorage.getItem('selectedCountryId');
+          const savedOk = saved && list.some((c) => String(c.id) === String(saved));
+          setCountryId(savedOk ? String(saved) : String(list[0].id));
         }
       } catch {
         setCountries([]);
@@ -38,6 +64,11 @@ export default function SignUp() {
 
     loadCountries();
   }, []);
+
+  const selectedCountry = useMemo(
+    () => countries.find((c) => String(c.id) === String(countryId)),
+    [countries, countryId],
+  );
 
   const handleSignUp = async () => {
     setError('');
@@ -57,14 +88,14 @@ export default function SignUp() {
       await registerRequest({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        phone: phone.trim(),
+        phone: combineDialAndNationalPhone(selectedCountry?.dialCode, phone),
         email: email.trim(),
         password,
         passwordConfirmation,
         countryId: Number(countryId),
       });
       localStorage.setItem('selectedCountryId', String(countryId));
-      localStorage.setItem('pendingVerificationEmail', email.trim());
+      localStorage.setItem('pendingVerificationEmail', email.trim().toLowerCase());
       navigate('/verification');
     } catch (err) {
       const message = err?.response?.data?.message || 'Sign up failed. Please try again.';
@@ -84,9 +115,9 @@ export default function SignUp() {
                 Sign up
               </p>
             </div>
-            <div className="flex flex-col font-['Poppins'] font-normal justify-center h-[32px] relative shrink-0 text-[#121212] text-[16px] w-full" data-node-id="35:4741">
+            <div className="flex flex-col font-['Poppins'] font-normal justify-center min-h-[32px] relative shrink-0 text-[#121212] text-[16px] w-full" data-node-id="35:4741">
               <p className="leading-[normal] whitespace-pre-wrap" dir="auto">
-                Enter your phone number to sign up
+                Create your account — we&apos;ll send a verification code to your email.
               </p>
             </div>
           </div>
@@ -110,36 +141,6 @@ export default function SignUp() {
               <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 w-full capitalize font-['Poppins'] font-normal text-[#999] text-[16px]" placeholder="Enter your last name" data-node-id="39:3232" />
             </div>
           </div>
-          <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full" data-node-id="35:4747">
-            <div className="flex flex-col font-['Poppins'] font-semibold h-[32px] justify-center leading-[0] not-italic relative shrink-0 text-[#121212] text-[18px] w-full" data-node-id="35:4748">
-              <p className="leading-[normal] whitespace-pre-wrap" dir="auto">
-                Phone Number
-              </p>
-            </div>
-            <div className="content-stretch flex gap-[8px] items-start relative shrink-0 w-full" data-node-id="35:4749">
-              <div className="border border-[#e6e6e6] border-solid content-stretch flex gap-[8px] items-center p-[8px] relative rounded-[4px] shrink-0" data-node-id="35:4750">
-                <div className="content-stretch flex items-center overflow-clip p-px relative shrink-0" data-name="svg2" data-node-id="35:4751">
-                  <div className="relative shrink-0 size-[30px]" data-name="layer1" data-node-id="35:4752">
-                    <img alt="" className="block max-w-none size-full" src={imgLayer1} />
-                  </div>
-                </div>
-                <div className="capitalize flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#999] text-[16px] whitespace-nowrap" data-node-id="35:4759">
-                  <p className="leading-[normal]">+966</p>
-                </div>
-              </div>
-              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 capitalize font-['Poppins'] font-normal text-[#999] text-[16px]" placeholder="Enter your Phone Number" data-node-id="35:4760" />
-            </div>
-          </div>
-          <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full" data-node-id="35:4762">
-            <div className="flex flex-col font-['Poppins'] font-semibold h-[32px] justify-center leading-[0] not-italic relative shrink-0 text-[#121212] text-[18px] w-full" data-node-id="35:4763">
-              <p className="leading-[normal] whitespace-pre-wrap" dir="auto">
-                Email
-              </p>
-            </div>
-            <div className="content-stretch flex items-start relative shrink-0 w-full" data-node-id="35:4764">
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 w-full capitalize font-['Poppins'] font-normal text-[#999] text-[16px]" placeholder="Enter your Email" data-node-id="35:4765" />
-            </div>
-          </div>
           <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full">
             <div className="flex flex-col font-['Poppins'] font-semibold h-[32px] justify-center leading-[0] not-italic relative shrink-0 text-[#121212] text-[18px] w-full">
               <p className="leading-[normal] whitespace-pre-wrap" dir="auto">
@@ -151,51 +152,125 @@ export default function SignUp() {
                 value={countryId}
                 onChange={(e) => setCountryId(e.target.value)}
                 className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 w-full font-['Poppins'] font-normal text-[#999] text-[16px] bg-white"
+                aria-label="Country"
               >
                 {countries.length === 0 ? (
                   <option value="">No countries available</option>
                 ) : (
                   countries.map((country) => (
                     <option key={country.id} value={country.id}>
-                      {country.name}
+                      {country.dialCode ? `${country.name} (${country.dialCode})` : country.name}
                     </option>
                   ))
                 )}
               </select>
             </div>
           </div>
-          <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full" data-node-id="35:4767">
-            <div className="capitalize flex flex-col font-['Poppins'] font-semibold h-[32px] justify-center leading-[0] not-italic relative shrink-0 text-[#121212] text-[18px] w-full" data-node-id="35:4768">
+          <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full" data-node-id="35:4747">
+            <div className="flex flex-col font-['Poppins'] font-semibold h-[32px] justify-center leading-[0] not-italic relative shrink-0 text-[#121212] text-[18px] w-full" data-node-id="35:4748">
               <p className="leading-[normal] whitespace-pre-wrap" dir="auto">
-                pasword
+                Phone Number
               </p>
             </div>
-            <div className="border border-[#e6e6e6] border-solid content-stretch flex h-[48px] items-center justify-between p-[8px] relative rounded-[4px] shrink-0 w-full" data-node-id="35:4769">
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="capitalize flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#999] text-[16px] flex-1 outline-none border-none bg-transparent" placeholder="Enter your password" data-node-id="35:4770" />
-              <div className="h-[13px] overflow-clip relative shrink-0 w-[20px]" data-name="Frame" data-node-id="35:4771">
-                <div className="absolute contents inset-[0_0_7.69%_0]" data-name="Group" data-node-id="35:4772">
-                  <div className="absolute inset-[0_0_7.69%_0]" data-name="Group" data-node-id="35:4773">
-                    <img alt="" className="block max-w-none size-full" src={imgGroup} />
-                  </div>
+            <p className="font-['Poppins'] text-[12px] text-[#666] w-full -mt-[4px] mb-[2px]">
+              Code matches your selected country. Enter your number without the country code (a leading 0 is optional).
+            </p>
+            <div className="content-stretch flex gap-[8px] items-start relative shrink-0 w-full" data-node-id="35:4749">
+              <div
+                className="border border-[#e6e6e6] border-solid content-stretch flex gap-[8px] items-center px-[10px] py-[8px] relative rounded-[4px] shrink-0 min-w-[108px]"
+                data-node-id="35:4750"
+                title={selectedCountry?.name ? `Dial code for ${selectedCountry.name}` : 'Country code'}
+              >
+                <div className="content-stretch flex items-center overflow-hidden rounded-[2px] shrink-0 size-[30px] bg-[#f5f5f5]" data-name="svg2" data-node-id="35:4751">
+                  <img
+                    alt=""
+                    className="block size-[30px] object-cover"
+                    src={selectedCountry?.flagUrl || imgLayer1}
+                    onError={(e) => {
+                      e.target.src = imgLayer1;
+                    }}
+                  />
                 </div>
+                <span className="font-['Poppins'] font-normal text-[#121212] text-[16px] whitespace-nowrap tabular-nums" data-node-id="35:4759">
+                  {selectedCountry?.dialCode || '—'}
+                </span>
               </div>
+              <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel-national"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 font-['Poppins'] font-normal text-[#121212] text-[16px] placeholder:text-[#999]"
+                placeholder="e.g. 5xxxxxxxx"
+                data-node-id="35:4760"
+              />
+            </div>
+          </div>
+          <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full" data-node-id="35:4762">
+            <div className="flex flex-col font-['Poppins'] font-semibold h-[32px] justify-center leading-[0] not-italic relative shrink-0 text-[#121212] text-[18px] w-full" data-node-id="35:4763">
+              <p className="leading-[normal] whitespace-pre-wrap" dir="auto">
+                Email
+              </p>
+            </div>
+            <div className="content-stretch flex items-start relative shrink-0 w-full" data-node-id="35:4764">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value.toLowerCase())}
+                autoComplete="email"
+                className="border border-[#e6e6e6] border-solid content-stretch flex flex-[1_0_0] flex-col h-[48px] items-start justify-center min-h-px min-w-px p-[8px] relative rounded-[4px] shrink-0 w-full font-['Poppins'] font-normal text-[#121212] text-[16px] placeholder:text-[#999]"
+                placeholder="Enter your email"
+                data-node-id="35:4765"
+              />
+            </div>
+          </div>
+          <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full" data-node-id="35:4767">
+            <div className="flex flex-col font-['Poppins'] font-semibold h-[32px] justify-center leading-[0] not-italic relative shrink-0 text-[#121212] text-[18px] w-full" data-node-id="35:4768">
+              <p className="leading-[normal] whitespace-pre-wrap" dir="auto">
+                Password
+              </p>
+            </div>
+            <div className="border border-[#e6e6e6] border-solid content-stretch flex h-[48px] items-center gap-[4px] pr-[4px] pl-[8px] relative rounded-[4px] shrink-0 w-full" data-node-id="35:4769">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                className="font-['Poppins'] font-normal text-[#121212] text-[16px] flex-1 min-w-0 outline-none border-none bg-transparent placeholder:text-[#999]"
+                placeholder="Enter your password"
+                data-node-id="35:4770"
+              />
+              <PasswordVisibilityToggle
+                visible={showPassword}
+                onToggle={() => setShowPassword((v) => !v)}
+                labelShow="Show password"
+                labelHide="Hide password"
+              />
             </div>
           </div>
           <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full" data-node-id="35:4775">
-            <div className="capitalize flex flex-col font-['Poppins'] font-semibold h-[32px] justify-center leading-[0] not-italic relative shrink-0 text-[#121212] text-[18px] w-full" data-node-id="35:4776">
+            <div className="flex flex-col font-['Poppins'] font-semibold h-[32px] justify-center leading-[0] not-italic relative shrink-0 text-[#121212] text-[18px] w-full" data-node-id="35:4776">
               <p className="leading-[normal] whitespace-pre-wrap" dir="auto">
-                confirm Password
+                Confirm password
               </p>
             </div>
-            <div className="border border-[#e6e6e6] border-solid content-stretch flex h-[48px] items-center justify-between p-[8px] relative rounded-[4px] shrink-0 w-full" data-node-id="35:4777">
-              <input type="password" value={passwordConfirmation} onChange={(e) => setPasswordConfirmation(e.target.value)} className="capitalize flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#999] text-[16px] flex-1 outline-none border-none bg-transparent" placeholder="Confirm your password" data-node-id="35:4778" />
-              <div className="h-[13px] overflow-clip relative shrink-0 w-[20px]" data-name="Frame" data-node-id="35:4779">
-                <div className="absolute contents inset-[0_0_7.69%_0]" data-name="Group" data-node-id="35:4780">
-                  <div className="absolute inset-[0_0_7.69%_0]" data-name="Group" data-node-id="35:4781">
-                    <img alt="" className="block max-w-none size-full" src={imgGroup} />
-                  </div>
-                </div>
-              </div>
+            <div className="border border-[#e6e6e6] border-solid content-stretch flex h-[48px] items-center gap-[4px] pr-[4px] pl-[8px] relative rounded-[4px] shrink-0 w-full" data-node-id="35:4777">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={passwordConfirmation}
+                onChange={(e) => setPasswordConfirmation(e.target.value)}
+                autoComplete="new-password"
+                className="font-['Poppins'] font-normal text-[#121212] text-[16px] flex-1 min-w-0 outline-none border-none bg-transparent placeholder:text-[#999]"
+                placeholder="Confirm your password"
+                data-node-id="35:4778"
+              />
+              <PasswordVisibilityToggle
+                visible={showConfirmPassword}
+                onToggle={() => setShowConfirmPassword((v) => !v)}
+                labelShow="Show confirm password"
+                labelHide="Hide confirm password"
+              />
             </div>
           </div>
           <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0" data-node-id="35:4783">

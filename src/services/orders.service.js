@@ -28,8 +28,34 @@ const extractOrderList = (payload) => {
   return [];
 };
 
+const inferPaymentStatusLabel = (order) => {
+  const direct = order?.payment_status
+    ?? order?.paymentStatus
+    ?? order?.payment_state
+    ?? order?.paymentState
+    ?? '';
+  const trimmed = toTrimmedString(direct);
+  if (trimmed) return trimmed;
+
+  const paidFlag = order?.is_paid ?? order?.paid;
+  if (paidFlag === true) return 'Paid';
+  if (paidFlag === false) return 'Unpaid';
+
+  const paidAt = order?.paid_at ?? order?.paidAt;
+  if (paidAt) return 'Paid';
+
+  return '';
+};
+
 const normalizeOrder = (order) => {
-  const id = order?.id ?? order?.order_id ?? order?.number ?? 'N/A';
+  const id =
+    order?.id
+    ?? order?.order_id
+    ?? order?.order?.id
+    ?? order?.order?.order_id
+    ?? order?.number
+    ?? order?.order_number
+    ?? 'N/A';
   const statusRaw = order?.status ?? order?.order_status ?? 'Processing';
   const totalRaw = order?.total ?? order?.total_amount ?? order?.grand_total ?? 0;
   const createdAt = order?.created_at ?? order?.date ?? new Date().toISOString();
@@ -43,6 +69,7 @@ const normalizeOrder = (order) => {
     total: Number(totalRaw) || 0,
     items: Number(itemsCount) || 0,
     image: firstImage,
+    paymentStatus: inferPaymentStatusLabel(order),
   };
 };
 
@@ -143,6 +170,52 @@ export const reorderOrder = async ({ orderId } = {}) => {
   return res.data;
 };
 
+/** Gateway checkout URL from POST /api/orders/:id/pay (Sadad, Tabby, etc.) */
+export const extractOrderPaymentUrl = (payload) => {
+  if (!payload || typeof payload !== 'object') return '';
+  const url =
+    payload.payment_url
+    ?? payload.paymentUrl
+    ?? payload.data?.payment_url
+    ?? payload.data?.paymentUrl;
+  const s = url != null ? String(url).trim() : '';
+  return /^https?:\/\//i.test(s) ? s : '';
+};
+
+/**
+ * Call synchronously from a click handler before `await payOrder` so popup blockers allow the new tab.
+ * Do not pass `noopener` here: many browsers return `null` but still open `about:blank`, so we lose the
+ * handle, the blank tab stays empty, and the fallback navigates the *current* tab instead.
+ */
+export const openPaymentGatewayPlaceholderTab = () => {
+  try {
+    return window.open('about:blank', '_blank');
+  } catch {
+    return null;
+  }
+};
+
+/** Open gateway URL in a new tab; uses `preOpenedTab` when provided (see openPaymentGatewayPlaceholderTab). */
+export const navigateToPaymentGateway = (paymentUrl, preOpenedTab = null) => {
+  const url = String(paymentUrl || '').trim();
+  if (!/^https?:\/\//i.test(url)) return false;
+
+  if (preOpenedTab && !preOpenedTab.closed) {
+    try {
+      preOpenedTab.location.href = url;
+      return true;
+    } catch {
+      // Cross-window restrictions; fall through to window.open / same-tab fallback.
+    }
+  }
+
+  const opened = window.open(url, '_blank', 'noopener,noreferrer');
+  if (!opened) {
+    window.location.assign(url);
+  }
+  return true;
+};
+
 export const payOrder = async ({ orderId, paymentMethod = 'sadad' } = {}) => {
   const normalizedOrderId = toTrimmedString(orderId);
   if (!normalizedOrderId) {
@@ -185,6 +258,47 @@ export const rateOrder = async ({ orderId, rating, comment = '' } = {}) => {
     comment: toTrimmedString(comment),
   });
   return res.data;
+};
+
+const normalizeOrderStatusForUi = (order) =>
+  String(order?.status ?? order?.order_status ?? '').trim().toLowerCase();
+
+const normalizePaymentStatusForUi = (order) =>
+  String(order?.payment_status ?? order?.paymentStatus ?? '').trim().toLowerCase();
+
+/** Payment captured/successful; excludes refunded strings that still contain "paid". */
+export const isPaidOrderByApiFields = (order) => {
+  if (!order || typeof order !== 'object') return false;
+  const p = normalizePaymentStatusForUi(order);
+  if (p.includes('refund')) return false;
+  if (order.is_paid === true || order.paid === true) return true;
+  if (order.paid_at || order.paidAt) return true;
+  if (!p) return false;
+  if (p.includes('unpaid') || p.includes('not paid') || p.includes('fail') || p.includes('declin')) return false;
+  if (p.includes('paid')) return true;
+  if (p.includes('success')) return true;
+  if (p.includes('captur') || p.includes('settl')) return true;
+  if (p.includes('complete') && (p.includes('pay') || p === 'completed')) return true;
+  return false;
+};
+
+/**
+ * Whether to show rating UI: delivered-style status, or paid (even when fulfillment status is still "pending").
+ */
+export const isOrderRateable = (order) => {
+  if (!order || typeof order !== 'object') return false;
+  const s = normalizeOrderStatusForUi(order);
+  const p = normalizePaymentStatusForUi(order);
+  if (s.includes('cancel')) return false;
+  if (p.includes('refund') || s.includes('refund')) return false;
+  if (isPaidOrderByApiFields(order)) return true;
+  if (!s) return false;
+  return (
+    s.includes('deliver')
+    || s.includes('completed')
+    || s === 'complete'
+    || s.includes('received')
+  );
 };
 
 export const getRawOrders = async () => {

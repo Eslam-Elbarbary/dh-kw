@@ -17,9 +17,17 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  // Let the browser set multipart boundaries for FormData requests.
+  // FormData must not use the instance default `application/json` or the server will not
+  // parse multipart (files never appear). Axios v1 uses AxiosHeaders — delete both casings.
   if (config.data instanceof FormData && config.headers) {
-    delete config.headers['Content-Type'];
+    const h = config.headers;
+    if (typeof h.delete === 'function') {
+      h.delete('Content-Type');
+      h.delete('content-type');
+    } else {
+      delete h['Content-Type'];
+      delete h['content-type'];
+    }
   }
 
   return config;

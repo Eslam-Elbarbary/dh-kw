@@ -1,0 +1,277 @@
+// Single digital order — GET /api/digital-orders/:id (separate from /track-order /api/orders).
+
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { getDigitalOrderById } from '../services/digitalOrders.service';
+import arrowDownIcon from '../assets/ArrowRight.svg';
+
+const imgArrowDown = arrowDownIcon;
+
+const toArray = (v) => (Array.isArray(v) ? v : []);
+
+const formatMoney = (n) => {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return '—';
+  return `$${x.toFixed(2)}`;
+};
+
+const statusPill = (label, variant) => {
+  const base = 'font-[\'Poppins\'] font-medium text-[12px] px-[12px] py-[4px] rounded-full';
+  const styles =
+    variant === 'pay'
+      ? 'bg-amber-100 text-amber-900'
+      : variant === 'ok'
+        ? 'bg-emerald-100 text-emerald-900'
+        : 'bg-slate-100 text-slate-800';
+  return <span className={`${base} ${styles}`}>{label}</span>;
+};
+
+export default function DigitalOrderDetail() {
+  const { id } = useParams();
+  const { isAuthenticated } = useAuth();
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      if (!isAuthenticated) {
+        setLoading(false);
+        setOrder(null);
+        return;
+      }
+      if (!id) {
+        setError('Missing order id.');
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError('');
+      try {
+        const data = await getDigitalOrderById({ orderId: id });
+        if (cancelled) return;
+        if (!data || typeof data !== 'object') {
+          setOrder(null);
+          setError('Order not found.');
+        } else {
+          setOrder(data);
+        }
+      } catch (e) {
+        if (cancelled) return;
+        setOrder(null);
+        setError(e?.response?.data?.message || e?.message || 'Failed to load digital order.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, isAuthenticated]);
+
+  const items = toArray(order?.items);
+  const placed = order?.created_at ?? order?.date;
+
+  return (
+    <div className="bg-white relative w-full min-h-screen">
+      <div className="max-w-[960px] mx-auto px-[16px] sm:px-[24px] md:px-[32px] py-[24px] sm:py-[32px] md:py-[40px] flex flex-col gap-[24px] sm:gap-[32px]">
+        <div className="flex gap-[8px] items-center flex-wrap" data-name="Breadcrumb">
+          <Link to="/" className="font-['Poppins'] text-[14px] text-[#666] hover:text-[#eea137] transition-colors">
+            Home
+          </Link>
+          <div className="flex items-center justify-center size-[18px] rotate-[270deg]">
+            <img alt="" className="size-[18px]" src={imgArrowDown} onError={(e) => { e.target.style.display = 'none'; }} />
+          </div>
+          <Link to="/my-orders?tab=digital" className="font-['Poppins'] text-[14px] text-[#666] hover:text-[#eea137] transition-colors">
+            My orders
+          </Link>
+          <div className="flex items-center justify-center size-[18px] rotate-[270deg]">
+            <img alt="" className="size-[18px]" src={imgArrowDown} onError={(e) => { e.target.style.display = 'none'; }} />
+          </div>
+          <span className="font-['Poppins'] text-[14px] text-[#eea137]">Digital order #{id}</span>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-[16px]">
+          <div>
+            <h1 className="font-['Poppins'] font-bold text-[28px] sm:text-[36px] md:text-[40px] text-[#0e1c47] mb-[8px]">
+              Digital order #{id}
+            </h1>
+            <p className="font-['Poppins'] text-[15px] text-[#666] max-w-[640px] leading-relaxed">
+              Gift cards and digital codes — no shipping. These orders are separate from regular store deliveries.
+            </p>
+          </div>
+          <Link
+            to="/my-orders?tab=digital"
+            className="font-['Poppins'] font-semibold text-[14px] text-[#0e1c47] border border-[#e6e6e6] px-[20px] py-[10px] rounded-[4px] hover:border-[#eea137] transition-colors text-center"
+          >
+            ← All digital orders
+          </Link>
+        </div>
+
+        {!isAuthenticated ? (
+          <div className="rounded-[4px] border border-[#e6e6e6] p-[32px] text-center">
+            <p className="font-['Poppins'] text-[#0e1c47] mb-[16px]">Sign in to view this order.</p>
+            <Link to="/sign-in" className="inline-block bg-[#eea137] text-white font-semibold px-[28px] py-[12px] rounded-[4px] hover:bg-[#d8902f]">
+              Sign in
+            </Link>
+          </div>
+        ) : null}
+
+        {isAuthenticated && loading ? (
+          <div className="border border-[#e6e6e6] rounded-[4px] p-[40px] text-center font-['Poppins'] text-[#666]">
+            Loading order…
+          </div>
+        ) : null}
+
+        {isAuthenticated && !loading && error ? (
+          <div className="border border-[#fecaca] bg-[#fef2f2] rounded-[4px] p-[24px] font-['Poppins'] text-[#991b1b]">
+            {error}
+          </div>
+        ) : null}
+
+        {isAuthenticated && !loading && order && !error ? (
+          <div className="flex flex-col gap-[20px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
+              <div className="border border-[#e6e6e6] rounded-[4px] p-[20px] sm:p-[24px] shadow-sm">
+                <h2 className="font-['Poppins'] font-semibold text-[16px] text-[#0e1c47] mb-[14px]">Status</h2>
+                <div className="flex flex-wrap gap-[8px] items-center mb-[12px]">
+                  {order.status != null ? statusPill(String(order.status), 'neutral') : null}
+                  {order.payment_status != null || order.paymentStatus != null
+                    ? statusPill(String(order.payment_status ?? order.paymentStatus), 'pay')
+                    : null}
+                </div>
+                {placed ? (
+                  <p className="font-['Poppins'] text-[13px] text-[#666]">
+                    Placed{' '}
+                    {new Date(placed).toLocaleString(undefined, {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    })}
+                  </p>
+                ) : null}
+                {order.notes ? (
+                  <p className="font-['Poppins'] text-[13px] text-[#57534e] mt-[12px] pt-[12px] border-t border-[#f1f5f9]">
+                    <span className="font-medium text-[#0e1c47]">Notes: </span>
+                    {order.notes}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="border border-[#e6e6e6] rounded-[4px] p-[20px] sm:p-[24px] shadow-sm">
+                <h2 className="font-['Poppins'] font-semibold text-[16px] text-[#0e1c47] mb-[14px]">Totals</h2>
+                <dl className="space-y-[8px] font-['Poppins'] text-[14px]">
+                  <div className="flex justify-between gap-[12px]">
+                    <dt className="text-[#666]">Subtotal</dt>
+                    <dd className="text-[#0e1c47] font-medium tabular-nums">{formatMoney(order.total)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-[12px]">
+                    <dt className="text-[#666]">Discount</dt>
+                    <dd className="text-[#0e1c47] font-medium tabular-nums">{formatMoney(order.discount)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-[12px]">
+                    <dt className="text-[#666]">Shipping</dt>
+                    <dd className="text-[#0e1c47] font-medium tabular-nums">{formatMoney(order.shipping_cost ?? 0)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-[12px] pt-[8px] border-t border-[#e6e6e6]">
+                    <dt className="text-[#0e1c47] font-semibold">Total</dt>
+                    <dd className="text-[#0e1c47] font-bold tabular-nums text-[18px]">
+                      {formatMoney(order.total_cost ?? order.total)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+
+            {(order.user_name || order.user_email || order.user_phone || order.user_country) ? (
+              <div className="border border-[#e6e6e6] rounded-[4px] p-[20px] sm:p-[24px] shadow-sm">
+                <h2 className="font-['Poppins'] font-semibold text-[16px] text-[#0e1c47] mb-[14px]">Account on order</h2>
+                <ul className="font-['Poppins'] text-[14px] text-[#444] space-y-[6px]">
+                  {order.user_name ? (
+                    <li>
+                      <span className="text-[#666]">Name: </span>
+                      {order.user_name}
+                    </li>
+                  ) : null}
+                  {order.user_email ? (
+                    <li>
+                      <span className="text-[#666]">Email: </span>
+                      {order.user_email}
+                    </li>
+                  ) : null}
+                  {order.user_phone ? (
+                    <li>
+                      <span className="text-[#666]">Phone: </span>
+                      {order.user_phone}
+                    </li>
+                  ) : null}
+                  {order.user_country ? (
+                    <li>
+                      <span className="text-[#666]">Country: </span>
+                      {order.user_country}
+                    </li>
+                  ) : null}
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="border border-[#e6e6e6] rounded-[4px] overflow-hidden shadow-sm">
+              <h2 className="font-['Poppins'] font-semibold text-[16px] text-[#0e1c47] px-[20px] pt-[20px] sm:px-[24px] sm:pt-[24px] pb-[12px]">
+                Items ({items.length})
+              </h2>
+              {items.length === 0 ? (
+                <p className="px-[20px] pb-[20px] font-['Poppins'] text-[14px] text-[#666]">No line items in the response.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left font-['Poppins'] text-[14px]">
+                    <thead>
+                      <tr className="bg-[#f8fafc] text-[#64748b] text-[12px] uppercase tracking-wide">
+                        <th className="px-[20px] sm:px-[24px] py-[10px] font-semibold">#</th>
+                        <th className="px-[20px] sm:px-[24px] py-[10px] font-semibold">Digital product</th>
+                        <th className="px-[20px] sm:px-[24px] py-[10px] font-semibold text-right">Qty</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((line, idx) => {
+                        const pid =
+                          line.digital_product_id
+                          ?? line.digital_product?.id
+                          ?? line.product_id;
+                        const label =
+                          line.name
+                          ?? line.title
+                          ?? line.product_name
+                          ?? (pid != null ? `Product #${pid}` : `Line ${idx + 1}`);
+                        const qty = line.quantity ?? line.qty ?? 1;
+                        return (
+                          <tr key={line.id ?? idx} className="border-t border-[#e6e6e6]">
+                            <td className="px-[20px] sm:px-[24px] py-[14px] text-[#666]">{idx + 1}</td>
+                            <td className="px-[20px] sm:px-[24px] py-[14px] text-[#0e1c47]">
+                              {pid != null && String(pid).length > 0 ? (
+                                <Link
+                                  to={`/digital-product/${pid}`}
+                                  className="font-semibold text-[#eea137] hover:underline"
+                                >
+                                  {label}
+                                </Link>
+                              ) : (
+                                label
+                              )}
+                            </td>
+                            <td className="px-[20px] sm:px-[24px] py-[14px] text-right tabular-nums">{qty}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}

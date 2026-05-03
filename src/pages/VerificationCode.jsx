@@ -12,7 +12,10 @@ export default function VerificationCode() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
-  const pendingEmail = useMemo(() => localStorage.getItem('pendingVerificationEmail') || '', []);
+  const pendingEmail = useMemo(() => {
+    const raw = localStorage.getItem('pendingVerificationEmail');
+    return raw ? String(raw).trim().toLowerCase() : '';
+  }, []);
   const inputRefs = useRef([]);
 
   const handleCodeInput = (index, value) => {
@@ -132,7 +135,7 @@ export default function VerificationCode() {
         <div className="content-stretch flex flex-col gap-[8px] items-start leading-[0] not-italic relative shrink-0" data-node-id="35:4795">
           <div className="capitalize flex flex-col font-['Poppins'] font-semibold justify-center min-w-full relative shrink-0 text-[#0e1c47] text-[32px] tracking-[-0.96px] w-[min-content]" data-node-id="35:4796">
             <p className="leading-none whitespace-pre-wrap" dir="auto">
-              Verification Code
+              Email verification
             </p>
           </div>
           <div className="flex flex-col font-['Poppins'] font-normal justify-center relative shrink-0 text-[#121212] text-[16px] whitespace-nowrap" data-node-id="35:4797">

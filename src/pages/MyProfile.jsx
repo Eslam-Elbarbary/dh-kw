@@ -2,9 +2,14 @@
 // Maintains colors, fonts, styles, and icons from the site
 
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getProfileRequest, updatePasswordRequest, updateProfileRequest } from '../services/auth.service';
+import {
+  getProfileRequest,
+  updatePasswordRequest,
+  updateProfileRequest,
+  updateProfileDigitalVerificationRequest,
+} from '../services/auth.service';
 import { createAddress, deleteAddress, getAddresses } from '../services/address.service';
 import { getPointsHistory, getWalletHistory } from '../services/transactions.service';
 
@@ -16,6 +21,7 @@ const imgArrowDown = arrowDownIcon;
 
 export default function MyProfile() {
   const { isAuthenticated, user, refreshUser } = useAuth();
+  const [searchParams] = useSearchParams();
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [saveProfileLoading, setSaveProfileLoading] = useState(false);
   const [savePasswordLoading, setSavePasswordLoading] = useState(false);
@@ -57,6 +63,19 @@ export default function MyProfile() {
     newPassword: '',
     confirmNewPassword: '',
   });
+  const [digitalForm, setDigitalForm] = useState({
+    gender: '',
+    birthDate: '',
+    nationalNumber: '',
+    nationalIdExpireDate: '',
+    homeAddress: '',
+  });
+  const [digitalFrontFile, setDigitalFrontFile] = useState(null);
+  const [digitalBackFile, setDigitalBackFile] = useState(null);
+  const [digitalSaveLoading, setDigitalSaveLoading] = useState(false);
+  const [digitalError, setDigitalError] = useState('');
+  const [digitalSuccess, setDigitalSuccess] = useState('');
+  const [digitalFileInputsKey, setDigitalFileInputsKey] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -80,6 +99,18 @@ export default function MyProfile() {
           country: profile?.country || '',
           zipCode: profile?.zip_code || profile?.zipCode || '',
         });
+
+        const birthRaw = profile?.birth_date ?? profile?.birthDate;
+        const expireRaw = profile?.national_id_expire_date ?? profile?.nationalIdExpireDate;
+        setDigitalForm({
+          gender: profile?.gender != null ? String(profile.gender) : '',
+          birthDate: birthRaw ? String(birthRaw).slice(0, 10) : '',
+          nationalNumber: profile?.national_number != null ? String(profile.national_number) : '',
+          nationalIdExpireDate: expireRaw ? String(expireRaw).slice(0, 10) : '',
+          homeAddress: profile?.home_address != null ? String(profile.home_address) : '',
+        });
+        setDigitalFrontFile(null);
+        setDigitalBackFile(null);
 
         try {
           const addresses = await getAddresses();
@@ -107,6 +138,17 @@ export default function MyProfile() {
 
     loadProfile();
   }, [isAuthenticated, user?.firstName, user?.lastName, user?.email, user?.phone]);
+
+  useEffect(() => {
+    if (!isAuthenticated || isLoadingProfile) return;
+    if (searchParams.get('focus') !== 'digital-order') return;
+    const el = document.getElementById('digital-order-profile');
+    if (el) {
+      window.requestAnimationFrame(() => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }, [isAuthenticated, isLoadingProfile, searchParams]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -143,6 +185,52 @@ export default function MyProfile() {
       ...passwordData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handleDigitalFormChange = (e) => {
+    const { name, value } = e.target;
+    setDigitalForm((prev) => ({ ...prev, [name]: value }));
+    if (digitalError) setDigitalError('');
+    if (digitalSuccess) setDigitalSuccess('');
+  };
+
+  const handleDigitalVerificationSave = async (e) => {
+    e.preventDefault();
+    try {
+      setDigitalSaveLoading(true);
+      setDigitalError('');
+      setDigitalSuccess('');
+      await updateProfileDigitalVerificationRequest({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        gender: digitalForm.gender,
+        birthDate: digitalForm.birthDate,
+        nationalNumber: digitalForm.nationalNumber,
+        nationalIdExpireDate: digitalForm.nationalIdExpireDate,
+        homeAddress: digitalForm.homeAddress,
+        nationalCardFrontImage: digitalFrontFile,
+        nationalCardBackImage: digitalBackFile,
+      });
+      await refreshUser();
+      setDigitalSuccess('Verification details saved. You can place your digital order now.');
+      setDigitalFrontFile(null);
+      setDigitalBackFile(null);
+      setDigitalFileInputsKey((k) => k + 1);
+    } catch (error) {
+      const responseData = error?.response?.data;
+      const validationErrors = responseData?.errors && typeof responseData.errors === 'object'
+        ? Object.values(responseData.errors).flat().filter(Boolean)
+        : [];
+      setDigitalError(
+        validationErrors.length > 0
+          ? validationErrors.join(' ')
+          : (responseData?.message || 'Could not save verification details.'),
+      );
+    } finally {
+      setDigitalSaveLoading(false);
+    }
   };
 
   const handleAddressFormChange = (e) => {
@@ -601,6 +689,141 @@ export default function MyProfile() {
                     className="bg-[#eea137] text-white font-['Poppins'] font-semibold px-[32px] py-[14px] rounded-[4px] hover:bg-[#d8902f] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {saveProfileLoading ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div
+              id="digital-order-profile"
+              className="bg-white border border-[#e6e6e6] border-solid rounded-[4px] p-[24px] sm:p-[32px] md:p-[40px] shadow-sm scroll-mt-[24px]"
+            >
+              <h2 className="font-['Poppins'] font-semibold text-[24px] sm:text-[28px] md:text-[32px] text-[#0e1c47] mb-[8px]">
+                Digital order verification
+              </h2>
+              <p className="font-['Poppins'] text-[14px] text-[#666] mb-[20px] max-w-[720px] leading-relaxed">
+                Digital products require these details on your account. They match what the server checks before creating a digital order (national ID images, home address, etc.).
+              </p>
+              {digitalError ? (
+                <p className="font-['Poppins'] text-[14px] text-[#8e0909] mb-[16px]" role="alert">{digitalError}</p>
+              ) : null}
+              {digitalSuccess ? (
+                <p className="font-['Poppins'] text-[14px] text-[#00a651] mb-[16px]" role="status">{digitalSuccess}</p>
+              ) : null}
+              <form onSubmit={handleDigitalVerificationSave} className="flex flex-col gap-[18px] sm:gap-[20px]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px] sm:gap-[20px]">
+                  <div>
+                    <label htmlFor="digital-gender" className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
+                      Gender
+                    </label>
+                    <select
+                      id="digital-gender"
+                      name="gender"
+                      value={digitalForm.gender}
+                      onChange={handleDigitalFormChange}
+                      className="w-full border border-[#e6e6e6] border-solid rounded-[4px] px-[16px] py-[12px] font-['Poppins'] text-[14px] text-[#0e1c47] focus:outline-none focus:border-[#eea137] bg-white"
+                    >
+                      <option value="">Select</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="digital-birth" className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
+                      Date of birth
+                    </label>
+                    <input
+                      id="digital-birth"
+                      type="date"
+                      name="birthDate"
+                      value={digitalForm.birthDate}
+                      onChange={handleDigitalFormChange}
+                      className="w-full border border-[#e6e6e6] border-solid rounded-[4px] px-[16px] py-[12px] font-['Poppins'] text-[14px] text-[#0e1c47] focus:outline-none focus:border-[#eea137]"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="digital-national" className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
+                      National ID number
+                    </label>
+                    <input
+                      id="digital-national"
+                      type="text"
+                      name="nationalNumber"
+                      value={digitalForm.nationalNumber}
+                      onChange={handleDigitalFormChange}
+                      className="w-full border border-[#e6e6e6] border-solid rounded-[4px] px-[16px] py-[12px] font-['Poppins'] text-[14px] text-[#0e1c47] focus:outline-none focus:border-[#eea137]"
+                      placeholder="National ID number"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="digital-id-expire" className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
+                      National ID expiry
+                    </label>
+                    <input
+                      id="digital-id-expire"
+                      type="date"
+                      name="nationalIdExpireDate"
+                      value={digitalForm.nationalIdExpireDate}
+                      onChange={handleDigitalFormChange}
+                      className="w-full border border-[#e6e6e6] border-solid rounded-[4px] px-[16px] py-[12px] font-['Poppins'] text-[14px] text-[#0e1c47] focus:outline-none focus:border-[#eea137]"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="digital-home-address" className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
+                    Home address
+                  </label>
+                  <textarea
+                    id="digital-home-address"
+                    name="homeAddress"
+                    rows={3}
+                    value={digitalForm.homeAddress}
+                    onChange={handleDigitalFormChange}
+                    className="w-full border border-[#e6e6e6] border-solid rounded-[4px] px-[16px] py-[12px] font-['Poppins'] text-[14px] text-[#0e1c47] focus:outline-none focus:border-[#eea137] resize-y min-h-[88px]"
+                    placeholder="Full home address as on your ID"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]" key={digitalFileInputsKey}>
+                  <div>
+                    <label htmlFor="digital-id-front" className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
+                      National ID — front
+                    </label>
+                    <input
+                      id="digital-id-front"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        setDigitalFrontFile(e.target.files?.[0] || null);
+                        if (digitalError) setDigitalError('');
+                      }}
+                      className="w-full font-['Poppins'] text-[13px] text-[#0e1c47] file:mr-[12px] file:rounded-[4px] file:border-0 file:bg-[#0e1c47] file:px-[14px] file:py-[8px] file:font-semibold file:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="digital-id-back" className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
+                      National ID — back
+                    </label>
+                    <input
+                      id="digital-id-back"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        setDigitalBackFile(e.target.files?.[0] || null);
+                        if (digitalError) setDigitalError('');
+                      }}
+                      className="w-full font-['Poppins'] text-[13px] text-[#0e1c47] file:mr-[12px] file:rounded-[4px] file:border-0 file:bg-[#0e1c47] file:px-[14px] file:py-[8px] file:font-semibold file:text-white"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={digitalSaveLoading}
+                    className="bg-[#0e1c47] text-white font-['Poppins'] font-semibold px-[28px] py-[12px] rounded-[4px] hover:bg-[#1a2d5a] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {digitalSaveLoading ? 'Saving…' : 'Save verification details'}
                   </button>
                 </div>
               </form>

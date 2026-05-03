@@ -2,6 +2,7 @@
 // Maintains colors, fonts, styles, and icons from the site
 
 import { Link } from 'react-router-dom';
+import { VENDOR_REGISTER_URL } from '../utils/vendorUrls';
 
 // Icon Assets
 // Import assets
@@ -16,15 +17,16 @@ export default function SiteMap() {
       links: [
         { name: "Home", path: "/" },
         { name: "PC Components", path: "/pc-components" },
-        { name: "Digital E-Cards", path: "/digital-e-cards" },
+        { name: "Digital products", path: "/digital-products" },
+        { name: "Digital categories", path: "/digital-categories" },
         { name: "Search Products", path: "/search" },
-        { name: "Brands", path: "/brands" }
       ]
     },
     {
       title: "Account",
       links: [
         { name: "My Account", path: "/my-account" },
+        { name: "My orders", path: "/my-orders" },
         { name: "Sign In", path: "/sign-in" },
         { name: "Sign Up", path: "/sign-up" },
         { name: "Favorites", path: "/favorite" },
@@ -53,7 +55,7 @@ export default function SiteMap() {
       links: [
         { name: "About Us", path: "/about-us" },
         { name: "Delivery & Return", path: "/delivery-return" },
-        { name: "Become A Seller", path: "/become-a-seller" },
+        { name: "Become A Seller", path: VENDOR_REGISTER_URL, external: true },
         { name: "Site Map", path: "/site-map" }
       ]
     }
@@ -106,13 +108,25 @@ export default function SiteMap() {
                 <ul className="flex flex-col gap-[10px] sm:gap-[12px]">
                   {section.links.map((link, linkIndex) => (
                     <li key={linkIndex}>
-                      <Link
-                        to={link.path}
-                        className="font-['Poppins'] font-normal text-[14px] sm:text-[16px] text-[#666] hover:text-[#eea137] transition-colors flex items-center gap-[8px] group"
-                      >
-                        <span className="text-[#eea137] opacity-0 group-hover:opacity-100 transition-opacity">→</span>
-                        <span>{link.name}</span>
-                      </Link>
+                      {link.external ? (
+                        <a
+                          href={link.path}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-['Poppins'] font-normal text-[14px] sm:text-[16px] text-[#666] hover:text-[#eea137] transition-colors flex items-center gap-[8px] group"
+                        >
+                          <span className="text-[#eea137] opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                          <span>{link.name}</span>
+                        </a>
+                      ) : (
+                        <Link
+                          to={link.path}
+                          className="font-['Poppins'] font-normal text-[14px] sm:text-[16px] text-[#666] hover:text-[#eea137] transition-colors flex items-center gap-[8px] group"
+                        >
+                          <span className="text-[#eea137] opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                          <span>{link.name}</span>
+                        </Link>
+                      )}
                     </li>
                   ))}
                 </ul>

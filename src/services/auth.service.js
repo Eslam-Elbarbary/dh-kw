@@ -33,10 +33,11 @@ export const registerRequest = async ({
   countryId,
 }) => {
   const name = `${firstName} ${lastName}`.trim();
+  const normalizedEmail = String(email || '').trim().toLowerCase();
 
   const res = await api.post('/api/auth/register', {
     name,
-    email,
+    email: normalizedEmail,
     phone,
     password,
     password_confirmation: passwordConfirmation,
@@ -93,6 +94,83 @@ export const updateProfileRequest = async ({
   return res.data;
 };
 
+const appendImageField = (formData, fieldName, value) => {
+  if (value == null) return;
+  if (typeof File !== 'undefined' && value instanceof File) {
+    const name = value.name && String(value.name).trim() ? value.name : `${fieldName}.jpg`;
+    formData.append(fieldName, value, name);
+    return;
+  }
+  if (typeof Blob !== 'undefined' && value instanceof Blob && value.size > 0) {
+    formData.append(fieldName, value, `${fieldName}.jpg`);
+  }
+};
+
+/**
+ * KYC + ID images for digital orders. Must be multipart (not JSON): POST `/api/profile` with
+ * `_method: PUT` so Laravel can read uploaded files. Uses shared axios instance — request
+ * interceptor removes default `Content-Type` for FormData so the boundary is set correctly.
+ */
+export const updateProfileDigitalVerificationRequest = async ({
+  gender,
+  birthDate,
+  nationalNumber,
+  nationalIdExpireDate,
+  homeAddress,
+  nationalCardFrontImage,
+  nationalCardBackImage,
+  firstName,
+  lastName,
+  email,
+  phone,
+} = {}) => {
+  const normalizedFirstName = String(firstName ?? '').trim();
+  const normalizedLastName = String(lastName ?? '').trim();
+  const name = `${normalizedFirstName} ${normalizedLastName}`.trim();
+  const normalizedPhone = String(phone ?? '').trim();
+
+  const fd = new FormData();
+  if (name) {
+    fd.append('name', name);
+    fd.append('full_name', name);
+  }
+  if (normalizedFirstName) {
+    fd.append('first_name', normalizedFirstName);
+    fd.append('firstName', normalizedFirstName);
+  }
+  if (normalizedLastName) {
+    fd.append('last_name', normalizedLastName);
+    fd.append('lastName', normalizedLastName);
+  }
+  const em = String(email ?? '').trim();
+  if (em) fd.append('email', em);
+  if (normalizedPhone) {
+    fd.append('phone', normalizedPhone);
+    fd.append('mobile', normalizedPhone);
+    fd.append('phone_number', normalizedPhone);
+  }
+
+  const g = String(gender ?? '').trim();
+  if (g) fd.append('gender', g);
+  if (birthDate) fd.append('birth_date', String(birthDate).trim());
+  const nn = String(nationalNumber ?? '').trim();
+  if (nn) fd.append('national_number', nn);
+  if (nationalIdExpireDate) fd.append('national_id_expire_date', String(nationalIdExpireDate).trim());
+  const ha = String(homeAddress ?? '').trim();
+  if (ha) fd.append('home_address', ha);
+
+  appendImageField(fd, 'national_cart_front_image', nationalCardFrontImage);
+  appendImageField(fd, 'national_cart_back_image', nationalCardBackImage);
+
+  fd.append('_method', 'PUT');
+
+  const res = await api.post('/api/profile', fd, {
+    retryOnTooManyRequests: true,
+    maxRetries: 2,
+  });
+  return res.data;
+};
+
 export const updatePasswordRequest = async ({
   currentPassword,
   newPassword,
@@ -109,12 +187,15 @@ export const updatePasswordRequest = async ({
   return res.data;
 };
 
+/**
+ * POST {baseURL}/api/auth/verify-email — JSON body: { "email": string, "code": string }
+ * (same contract as API clients / Thunder / Postman).
+ */
 export const verifyEmailRequest = async ({ email, code }) => {
   const normalizedEmail = String(email || '').trim().toLowerCase();
   const normalizedCode = String(code || '').trim();
   const res = await api.post('/api/auth/verify-email', {
     email: normalizedEmail,
-    login: normalizedEmail,
     code: normalizedCode,
   });
   return res.data;
@@ -125,9 +206,20 @@ export const verifyPhoneRequest = async ({ phone, code }) => {
   return res.data;
 };
 
-export const resendVerificationCodeRequest = async ({ email, phone }) => {
-  const payload = email ? { channel: 'email', email } : { channel: 'phone', phone };
-  const res = await api.post('/api/auth/resend-verification-code', payload);
+export const resendVerificationCodeRequest = async ({ email, phone } = {}) => {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (normalizedEmail) {
+    const res = await api.post('/api/auth/resend-verification-code', {
+      channel: 'email',
+      email: normalizedEmail,
+    });
+    return res.data;
+  }
+  const normalizedPhone = String(phone || '').trim();
+  const res = await api.post('/api/auth/resend-verification-code', {
+    channel: 'phone',
+    phone: normalizedPhone,
+  });
   return res.data;
 };
 

@@ -1,9 +1,10 @@
 // Search Results page component - exact Figma implementation
 // Based on node 35:2469 and 35:3733
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getCategories, getProducts, resolveCountryId, toggleFavoriteProduct } from '../services/catalog.service';
+import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
 
 // Import assets
 import productImage1 from '../assets/2c2703028e858e93057b03391653381259c5700c.png';
@@ -18,6 +19,7 @@ import productImage9 from '../assets/89ed235ee47f8d384c57df36ae75c564312166e3.pn
 import productImage10 from '../assets/95835fab043de209b7a372fca8d7f780a4915f2b.png';
 import arrowDownIcon from '../assets/ArrowRight.svg';
 import heartIcon from '../assets/wishlist.svg';
+import compareIcon from '../assets/arrow-swap-horizontal.svg';
 import shoppingCartIcon from '../assets/shopping-basket-01.svg';
 import filterHorizontalIcon from '../assets/filter-horizontal.svg';
 import checkIcon from '../assets/CheckCircle.svg';
@@ -37,6 +39,7 @@ const imgRegularCaretDownVector = arrowDownIcon;
 const imgHeart = heartIcon;
 const imgShoppingCart = shoppingCartIcon;
 const imgHeart3 = heartIcon;
+const imgCompare = compareIcon;
 const imgDropdownCaret = arrowDownIcon;
 
 // Filter Assets
@@ -44,8 +47,6 @@ const imgDropdownCaret = arrowDownIcon;
 const imgFromElements = "data:image/svg+xml,%3Csvg width='12' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='0' y='10' font-size='12' fill='%23666'%3EFrom%3C/text%3E%3C/svg%3E";
 // Divider line
 const imgLine13 = "data:image/svg+xml,%3Csvg width='100%25' height='1' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='0' x2='100%25' y2='0' stroke='%23e4e7e9'/%3E%3C/svg%3E";
-// Price range icon
-const imgPriceRange = "data:image/svg+xml,%3Csvg width='16' height='16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 0L10 6H16L11 10L13 16L8 12L3 16L5 10L0 6H6L8 0Z' fill='%23666'/%3E%3C/svg%3E";
 // Check icons
 const imgDuotoneCheck = checkIcon;
 const imgCheckVector = checkIcon;
@@ -77,6 +78,51 @@ export default function SearchResults() {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productsError, setProductsError] = useState('');
   const [favoriteBusyId, setFavoriteBusyId] = useState(null);
+  const [compareIds, setCompareIds] = useState(() => getCompareIds());
+  const [compareToast, setCompareToast] = useState('');
+  const compareToastTimerRef = useRef(null);
+
+  useEffect(() => {
+    const syncCompareIds = () => setCompareIds(getCompareIds());
+    const onStorage = (e) => {
+      if (e.key === 'dh_compare_product_ids' || e.key === null) syncCompareIds();
+    };
+    window.addEventListener('dh-compare-updated', syncCompareIds);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('dh-compare-updated', syncCompareIds);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
+  useEffect(() => () => {
+    if (compareToastTimerRef.current) window.clearTimeout(compareToastTimerRef.current);
+  }, []);
+
+  const showCompareToast = (text) => {
+    if (compareToastTimerRef.current) window.clearTimeout(compareToastTimerRef.current);
+    setCompareToast(text);
+    compareToastTimerRef.current = window.setTimeout(() => {
+      setCompareToast('');
+      compareToastTimerRef.current = null;
+    }, 4500);
+  };
+
+  const isProductInCompare = (productId) => compareIds.includes(Number(productId));
+
+  const handleAddToCompare = (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!productId) return;
+    const result = addCompareProductId(productId);
+    setCompareIds(getCompareIds());
+    if (!result.ok && result.reason === 'full') {
+      showCompareToast(`You can compare up to ${MAX_COMPARE_ITEMS} products. Open Compare to remove one.`);
+      return;
+    }
+    if (result.added) showCompareToast('Added to your compare list.');
+    else showCompareToast('This product is already in your compare list.');
+  };
 
   const toggleBrand = (brand) => {
     setSelectedBrands(prev => 
@@ -465,10 +511,21 @@ export default function SearchResults() {
             {/* Products Grid - Exact Figma Layout */}
             <div className={`flex-1 w-full lg:w-auto`}>
               {/* Results Count */}
-              <div className="mb-[16px] sm:mb-[20px]">
+              <div className="mb-[16px] sm:mb-[20px] space-y-[10px]">
                 <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">
                   Showing {startIndex + 1}-{Math.min(endIndex, sortedProducts.length)} of {sortedProducts.length} products
                 </p>
+                {compareToast ? (
+                  <p
+                    className="font-['Poppins'] text-[13px] sm:text-[14px] text-[#92400e] dark:text-[#fde68a] bg-[#fffbeb] dark:bg-[#422006]/50 border border-[#fde68a] dark:border-[#854d0e] rounded-[6px] px-[14px] py-[10px]"
+                    role="status"
+                  >
+                    {compareToast}{' '}
+                    <Link to="/compare" className="font-semibold text-[#0e1c47] dark:text-[#eea137] underline underline-offset-2">
+                      View compare
+                    </Link>
+                  </p>
+                ) : null}
               </div>
 
               {loadingProducts ? (
@@ -519,22 +576,43 @@ export default function SearchResults() {
                               </p>
                             )}
 
-                            <button
-                              type="button"
-                              onClick={(event) => handleToggleFavorite(event, product.id)}
-                              aria-label={product.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-                              title={product.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-                              className={`absolute top-[10px] right-[10px] z-10 inline-flex items-center justify-center size-[34px] rounded-full border shadow-sm transition-all duration-200 ${
-                                product.isFavorite
-                                  ? 'bg-[#fee2e2] text-[#dc2626] border-[#fecaca]'
-                                  : 'bg-white text-[#0e1c47] border-[#e2e8f0] hover:text-[#dc2626] hover:border-[#fecaca] hover:shadow-md'
-                              } ${favoriteBusyId === product.id ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'} focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0e1c47] focus-visible:ring-offset-1`}
-                              disabled={favoriteBusyId === product.id}
-                            >
-                              <svg className="size-[16px]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M12 21s-6.716-4.438-9.193-8.11C1.205 10.518 1 8.41 1 7.5 1 4.462 3.462 2 6.5 2c2.06 0 3.854 1.133 4.5 2.81C11.646 3.133 13.44 2 15.5 2 18.538 2 21 4.462 21 7.5c0 .91-.205 3.018-1.807 5.39C18.716 16.562 12 21 12 21z" />
-                              </svg>
-                            </button>
+                            <div className="absolute top-[10px] right-[10px] z-10 flex flex-row-reverse items-center gap-[8px]">
+                              <button
+                                type="button"
+                                onClick={(event) => handleToggleFavorite(event, product.id)}
+                                aria-label={product.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                                title={product.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                                className={`inline-flex items-center justify-center size-[34px] rounded-full border shadow-sm transition-all duration-200 ${
+                                  product.isFavorite
+                                    ? 'bg-[#fee2e2] text-[#dc2626] border-[#fecaca]'
+                                    : 'bg-white text-[#0e1c47] border-[#e2e8f0] hover:text-[#dc2626] hover:border-[#fecaca] hover:shadow-md'
+                                } ${favoriteBusyId === product.id ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'} focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0e1c47] focus-visible:ring-offset-1 dark:bg-[#1e293b] dark:border-[#475569] dark:text-[#e5e7eb]`}
+                                disabled={favoriteBusyId === product.id}
+                              >
+                                <svg className="size-[16px]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                  <path d="M12 21s-6.716-4.438-9.193-8.11C1.205 10.518 1 8.41 1 7.5 1 4.462 3.462 2 6.5 2c2.06 0 3.854 1.133 4.5 2.81C11.646 3.133 13.44 2 15.5 2 18.538 2 21 4.462 21 7.5c0 .91-.205 3.018-1.807 5.39C18.716 16.562 12 21 12 21z" />
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(event) => handleAddToCompare(event, product.id)}
+                                aria-label={isProductInCompare(product.id) ? 'In compare list' : 'Add to compare'}
+                                title={isProductInCompare(product.id) ? 'In compare list — click Compare in the header to view' : 'Add to compare'}
+                                aria-pressed={isProductInCompare(product.id)}
+                                className={`inline-flex items-center justify-center size-[34px] rounded-full border shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0e1c47] focus-visible:ring-offset-1 dark:focus-visible:ring-offset-[#1e293b] ${
+                                  isProductInCompare(product.id)
+                                    ? 'bg-[#fff8eb] dark:bg-[#422006]/60 border-[#f5c06a] dark:border-[#eea137]/50 shadow-md'
+                                    : 'bg-white dark:bg-[#1e293b] border-[#e2e8f0] dark:border-[#475569] hover:border-[#eea137]/60 hover:shadow-md'
+                                } cursor-pointer`}
+                              >
+                                <img
+                                  src={imgCompare}
+                                  alt=""
+                                  className="size-[16px] object-contain pointer-events-none dark:opacity-90"
+                                  style={{ filter: 'brightness(0) saturate(100%)' }}
+                                />
+                              </button>
+                            </div>
                             
                             {/* Badges */}
                             {product.badges.length > 0 && (
@@ -756,11 +834,10 @@ export default function SearchResults() {
                   <p className="font-['Poppins'] font-semibold leading-[24.078px] text-[#191c1f] dark:text-white text-[14px] sm:text-[16.052px] uppercase w-full" data-node-id="35:4216">
                     Price Range
                   </p>
-                  
-                  {/* Slider */}
-                  <div className="h-[12.039px] w-full relative" data-name="Price Range" data-node-id="35:4217">
-                    <img alt="Price range slider" className="block w-full h-full" src={imgPriceRange} />
-                  </div>
+                  <div
+                    className="w-full h-px shrink-0 bg-[#e4e7e9] dark:bg-[#334155] rounded-full"
+                    aria-hidden
+                  />
 
                   {/* Min/Max Inputs */}
                   <div className="flex gap-[12.039px] items-start w-full" data-name="Input Field" data-node-id="35:4222">
@@ -796,27 +873,42 @@ export default function SearchResults() {
                       '$300 to $500',
                       '$500 to $1,000',
                       '$1,000 to $10,000'
-                    ].map((range, idx) => (
+                    ].map((range, idx) => {
+                      const priceSelected = selectedPriceRange === range;
+                      return (
                       <label
                         key={range}
-                        className="flex gap-[8.026px] items-start cursor-pointer w-full"
+                        className="flex gap-[10px] items-center cursor-pointer w-full rounded-[4px] -mx-[4px] px-[4px] py-[2px] hover:bg-[#f8f9fa] dark:hover:bg-[#1e293b]/80 transition-colors"
                         data-name="Category"
                         data-node-id={`35:${4228 + idx * 3}`}
                       >
-                        <div className={`bg-white border border-[#c9cfd2] border-solid rounded-[100px] size-[20.065px] flex-shrink-0 ${selectedPriceRange === range ? 'border-[#0e1c47] border-[2.006px]' : ''}`} data-name="From Elements" />
+                        <div
+                          className={`bg-white dark:bg-[#0f172a] border-[#c9cfd2] dark:border-[#475569] border-solid rounded-full size-[20.065px] flex-shrink-0 flex items-center justify-center transition-colors duration-200 ${
+                            priceSelected ? 'border-[#0e1c47] dark:border-[#eea137] border-[2px]' : 'border-[1.003px]'
+                          }`}
+                          data-name="From Elements"
+                          aria-hidden
+                        >
+                          {priceSelected ? (
+                            <div className="w-full h-full rounded-full bg-[#0e1c47] dark:bg-[#eea137] flex items-center justify-center">
+                              <div className="w-[8px] h-[8px] rounded-full bg-white shrink-0" />
+                            </div>
+                          ) : null}
+                        </div>
                         <input
                           type="radio"
                           name="priceRange"
                           value={range}
-                          checked={selectedPriceRange === range}
+                          checked={priceSelected}
                           onChange={() => setSelectedPriceRange(range)}
-                          className="hidden"
+                          className="sr-only"
                         />
-                        <p className="font-['Poppins'] font-semibold leading-[20.065px] text-[#475156] dark:text-[#9ca3af] text-[13px] sm:text-[14.045px]">
+                        <span className={`font-['Poppins'] font-semibold leading-[20.065px] text-[13px] sm:text-[14.045px] ${priceSelected ? 'text-[#0e1c47] dark:text-[#eea137]' : 'text-[#475156] dark:text-[#9ca3af]'}`}>
                           {range}
-                        </p>
+                        </span>
                       </label>
-                    ))}
+                    );
+                    })}
                   </div>
                 </div>
 

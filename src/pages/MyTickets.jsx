@@ -2,13 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  addTicketMessage,
   createTicket,
   deleteTicket,
   getTicketById,
   getTickets,
   updateTicket,
-  updateTicketStatus,
 } from '../services/tickets.service';
 import arrowDownIcon from '../assets/ArrowRight.svg';
 
@@ -25,8 +23,6 @@ export default function MyTickets() {
   const [ticketSuccess, setTicketSuccess] = useState('');
   const [createForm, setCreateForm] = useState({ subject: '', description: '' });
   const [editForm, setEditForm] = useState({ subject: '', description: '' });
-  const [addMessageText, setAddMessageText] = useState('');
-  const [statusValue, setStatusValue] = useState('open');
   const [nextTicketActionAt, setNextTicketActionAt] = useState(0);
 
   const toProfessionalTicketError = (error, fallbackMessage) => {
@@ -84,7 +80,6 @@ export default function MyTickets() {
           subject: ticket.subject || '',
           description: ticket.description || '',
         });
-        setStatusValue(ticket.status || 'open');
       } catch (error) {
         const fallbackFromList = tickets.find((item) => String(item.id) === String(selectedTicketId)) || null;
         if (fallbackFromList) {
@@ -93,7 +88,6 @@ export default function MyTickets() {
             subject: fallbackFromList.subject || '',
             description: fallbackFromList.description || '',
           });
-          setStatusValue(fallbackFromList.status || 'open');
         }
         setTicketError(error?.response?.data?.message || 'Unable to load ticket details.');
       } finally {
@@ -111,7 +105,6 @@ export default function MyTickets() {
       subject: ticket.subject || '',
       description: ticket.description || '',
     });
-    setStatusValue(ticket.status || 'open');
     setTicketError('');
   };
 
@@ -198,67 +191,6 @@ export default function MyTickets() {
       await loadTickets();
     } catch (error) {
       setTicketError(toProfessionalTicketError(error, 'Failed to delete ticket.'));
-    } finally {
-      setTicketBusy(false);
-    }
-  };
-
-  const handleAddMessage = async (e) => {
-    e.preventDefault();
-    if (Date.now() < nextTicketActionAt) {
-      const waitSeconds = Math.max(1, Math.ceil((nextTicketActionAt - Date.now()) / 1000));
-      setTicketError(`Too many attempts. Please wait ${waitSeconds}s before trying again.`);
-      setTicketSuccess('');
-      return;
-    }
-    if (!selectedTicketId) return;
-    const message = String(addMessageText || '').trim();
-    if (!message) {
-      setTicketError('Please write a message before sending.');
-      setTicketSuccess('');
-      return;
-    }
-    try {
-      setTicketBusy(true);
-      setTicketError('');
-      setTicketSuccess('');
-      const updated = await addTicketMessage({ ticketId: selectedTicketId, message });
-      setSelectedTicket(updated);
-      setAddMessageText('');
-      setTicketSuccess('Message added successfully.');
-      await loadTickets();
-    } catch (error) {
-      setTicketError(toProfessionalTicketError(error, 'Failed to add ticket message.'));
-    } finally {
-      setTicketBusy(false);
-    }
-  };
-
-  const handleUpdateStatus = async (e) => {
-    e.preventDefault();
-    if (Date.now() < nextTicketActionAt) {
-      const waitSeconds = Math.max(1, Math.ceil((nextTicketActionAt - Date.now()) / 1000));
-      setTicketError(`Too many attempts. Please wait ${waitSeconds}s before trying again.`);
-      setTicketSuccess('');
-      return;
-    }
-    if (!selectedTicketId) return;
-    const status = String(statusValue || '').trim();
-    if (!status) {
-      setTicketError('Please select a status.');
-      setTicketSuccess('');
-      return;
-    }
-    try {
-      setTicketBusy(true);
-      setTicketError('');
-      setTicketSuccess('');
-      const updated = await updateTicketStatus({ ticketId: selectedTicketId, status });
-      setSelectedTicket(updated);
-      setTicketSuccess('Ticket status updated successfully.');
-      await loadTickets();
-    } catch (error) {
-      setTicketError(toProfessionalTicketError(error, 'Failed to update ticket status.'));
     } finally {
       setTicketBusy(false);
     }
@@ -376,30 +308,33 @@ export default function MyTickets() {
                     </div>
                   </form>
 
-                  <form onSubmit={handleAddMessage} className="space-y-[8px]">
-                    <textarea
-                      rows={2}
-                      value={addMessageText}
-                      onChange={(e) => setAddMessageText(e.target.value)}
-                      placeholder="Add message"
-                      className="w-full border border-[#d0d7de] rounded-[6px] px-[10px] py-[8px] font-['Poppins'] text-[13px]"
-                    />
-                    <button type="submit" disabled={ticketBusy || Date.now() < nextTicketActionAt} className="bg-[#eea137] text-white px-[12px] py-[7px] rounded-[4px] text-[12px] font-['Poppins'] font-semibold disabled:opacity-60">Add Message</button>
-                  </form>
+                  <div className="space-y-[6px] pt-[4px] border-t border-[#e6e6e6]">
+                    <p className="font-['Poppins'] font-semibold text-[12px] text-[#0e1c47]">Status</p>
+                    <p className="font-['Poppins'] text-[13px] text-[#333] capitalize">{selectedTicket.status || '—'}</p>
+                  </div>
 
-                  <form onSubmit={handleUpdateStatus} className="space-y-[8px]">
-                    <select
-                      value={statusValue}
-                      onChange={(e) => setStatusValue(e.target.value)}
-                      className="w-full border border-[#d0d7de] rounded-[6px] px-[10px] py-[8px] font-['Poppins'] text-[13px]"
-                    >
-                      <option value="open">Open</option>
-                      <option value="pending">Pending</option>
-                      <option value="resolved">Resolved</option>
-                      <option value="closed">Closed</option>
-                    </select>
-                    <button type="submit" disabled={ticketBusy || Date.now() < nextTicketActionAt} className="bg-[#0e1c47] text-white px-[12px] py-[7px] rounded-[4px] text-[12px] font-['Poppins'] font-semibold disabled:opacity-60">Update Status</button>
-                  </form>
+                  <div className="space-y-[8px] pt-[4px] border-t border-[#e6e6e6]">
+                    <p className="font-['Poppins'] font-semibold text-[12px] text-[#0e1c47]">Support response</p>
+                    {selectedTicket.threadMessages?.length ? (
+                      <ul className="space-y-[8px] list-none p-0 m-0">
+                        {selectedTicket.threadMessages.map((m, idx) => (
+                          <li
+                            key={`${m.text}-${idx}`}
+                            className="border border-[#e6e6e6] rounded-[6px] px-[10px] py-[8px] font-['Poppins'] text-[13px] text-[#333] whitespace-pre-wrap"
+                          >
+                            {m.from ? (
+                              <span className="block text-[11px] text-[#666] capitalize mb-[4px]">{m.from}</span>
+                            ) : null}
+                            {m.text}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : selectedTicket.supportReply ? (
+                      <p className="border border-[#e6e6e6] rounded-[6px] px-[10px] py-[8px] font-['Poppins'] text-[13px] text-[#333] whitespace-pre-wrap">{selectedTicket.supportReply}</p>
+                    ) : (
+                      <p className="font-['Poppins'] text-[13px] text-[#666]">No response from support yet.</p>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <p className="font-['Poppins'] text-[13px] text-[#666]">Select a ticket to view details.</p>

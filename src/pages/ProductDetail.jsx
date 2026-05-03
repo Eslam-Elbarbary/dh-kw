@@ -1,6 +1,6 @@
 // Product Detail page component - exact Figma implementation
 // Based on Figma design - Product Detail Page
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import {
@@ -17,6 +17,7 @@ import {
   reportProduct,
   reportVendor,
 } from '../services/ratings-reports.service';
+import { addCompareProductId, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
 
 // Import assets
 import productImage1 from '../assets/4290b5299d7820aab27a24eef721fc6a3de6f994.png';
@@ -118,6 +119,8 @@ export default function ProductDetail() {
   const [reportTarget, setReportTarget] = useState('product');
   const [rateTarget, setRateTarget] = useState('product');
   const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [compareHint, setCompareHint] = useState('');
+  const compareHintTimerRef = useRef(null);
   const [feedbackError, setFeedbackError] = useState('');
   const [feedbackSuccess, setFeedbackSuccess] = useState('');
   const [favoriteBusy, setFavoriteBusy] = useState(false);
@@ -353,6 +356,30 @@ export default function ProductDetail() {
       setFavoriteBusy(false);
     }
   };
+
+  const showCompareHint = (text) => {
+    if (compareHintTimerRef.current) window.clearTimeout(compareHintTimerRef.current);
+    setCompareHint(text);
+    compareHintTimerRef.current = window.setTimeout(() => {
+      setCompareHint('');
+      compareHintTimerRef.current = null;
+    }, 6000);
+  };
+
+  const handleAddToCompare = () => {
+    if (!productData?.id) return;
+    const result = addCompareProductId(productData.id);
+    if (!result.ok && result.reason === 'full') {
+      showCompareHint(`You can compare up to ${MAX_COMPARE_ITEMS} products. Open Compare to remove one.`);
+      return;
+    }
+    if (result.added) showCompareHint('Added to your compare list.');
+    else showCompareHint('This product is already in your compare list.');
+  };
+
+  useEffect(() => () => {
+    if (compareHintTimerRef.current) window.clearTimeout(compareHintTimerRef.current);
+  }, []);
 
   const handleAddToCart = async () => {
     if (!productData?.id || cartBusy) return;
@@ -691,11 +718,24 @@ export default function ProductDetail() {
                     <HeartIcon className="relative shrink-0 size-[16px] sm:size-[18px]" />
                     {isFavorite ? 'Remove from Wishlist' : 'Add to Wishlist'}
                   </button>
-                  <button className="flex items-center gap-[6px] sm:gap-[8px] font-['Poppins'] font-normal text-[#666] text-[12px] sm:text-[14px] hover:text-[#0e1c47] transition-colors">
+                  <button
+                    type="button"
+                    onClick={handleAddToCompare}
+                    disabled={!productData?.id}
+                    className="flex items-center gap-[6px] sm:gap-[8px] font-['Poppins'] font-normal text-[#666] text-[12px] sm:text-[14px] hover:text-[#0e1c47] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     <CompareIcon className="relative shrink-0 size-[16px] sm:size-[18px]" />
                     Add to Compare
                   </button>
                 </div>
+                {compareHint ? (
+                  <p className="font-['Poppins'] text-[12px] sm:text-[13px] text-[#0e1c47]">
+                    {compareHint}{' '}
+                    <Link to="/compare" className="font-semibold text-[#eea137] hover:underline">
+                      View compare
+                    </Link>
+                  </p>
+                ) : null}
                 <div className="flex flex-wrap items-center gap-[8px] sm:gap-[12px]">
                   <span className="font-['Poppins'] font-normal text-[#666] text-[12px] sm:text-[14px] whitespace-nowrap">Share product:</span>
                   <div className="flex gap-[6px] sm:gap-[8px] items-center">

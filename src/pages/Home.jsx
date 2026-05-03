@@ -4,6 +4,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { getCategories, getProducts, getSliders, getVendors, resolveCountryId } from '../services/catalog.service';
+import { getDigitalProducts } from '../services/digitalProducts.service';
 
 // Import assets
 import arrowRightIcon from '../assets/ArrowRight.svg';
@@ -18,7 +19,6 @@ import productImage1 from '../assets/aea077bf04af7282f36991b02261f6144abee355 (1
 import productImage2 from '../assets/0e25c65909ff9d8fdace00ffb430dbc3cbf9784b.png';
 import productImage3 from '../assets/bb78ddf69f42960d1b738bd3b005bc00c143cfb6.png';
 import productImage4 from '../assets/95835fab043de209b7a372fca8d7f780a4915f2b.png';
-import blogImage from '../assets/335d3b72fbbc6db1573cca89bf153f548926e796.jpg';
 import heroBackgroundImage from '../assets/Frame 1984079875 (1).png';
 
 // Hero Banner Assets - using the provided hero background image
@@ -30,13 +30,6 @@ const imgSleekBlackTabletModernDigitalDevice1 = productImage2;
 const imgElectronicCollectionComputerMotherboardWithCpuCooler1 = productImage3;
 const imgLaptopTabletPcTvMobilePhone3D1 = productImage4;
 const imgArrowRight = arrowRightIcon;
-
-// Blogs Assets
-const imgBlogImage = blogImage;
-// Arrow circle icons - using ArrowRight with circle styling
-const imgArrowCircleRight = "data:image/svg+xml,%3Csvg width='32' height='32' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='16' cy='16' r='15' fill='none' stroke='%23ccc' stroke-width='2'/%3E%3Cpath d='M12 10l6 6-6 6' stroke='%23ccc' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E";
-const imgArrowCircleRightActive = "data:image/svg+xml,%3Csvg width='32' height='32' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23eea137' stroke='%23eea137' stroke-width='2'/%3E%3Cpath d='M12 10l6 6-6 6' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E";
-const imgArrowRightSmall = arrowRightIcon;
 
 // Features Assets
 const imgShipping = truckDeliveryIcon;
@@ -166,182 +159,6 @@ function ProductCategoryCard({ title, mainImage, mainImageAlt, linkText, subCate
   );
 }
 
-// Blogs Section Component with Carousel
-function BlogsSection() {
-  const [currentIndex, setCurrentIndex] = React.useState(0);
-  const [touchStart, setTouchStart] = React.useState(null);
-  const [touchEnd, setTouchEnd] = React.useState(null);
-  
-  const blogs = [
-    { id: 1, title: "Bose Sport Earbuds Wireless Earphones", date: "3 days age" },
-    { id: 2, title: "Bose Sport Earbuds Wireless Earphones", date: "3 days age" },
-    { id: 3, title: "Bose Sport Earbuds Wireless Earphones", date: "3 days age" },
-  ];
-
-  // Determine how many blogs to show based on screen size
-  const getVisibleCount = () => {
-    if (typeof window !== 'undefined') {
-      if (window.innerWidth >= 1536) return 4; // 2xl: 4 blogs
-      if (window.innerWidth >= 1280) return 4; // xl: 4 blogs
-      if (window.innerWidth >= 1024) return 3; // lg: 3 blogs
-      if (window.innerWidth >= 640) return 2;  // sm: 2 blogs
-      return 1; // mobile: 1 blog
-    }
-    return 1;
-  };
-
-  const [visibleCount, setVisibleCount] = React.useState(getVisibleCount());
-
-  React.useEffect(() => {
-    const handleResize = () => {
-      const newVisibleCount = getVisibleCount();
-      setVisibleCount(newVisibleCount);
-      const newMaxIndex = Math.max(0, blogs.length - newVisibleCount);
-      setCurrentIndex((prev) => Math.min(prev, newMaxIndex)); // Adjust index if needed
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [blogs.length]);
-
-  const maxIndex = Math.max(0, blogs.length - visibleCount);
-
-  const nextSlide = () => {
-    setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
-  };
-
-  const prevSlide = () => {
-    setCurrentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1));
-  };
-
-  const canGoPrev = currentIndex > 0;
-  const canGoNext = currentIndex < maxIndex;
-
-  // Touch handlers for swipe
-  const minSwipeDistance = 50;
-
-  const onTouchStart = (e) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const onTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe && canGoNext) {
-      nextSlide();
-    }
-    if (isRightSwipe && canGoPrev) {
-      prevSlide();
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-[20px] sm:gap-[24px] md:gap-[28px] lg:gap-[32px] xl:gap-[36px] 2xl:gap-[40px] items-center justify-center relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-[12px] sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[100px] 2xl:px-[120px]" data-node-id="35:772">
-      <div className="flex items-start justify-between relative shrink-0 w-full">
-        <div className="flex gap-[6px] sm:gap-[8px] items-center relative shrink-0">
-          <div className="h-[32px] sm:h-[36px] md:h-[40px] relative shrink-0 w-[8px] sm:w-[9px] md:w-[10px]">
-            <div className="absolute bg-[#eea137] inset-0 rounded-[4px]" />
-          </div>
-          <p className="capitalize font-['Poppins'] font-semibold leading-[20px] not-italic relative shrink-0 text-[#eea137] text-[16px] sm:text-[18px] md:text-[20px] lg:text-[22px] xl:text-[24px] 2xl:text-[26px]">
-            blogs
-          </p>
-        </div>
-        <div className="flex gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] items-start relative shrink-0">
-          <button
-            onClick={prevSlide}
-            disabled={!canGoPrev}
-            className={`flex items-center justify-center relative shrink-0 cursor-pointer transition-opacity ${
-              !canGoPrev ? 'opacity-20 cursor-not-allowed' : 'opacity-100 hover:opacity-80'
-            }`}
-            aria-label="Previous blog"
-          >
-            <div className="flex-none rotate-[180deg] scale-y-[-100%]">
-              <div className="relative size-[24px] sm:size-[28px] md:size-[32px]">
-                <img alt="" className="block max-w-none size-full" src={imgArrowCircleRight} />
-              </div>
-            </div>
-          </button>
-          <button
-            onClick={nextSlide}
-            disabled={!canGoNext}
-            className={`relative shrink-0 size-[24px] sm:size-[28px] md:size-[32px] cursor-pointer transition-opacity ${
-              !canGoNext ? 'opacity-20 cursor-not-allowed' : 'opacity-100 hover:opacity-80'
-            }`}
-            aria-label="Next blog"
-          >
-            <img alt="" className="block max-w-none size-full" src={imgArrowCircleRightActive} />
-          </button>
-        </div>
-      </div>
-      
-      {/* Carousel Container */}
-      <div 
-        className="relative w-full overflow-hidden"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
-        <div
-          className="flex transition-transform duration-500 ease-in-out gap-[12px] sm:gap-[8px]"
-          style={{
-            transform: `translateX(-${currentIndex * (100 / visibleCount)}%)`,
-          }}
-        >
-          {blogs.map((blog) => (
-            <div
-              key={blog.id}
-              className="bg-white border-[#e4e7e9] border-[0.928px] border-solid flex flex-col gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] items-center justify-center overflow-hidden px-[10px] sm:px-[12px] md:px-[14px] lg:px-[16px] py-[12px] sm:py-[16px] md:py-[20px] lg:py-[24px] relative rounded-[3.713px] shrink-0"
-              style={{
-                width: `${100 / visibleCount}%`,
-                minWidth: `${100 / visibleCount}%`,
-              }}
-            >
-              <div className="h-[140px] sm:h-[160px] md:h-[174px] relative rounded-[4px] shrink-0 w-full">
-                <img alt="" className="absolute inset-0 max-w-none object-cover pointer-events-none rounded-[4px] size-full" src={imgBlogImage} />
-              </div>
-              <div className="flex flex-col gap-[6px] sm:gap-[7px] md:gap-[7.425px] items-start relative shrink-0 w-full">
-                <p className="font-['Poppins'] font-normal leading-[18.563px] not-italic relative shrink-0 text-[#191c1f] text-[12px] sm:text-[13px] md:text-[14px] w-full whitespace-pre-wrap">
-                  {blog.title}
-                </p>
-                <div className="flex items-center justify-between relative shrink-0 w-full">
-                  <div className="flex gap-[3px] sm:gap-[3.5px] md:gap-[3.713px] items-start relative shrink-0">
-                    <p className="font-['Poppins'] font-semibold leading-[18.563px] not-italic relative shrink-0 text-[#0e1c47] text-[12px] sm:text-[13px] md:text-[14px]">
-                      read more
-                    </p>
-                    <div className="relative shrink-0 size-[16px] sm:size-[17px] md:size-[18px]">
-                      <img alt="" className="block max-w-none size-full" src={imgArrowRightSmall} />
-                    </div>
-                  </div>
-                  <p className="capitalize font-['Poppins'] font-medium leading-[18.563px] not-italic relative shrink-0 text-[#999] text-[10px] sm:text-[11px] md:text-[12px] text-right" dir="auto">
-                    {blog.date}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <Link to="/" className="flex gap-[8px] items-center px-0 py-[6px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
-        <p className="capitalize font-['Poppins'] font-semibold leading-[20px] not-italic relative shrink-0 text-[#0e1c47] text-[14px]">
-          Browse All blogs
-        </p>
-        <div className="relative shrink-0 size-[18px]">
-          <img alt="" className="block max-w-none size-full" src={imgArrowRightSmall} />
-        </div>
-      </Link>
-    </div>
-  );
-}
-
 // Features Section Component
 function FeaturesSection() {
   const features = [
@@ -397,7 +214,28 @@ export default function Home() {
   const [apiVendorProducts, setApiVendorProducts] = React.useState({});
   const [sliders, setSliders] = React.useState([]);
   const [loadingHomeData, setLoadingHomeData] = React.useState(true);
+  const [digitalPreview, setDigitalPreview] = React.useState([]);
+  const [digitalPreviewLoading, setDigitalPreviewLoading] = React.useState(true);
   const countryId = React.useMemo(() => resolveCountryId(1), []);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const loadDigital = async () => {
+      try {
+        setDigitalPreviewLoading(true);
+        const { items } = await getDigitalProducts({ countryId, page: 1, perPage: 8 });
+        if (!cancelled) setDigitalPreview(items);
+      } catch {
+        if (!cancelled) setDigitalPreview([]);
+      } finally {
+        if (!cancelled) setDigitalPreviewLoading(false);
+      }
+    };
+    loadDigital();
+    return () => {
+      cancelled = true;
+    };
+  }, [countryId]);
 
   React.useEffect(() => {
     const loadHomeData = async () => {
@@ -492,7 +330,7 @@ export default function Home() {
   });
 
   return (
-    <div className="bg-white relative w-full min-h-screen" data-name="home" data-node-id="35:497">
+    <div className="bg-white dark:bg-[#0f172a] relative w-full min-h-screen transition-colors duration-300" data-name="home" data-node-id="35:497">
       <div className="flex flex-col gap-[24px] sm:gap-[32px] md:gap-[40px] items-center relative w-full" data-node-id="35:498">
         {/* Hero Banner */}
         <div className="w-full" data-node-id="35:500">
@@ -534,10 +372,128 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Blogs Section */}
-        <div className="flex flex-col gap-[24px] sm:gap-[28px] md:gap-[32px] lg:gap-[36px] xl:gap-[40px] 2xl:gap-[44px] items-center relative w-full  py-[24px] sm:py-[32px] md:py-[40px] lg:py-[48px] xl:py-[56px] 2xl:py-[64px]">
-          <BlogsSection />
-        </div>
+        {(digitalPreviewLoading || digitalPreview.length > 0) && (
+          <section
+            className="w-full relative border-t border-[#e2e8f0] dark:border-[#1e293b] bg-gradient-to-b from-[#f1f5f9] via-white to-[#f8fafc] dark:from-[#0f172a] dark:via-[#0f172a] dark:to-[#0c1322] py-[28px] sm:py-[36px] md:py-[44px] transition-colors duration-300"
+            aria-labelledby="home-digital-heading"
+          >
+            <div
+              className="pointer-events-none absolute left-0 right-0 top-0 h-[3px] bg-gradient-to-r from-transparent via-[#eea137] to-transparent opacity-90"
+              aria-hidden
+            />
+            <div className="flex flex-col gap-[18px] sm:gap-[22px] items-stretch w-full px-[12px] sm:px-[16px] md:px-[24px] lg:px-[60px] xl:px-[80px] 2xl:px-[100px]">
+              <div className="w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto flex flex-col lg:flex-row lg:items-end lg:justify-between gap-[16px]">
+                <div className="flex gap-[12px] items-start max-w-[640px]">
+                  <span className="w-[5px] min-h-[48px] sm:min-h-[52px] bg-[#eea137] rounded-[3px] shrink-0 mt-[4px]" aria-hidden />
+                  <div>
+                    <div className="flex flex-wrap items-center gap-[8px] gap-y-[6px] mb-[6px]">
+                      <h2
+                        id="home-digital-heading"
+                        className="font-['Poppins'] font-bold text-[#0e1c47] dark:text-white text-[22px] sm:text-[26px] md:text-[28px] leading-tight tracking-tight"
+                      >
+                        Digital products
+                      </h2>
+                      <span className="font-['Poppins'] text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.14em] px-[10px] py-[4px] rounded-full bg-[#0e1c47] dark:bg-[#eea137] text-white dark:text-[#0e1c47]">
+                        No cart
+                      </span>
+                      <span className="font-['Poppins'] text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] px-[10px] py-[4px] rounded-full border border-[#cbd5e1] dark:border-[#475569] text-[#475569] dark:text-[#94a3b8]">
+                        Direct order
+                      </span>
+                    </div>
+                    <p className="font-['Poppins'] text-[13px] sm:text-[15px] text-[#64748b] dark:text-[#94a3b8] leading-relaxed">
+                      Gift cards and digital codes — delivered digitally. Complete your profile, then order on the product page (separate from regular checkout).
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-[10px] shrink-0">
+                  <Link
+                    to="/digital-categories"
+                    className="font-['Poppins'] font-semibold text-[14px] inline-flex items-center justify-center px-[18px] py-[11px] rounded-[8px] border-2 border-[#0e1c47] dark:border-[#94a3b8] text-[#0e1c47] dark:text-white hover:bg-[#0e1c47] hover:text-white dark:hover:bg-[#334155] transition-colors"
+                  >
+                    By category
+                  </Link>
+                  <Link
+                    to="/digital-products"
+                    className="font-['Poppins'] font-semibold text-[14px] inline-flex items-center justify-center gap-[8px] px-[20px] py-[11px] rounded-[8px] bg-[#0e1c47] dark:bg-[#eea137] text-white dark:text-[#0e1c47] hover:opacity-90 transition-opacity shadow-md"
+                  >
+                    Browse all digital
+                    <img alt="" className="size-[16px] brightness-0 invert dark:brightness-0 dark:invert-0 rotate-[-90deg]" src={imgArrowRight} />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto">
+                {digitalPreviewLoading ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-[14px] sm:gap-[18px]">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="rounded-[12px] border border-[#e2e8f0] dark:border-[#334155] bg-white/60 dark:bg-[#1e293b]/50 overflow-hidden animate-pulse"
+                      >
+                        <div className="aspect-[4/3] bg-[#e2e8f0] dark:bg-[#334155]" />
+                        <div className="p-4 space-y-2">
+                          <div className="h-3 bg-[#e2e8f0] dark:bg-[#334155] rounded w-4/5" />
+                          <div className="h-3 bg-[#e2e8f0] dark:bg-[#334155] rounded w-1/3" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-[14px] sm:gap-[18px] md:gap-[22px]">
+                    {digitalPreview.map((item) => (
+                      <Link
+                        key={item.id}
+                        to={`/digital-product/${item.id}`}
+                        className="group relative flex flex-col overflow-hidden rounded-[12px] border border-[#e2e8f0] dark:border-[#334155] bg-white dark:bg-[#1e293b] shadow-[0_2px_14px_rgba(14,28,71,0.07)] hover:shadow-[0_14px_32px_rgba(14,28,71,0.14)] hover:border-[#eea137]/45 dark:hover:border-[#eea137]/50 transition-all duration-300 hover:-translate-y-[3px]"
+                      >
+                        <div className="relative aspect-[4/3] bg-gradient-to-br from-[#eef2f9] via-[#f8fafc] to-[#e8edf5] dark:from-[#1a2744] dark:via-[#1e293b] dark:to-[#0f172a]">
+                          <span className="absolute top-[10px] left-[10px] z-[1] font-['Poppins'] text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-[8px] py-[3px] rounded-[6px] bg-[#0e1c47]/92 text-white shadow-sm">
+                            Digital
+                          </span>
+                          {item.image ? (
+                            <img
+                              src={item.image}
+                              alt=""
+                              className="absolute inset-0 w-full h-full object-contain p-[12px] sm:p-[14px] group-hover:scale-[1.04] transition-transform duration-300 ease-out"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center p-[16px]">
+                              <span className="font-['Poppins'] text-[11px] text-[#94a3b8] text-center">No image</span>
+                            </div>
+                          )}
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/[0.06] to-transparent dark:from-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
+                        <div className="flex flex-col flex-1 p-[12px] sm:p-[14px] gap-[8px] min-h-0">
+                          <p className="font-['Poppins'] font-semibold text-[#0f172a] dark:text-white text-[12px] sm:text-[13px] leading-snug line-clamp-2 min-h-[2.5rem]">
+                            {item.name}
+                          </p>
+                          {item.merchantName ? (
+                            <p className="font-['Poppins'] text-[11px] text-[#64748b] dark:text-[#94a3b8] line-clamp-1">
+                              {item.merchantName}
+                            </p>
+                          ) : null}
+                          <div className="mt-auto flex items-end justify-between gap-[8px] pt-[4px] border-t border-[#f1f5f9] dark:border-[#334155]">
+                            <p className="font-['Poppins'] font-bold text-[#059669] dark:text-[#34d399] text-[15px] sm:text-[16px] tabular-nums">
+                              {item.priceFormatted}
+                            </p>
+                            <span className="font-['Poppins'] font-semibold text-[11px] sm:text-[12px] text-[#0e1c47] dark:text-[#eea137] inline-flex items-center gap-[4px] shrink-0 group-hover:gap-[6px] transition-all">
+                              Order
+                              <img
+                                alt=""
+                                className="size-[14px] rotate-[-90deg] opacity-80 group-hover:translate-x-[2px] transition-transform"
+                                src={imgArrowRight}
+                              />
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Features Section */}
         <div className="w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto lg:px-[100px] xl:px-[120px] 2xl:px-[140px] md:px-[60px] sm:px-[40px] px-[12px] py-[24px] sm:py-[32px] md:py-[40px] lg:py-[48px] xl:py-[56px] 2xl:py-[64px]" data-node-id="35:814">
