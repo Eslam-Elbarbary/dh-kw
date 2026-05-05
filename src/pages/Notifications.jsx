@@ -1,9 +1,14 @@
 // Notifications page - professional design matching site's visual identity
 // Maintains colors, fonts, styles, and icons from the site
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import {
+  getNotifications,
+  markAllNotificationsAsRead,
+  markNotificationAsRead,
+} from '../services/notifications.service';
 
 // Icon Assets
 // Import assets
@@ -14,72 +19,91 @@ const imgArrowDown = arrowDownIcon;
 export default function Notifications() {
   const { isAuthenticated } = useAuth();
   const [selectedFilter, setSelectedFilter] = useState('All');
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  // Sample notifications data
-  const notifications = [
-    {
-      id: 1,
-      type: 'order',
-      title: 'Order Shipped',
-      message: 'Your order #ORD-2025-001 has been shipped and is on the way.',
-      time: '2 hours ago',
-      read: false,
-      link: '/track-order?orderId=ORD-2025-001'
-    },
-    {
-      id: 2,
-      type: 'promotion',
-      title: 'Special Offer',
-      message: 'Get 20% off on all electronics. Limited time offer!',
-      time: '5 hours ago',
-      read: false,
-      link: '/search?category=electronics'
-    },
-    {
-      id: 3,
-      type: 'order',
-      title: 'Order Delivered',
-      message: 'Your order #ORD-2024-120 has been delivered successfully.',
-      time: '1 day ago',
-      read: true,
-      link: '/track-order?orderId=ORD-2024-120'
-    },
-    {
-      id: 4,
-      type: 'account',
-      title: 'Profile Updated',
-      message: 'Your profile information has been successfully updated.',
-      time: '2 days ago',
-      read: true,
-      link: '/my-profile'
-    },
-    {
-      id: 5,
-      type: 'promotion',
-      title: 'New Arrivals',
-      message: 'Check out our latest collection of PC components.',
-      time: '3 days ago',
-      read: true,
-      link: '/pc-components'
-    },
-    {
-      id: 6,
-      type: 'order',
-      title: 'Payment Received',
-      message: 'Payment for order #ORD-2025-002 has been confirmed.',
-      time: '4 days ago',
-      read: true,
-      link: '/my-orders'
+  const toTitleCase = (value) => {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+  };
+
+  const filters = useMemo(() => {
+    const orderStatusFilters = [...new Set(
+      notifications
+        .filter((item) => item.type === 'order' && item.status)
+        .map((item) => toTitleCase(item.status))
+    )];
+    return ['All', 'Orders', ...orderStatusFilters];
+  }, [notifications]);
+
+  const filteredNotifications = useMemo(() => {
+    if (selectedFilter === 'All') return notifications;
+    if (selectedFilter === 'Orders') {
+      return notifications.filter((notif) => notif.type === 'order');
     }
-  ];
+    return notifications.filter(
+      (notif) => notif.type === 'order' && toTitleCase(notif.status) === selectedFilter
+    );
+  }, [notifications, selectedFilter]);
 
-  const filters = ['All', 'Order', 'Promotion', 'Account'];
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications]
+  );
 
-  const filteredNotifications = selectedFilter === 'All'
-    ? notifications
-    : notifications.filter(notif => notif.type === selectedFilter.toLowerCase());
+  useEffect(() => {
+    if (!filters.includes(selectedFilter)) {
+      setSelectedFilter('All');
+    }
+  }, [filters, selectedFilter]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const formatRelativeTime = (isoDate) => {
+    if (!isoDate) return 'Just now';
+    const ts = new Date(isoDate).getTime();
+    if (Number.isNaN(ts)) return 'Just now';
+    const diffMs = Date.now() - ts;
+    const minutes = Math.floor(diffMs / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days === 1 ? '' : 's'} ago`;
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      setNotifications([]);
+      setError('');
+      return;
+    }
+
+    let cancelled = false;
+    const loadNotifications = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const list = await getNotifications();
+        if (!cancelled) setNotifications(list);
+      } catch (err) {
+        if (!cancelled) {
+          setNotifications([]);
+          setError(err?.response?.data?.message || 'Could not load notifications right now.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadNotifications();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
 
   const getNotificationIcon = (type) => {
     switch (type) {
@@ -94,14 +118,32 @@ export default function Notifications() {
     }
   };
 
-  const markAsRead = (id) => {
-    // In a real app, this would update the notification state
-    console.log('Mark as read:', id);
+  const markAsRead = async (id) => {
+    if (!id) return;
+    setNotifications((prev) => prev.map((item) => (
+      item.id === id ? { ...item, read: true, readAt: item.readAt || new Date().toISOString() } : item
+    )));
+    try {
+      await markNotificationAsRead({ notificationId: id });
+    } catch {
+      // Keep optimistic update to avoid blocking user flow.
+    }
   };
 
-  const markAllAsRead = () => {
-    // In a real app, this would mark all notifications as read
-    console.log('Mark all as read');
+  const markAllAsRead = async () => {
+    if (unreadCount === 0 || actionLoading) return;
+    setActionLoading(true);
+    const nowIso = new Date().toISOString();
+    setNotifications((prev) => prev.map((item) => (
+      item.read ? item : { ...item, read: true, readAt: nowIso }
+    )));
+    try {
+      await markAllNotificationsAsRead();
+    } catch {
+      // Keep optimistic state. User can refresh if backend fails.
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   return (
@@ -140,9 +182,10 @@ export default function Notifications() {
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
-              className="font-['Poppins'] font-semibold text-[14px] sm:text-[16px] text-[#eea137] hover:text-[#d8902f] transition-colors"
+              disabled={actionLoading}
+              className="font-['Poppins'] font-semibold text-[14px] sm:text-[16px] text-[#eea137] hover:text-[#d8902f] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Mark all as read
+              {actionLoading ? 'Marking…' : 'Mark all as read'}
             </button>
           )}
         </div>
@@ -168,7 +211,15 @@ export default function Notifications() {
             </div>
 
             {/* Notifications List */}
-            {filteredNotifications.length > 0 ? (
+            {loading ? (
+              <div className="bg-white border border-[#e6e6e6] border-solid rounded-[4px] p-[32px] text-center">
+                <p className="font-['Poppins'] font-normal text-[15px] text-[#666]">Loading notifications...</p>
+              </div>
+            ) : error ? (
+              <div className="bg-white border border-[#e6e6e6] border-solid rounded-[4px] p-[32px] text-center">
+                <p className="font-['Poppins'] font-normal text-[15px] text-[#8e0909]">{error}</p>
+              </div>
+            ) : filteredNotifications.length > 0 ? (
               <div className="flex flex-col gap-[12px] sm:gap-[16px]">
                 {filteredNotifications.map((notification) => (
                   <Link
@@ -198,7 +249,7 @@ export default function Notifications() {
                           {notification.message}
                         </p>
                         <p className="font-['Poppins'] font-normal text-[12px] sm:text-[14px] text-[#999]">
-                          {notification.time}
+                          {formatRelativeTime(notification.createdAt)}
                         </p>
                       </div>
                     </div>

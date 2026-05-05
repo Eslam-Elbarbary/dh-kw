@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext';
 import React, { useState, useRef, useEffect } from 'react';
 import ThemeToggle from './ThemeToggle';
 import { getCategories, resolveCountryId } from '../services/catalog.service';
+import { getNotifications } from '../services/notifications.service';
 import { VENDOR_REGISTER_URL } from '../utils/vendorUrls';
 
 // Import assets
@@ -104,6 +105,7 @@ export default function Header() {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showNavCategoryDropdown, setShowNavCategoryDropdown] = useState(false);
   const [apiCategories, setApiCategories] = useState([]);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const dropdownRef = useRef(null);
@@ -123,6 +125,31 @@ export default function Header() {
 
     loadHeaderCategories();
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUnreadNotificationCount(0);
+      return;
+    }
+
+    let cancelled = false;
+    const loadNotificationCount = async () => {
+      try {
+        const list = await getNotifications();
+        if (!cancelled) {
+          const unread = list.filter((item) => !item.read).length;
+          setUnreadNotificationCount(unread);
+        }
+      } catch {
+        if (!cancelled) setUnreadNotificationCount(0);
+      }
+    };
+
+    loadNotificationCount();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
 
   const categories = React.useMemo(() => {
     const apiList = apiCategories.map((item) => ({
@@ -434,6 +461,11 @@ export default function Header() {
               <div className="absolute contents inset-0">
                 <img alt="" className="block max-w-none size-full" src={img6} />
               </div>
+              {unreadNotificationCount > 0 ? (
+                <span className="absolute -top-[8px] -right-[8px] min-w-[16px] h-[16px] px-[4px] rounded-full bg-[#eea137] text-white text-[10px] leading-[16px] text-center font-['Poppins'] font-semibold">
+                  {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                </span>
+              ) : null}
             </Link>
             <ThemeToggle />
             

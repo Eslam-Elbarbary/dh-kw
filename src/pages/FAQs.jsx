@@ -1,8 +1,9 @@
 // FAQs page - professional design matching site's visual identity
 // Maintains colors, fonts, styles, and icons from the site
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getFaqs } from '../services/faqs.service';
 
 // Icon Assets
 // Import assets
@@ -12,73 +13,39 @@ const imgArrowDown = arrowDownIcon;
 
 export default function FAQs() {
   const [openFaq, setOpenFaq] = useState(null);
-
-  const faqs = [
-    {
-      id: 1,
-      category: "General",
-      question: "What is your return policy?",
-      answer: "We offer a 30-day return policy for most items. Products must be in original condition with tags attached. To initiate a return, please visit your order history and select the item you wish to return."
-    },
-    {
-      id: 2,
-      category: "Shipping",
-      question: "How long does shipping take?",
-      answer: "Standard shipping typically takes 5-7 business days. Express shipping options are available for 2-3 business day delivery. International shipping times vary by location."
-    },
-    {
-      id: 3,
-      category: "Payment",
-      question: "What payment methods do you accept?",
-      answer: "We accept all major credit cards, debit cards, PayPal, Venmo, Amazon Pay, and cash on delivery. All transactions are secure and encrypted for your protection."
-    },
-    {
-      id: 4,
-      category: "Orders",
-      question: "How can I track my order?",
-      answer: "You can track your order by visiting the Track Order page and entering your order ID. You'll receive real-time updates on your order status, from placement to delivery."
-    },
-    {
-      id: 5,
-      category: "Account",
-      question: "How do I create an account?",
-      answer: "Click on 'Sign In' in the header, then select 'Sign Up'. Enter your details and email; we send a verification code to your email to activate your account."
-    },
-    {
-      id: 6,
-      category: "Products",
-      question: "Are your products authentic?",
-      answer: "Yes, all our products are 100% authentic. We source directly from authorized distributors and manufacturers to ensure authenticity and quality."
-    },
-    {
-      id: 7,
-      category: "Shipping",
-      question: "Do you ship internationally?",
-      answer: "Yes, we ship to many countries worldwide. Shipping costs and delivery times vary by destination. Check our shipping page for more details."
-    },
-    {
-      id: 8,
-      category: "Returns",
-      question: "How do I return an item?",
-      answer: "To return an item, log into your account, go to your order history, and select the item you want to return. Follow the return process and you'll receive a return label. Items must be in original condition."
-    },
-    {
-      id: 9,
-      category: "Payment",
-      question: "Is my payment information secure?",
-      answer: "Absolutely. We use industry-standard encryption and secure payment gateways to protect your financial information. We never store your full payment details."
-    },
-    {
-      id: 10,
-      category: "Account",
-      question: "I forgot my password. How do I reset it?",
-      answer: "Click on 'Sign In' and then 'Forgot Password'. Enter your registered email or phone number, and we'll send you instructions to reset your password."
-    }
-  ];
-
-  const categories = ["All", "General", "Shipping", "Payment", "Orders", "Account", "Products", "Returns"];
+  const [faqs, setFaqs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadFaqs = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const list = await getFaqs();
+        if (!cancelled) setFaqs(list);
+      } catch (err) {
+        if (!cancelled) {
+          setFaqs([]);
+          setError(err?.response?.data?.message || 'Could not load FAQs right now.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadFaqs();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const categories = useMemo(() => {
+    const unique = [...new Set(faqs.map((item) => item.category).filter(Boolean))];
+    return ["All", ...unique];
+  }, [faqs]);
 
   const filteredFaqs = selectedCategory === "All" 
     ? faqs 
@@ -143,43 +110,57 @@ export default function FAQs() {
         {/* FAQ List */}
         <div className="w-full">
           <div className="flex flex-col gap-[12px] sm:gap-[16px]">
-            {filteredFaqs.map((faq) => (
-              <div
-                key={faq.id}
-                className="bg-white border border-[#e6e6e6] border-solid rounded-[4px] overflow-hidden"
-              >
-                <button
-                  onClick={() => toggleFaq(faq.id)}
-                  className="w-full flex items-center justify-between p-[16px] sm:p-[20px] text-left hover:bg-[#f8f9fa] transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-[8px] mb-[4px]">
-                      <span className="font-['Poppins'] font-medium text-[12px] sm:text-[14px] text-[#eea137] bg-[#fff4e6] px-[8px] py-[2px] rounded">
-                        {faq.category}
-                      </span>
-                    </div>
-                    <h3 className="font-['Poppins'] font-semibold text-[16px] sm:text-[18px] text-[#0e1c47]">
-                      {faq.question}
-                    </h3>
-                  </div>
-                  <svg
-                    className={`w-[20px] h-[20px] text-[#666] transition-transform shrink-0 ${openFaq === faq.id ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {openFaq === faq.id && (
-                  <div className="px-[16px] sm:px-[20px] pb-[16px] sm:pb-[20px] border-t border-[#e6e6e6]">
-                    <p className="font-['Poppins'] font-normal text-[14px] sm:text-[16px] text-[#666] leading-relaxed pt-[12px]">
-                      {faq.answer}
-                    </p>
-                  </div>
-                )}
+            {loading ? (
+              <div className="bg-white border border-[#e6e6e6] border-solid rounded-[4px] p-[32px] text-center">
+                <p className="font-['Poppins'] font-normal text-[15px] text-[#666]">Loading FAQs...</p>
               </div>
-            ))}
+            ) : error ? (
+              <div className="bg-white border border-[#e6e6e6] border-solid rounded-[4px] p-[32px] text-center">
+                <p className="font-['Poppins'] font-normal text-[15px] text-[#8e0909]">{error}</p>
+              </div>
+            ) : filteredFaqs.length > 0 ? (
+              filteredFaqs.map((faq) => (
+                <div
+                  key={faq.id}
+                  className="bg-white border border-[#e6e6e6] border-solid rounded-[4px] overflow-hidden"
+                >
+                  <button
+                    onClick={() => toggleFaq(faq.id)}
+                    className="w-full flex items-center justify-between p-[16px] sm:p-[20px] text-left hover:bg-[#f8f9fa] transition-colors"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-[8px] mb-[4px]">
+                        <span className="font-['Poppins'] font-medium text-[12px] sm:text-[14px] text-[#eea137] bg-[#fff4e6] px-[8px] py-[2px] rounded">
+                          {faq.category}
+                        </span>
+                      </div>
+                      <h3 className="font-['Poppins'] font-semibold text-[16px] sm:text-[18px] text-[#0e1c47]">
+                        {faq.question}
+                      </h3>
+                    </div>
+                    <svg
+                      className={`w-[20px] h-[20px] text-[#666] transition-transform shrink-0 ${openFaq === faq.id ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {openFaq === faq.id && (
+                    <div className="px-[16px] sm:px-[20px] pb-[16px] sm:pb-[20px] border-t border-[#e6e6e6]">
+                      <p className="font-['Poppins'] font-normal text-[14px] sm:text-[16px] text-[#666] leading-relaxed pt-[12px]">
+                        {faq.answer}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="bg-white border border-[#e6e6e6] border-solid rounded-[4px] p-[32px] text-center">
+                <p className="font-['Poppins'] font-normal text-[15px] text-[#666]">No FAQs found.</p>
+              </div>
+            )}
           </div>
         </div>
 
