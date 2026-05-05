@@ -2,69 +2,79 @@
 // Based on Figma design
 
 import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { getSettings } from '../services/settings.service';
 
-// Import assets
 import logoImage from '../assets/websiteLogo.png';
-import linkedinIcon from '../assets/Icon-Linkedin.svg';
-import instagramIcon from '../assets/icon-instagram.svg';
-import twitterIcon from '../assets/Icon-Twitter.svg';
-import facebookIcon from '../assets/Icon-Facebook.svg';
 import layer1Image from '../assets/Layer 1.svg';
 
 // Logo - 3D gold "dh" logo (same as header)
 const imgUntitled111 = logoImage;
-// Social media icons
-const imgVector = linkedinIcon;
-const imgGroup = instagramIcon;
-const imgGroup1 = twitterIcon;
-const imgVector1 = facebookIcon;
 // Email icon - using inline SVG
 const imgEmailSvg = "data:image/svg+xml,%3Csvg width='12' height='9' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 1H1a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 5L1 2h10L6 5z' fill='%23f2f2f2'/%3E%3C/svg%3E";
 // Divider line - using inline SVG
 const imgLine4 = "data:image/svg+xml,%3Csvg width='100%25' height='1' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='0' x2='100%25' y2='0' stroke='%23ffffff' stroke-opacity='0.2'/%3E%3C/svg%3E";
 function IconLinkedin({ className }) {
   return (
-    <div className={className} data-name="Icon-Linkedin" data-node-id="1:533">
-      <div className="absolute inset-[12.5%_14.58%_14.58%_12.5%]" data-name="Vector" data-node-id="1:534">
-        <img alt="" className="block max-w-none size-full" src={imgVector} />
-      </div>
+    <div className={className} aria-hidden>
+      <svg className="size-[16px]" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M6.94 8.5A1.44 1.44 0 1 0 6.94 5.6a1.44 1.44 0 0 0 0 2.9ZM5.7 9.75h2.5V18H5.7V9.75Zm4.07 0h2.4v1.13h.03c.34-.63 1.15-1.3 2.37-1.3 2.53 0 3 1.66 3 3.81V18h-2.5v-3.94c0-.94-.02-2.15-1.3-2.15-1.3 0-1.5 1.02-1.5 2.08V18h-2.5V9.75Z" />
+      </svg>
     </div>
   );
 }
 
 function IconInstagram({ className }) {
   return (
-    <div className={className} data-name="icon-instagram" data-node-id="1:528">
-      <div className="absolute inset-[12.5%]" data-name="Group" data-node-id="1:529">
-        <div className="absolute inset-[-4.17%]">
-          <img alt="" className="block max-w-none size-full" src={imgGroup} />
-        </div>
-      </div>
+    <div className={className} aria-hidden>
+      <svg className="size-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+        <circle cx="12" cy="12" r="3.8" />
+        <circle cx="17.3" cy="6.7" r="1.1" fill="currentColor" stroke="none" />
+      </svg>
     </div>
   );
 }
 
 function IconTwitter({ className }) {
   return (
-    <div className={className} data-name="Icon-Twitter" data-node-id="1:524">
-      <div className="absolute inset-[0_8.09%_0_-20.83%]" data-name="Group" data-node-id="1:525">
-        <img alt="" className="block max-w-none size-full" src={imgGroup1} />
-      </div>
+    <div className={className} aria-hidden>
+      <svg className="size-[16px]" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M18.9 4.5h-2.3l-3.2 3.7-2.7-3.7H5.1l5.4 7.4-5.1 6h2.3l3.9-4.5 3.3 4.5h5.6l-5.6-7.8 5-5.6Zm-3.2 11.9-7-9.8h1.6l7 9.8h-1.6Z" />
+      </svg>
     </div>
   );
 }
 
 function IconFacebook({ className }) {
   return (
-    <div className={className} data-name="Icon-Facebook" data-node-id="1:521">
-      <div className="absolute inset-[12.5%_27.08%_12.5%_29.17%]" data-name="Vector" data-node-id="1:522">
-        <img alt="" className="block max-w-none size-full" src={imgVector1} />
-      </div>
+    <div className={className} aria-hidden>
+      <svg className="size-[16px]" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M13.6 20v-6h2l.3-2.3h-2.3v-1.5c0-.7.2-1.2 1.2-1.2h1.3V6.9c-.2 0-1-.1-1.9-.1-1.9 0-3.2 1.1-3.2 3.3v1.7H9V14h2v6h2.6Z" />
+      </svg>
     </div>
   );
 }
 
 export default function Footer() {
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadSettings = async () => {
+      try {
+        const data = await getSettings();
+        if (!cancelled) setSettings(data);
+      } catch {
+        if (!cancelled) setSettings(null);
+      }
+    };
+    loadSettings();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="bg-[#0e1c47] content-stretch flex flex-col gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] items-start justify-center pb-[16px] lg:pb-[20px] xl:pb-[24px] 2xl:pb-[28px] pt-[24px] sm:pt-[32px] md:pt-[40px] lg:pt-[48px] xl:pt-[56px] 2xl:pt-[64px] px-0 relative shrink-0 w-full overflow-hidden" data-name="Footer" data-node-id="35:5022">
       <div className="content-stretch flex flex-col items-start px-[12px] sm:px-[16px] md:px-[32px] lg:px-[50px] xl:px-[100px] 2xl:px-[140px] py-0 relative shrink-0 w-full max-w-full overflow-hidden" data-node-id="35:5023">
@@ -72,17 +82,32 @@ export default function Footer() {
           <div className="content-stretch flex flex-col gap-[20px] sm:gap-[22px] md:gap-[24px] items-start relative shrink-0 w-full md:w-auto md:flex-shrink-0 md:max-w-[380px] lg:max-w-[320px] xl:max-w-[360px]" data-node-id="35:5025">
             <div className="content-stretch flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] items-start relative shrink-0 w-full" data-node-id="35:5026">
               <Link to="/" className="relative shrink-0 size-[70px] sm:size-[80px] md:size-[90px] lg:size-[100px] xl:size-[110px] 2xl:size-[130px] cursor-pointer hover:opacity-80 transition-opacity" data-name="Untitled-1[1] 1" data-node-id="35:5027">
-                <img alt="Logo" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgUntitled111} />
+                <img
+                  alt={settings?.appName || 'Logo'}
+                  className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full"
+                  src={settings?.appLogo || imgUntitled111}
+                  onError={(e) => {
+                    e.currentTarget.src = imgUntitled111;
+                  }}
+                />
               </Link>
               <div className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[13px] sm:text-[14px] md:text-[15px] lg:text-[15px] xl:text-[16px] 2xl:text-[17px] text-white w-full max-w-[340px] lg:max-w-[320px] xl:max-w-[360px]" data-node-id="35:5028">
                 <p className="leading-[1.5] sm:leading-[1.45] lg:leading-[1.4] whitespace-pre-wrap">{`A premium store offering a curated selection from top international brands. `}</p>
               </div>
             </div>
-            <div className="content-stretch flex gap-[20px] sm:gap-[22px] md:gap-[24px] items-start relative shrink-0" data-node-id="35:5029">
-              <IconFacebook className="overflow-clip relative shrink-0 size-[20px] sm:size-[22px] md:size-[24px] cursor-pointer hover:opacity-80 transition-opacity" />
-              <IconTwitter className="overflow-clip relative shrink-0 size-[20px] sm:size-[22px] md:size-[24px] cursor-pointer hover:opacity-80 transition-opacity" />
-              <IconInstagram className="overflow-clip relative shrink-0 size-[20px] sm:size-[22px] md:size-[24px] cursor-pointer hover:opacity-80 transition-opacity" />
-              <IconLinkedin className="overflow-clip relative shrink-0 size-[20px] sm:size-[22px] md:size-[24px] cursor-pointer hover:opacity-80 transition-opacity" />
+            <div className="content-stretch flex gap-[10px] sm:gap-[12px] md:gap-[14px] items-start relative shrink-0" data-node-id="35:5029">
+              <a href={settings?.contactFacebook || '#'} target="_blank" rel="noreferrer" aria-label="Facebook">
+                <IconFacebook className="overflow-clip relative shrink-0 text-white/90 hover:text-white size-[34px] sm:size-[36px] md:size-[38px] rounded-full border border-white/20 hover:border-[#eea137]/70 hover:bg-white/10 flex items-center justify-center transition-all" />
+              </a>
+              <a href={settings?.contactTwitter || '#'} target="_blank" rel="noreferrer" aria-label="Twitter">
+                <IconTwitter className="overflow-clip relative shrink-0 text-white/90 hover:text-white size-[34px] sm:size-[36px] md:size-[38px] rounded-full border border-white/20 hover:border-[#eea137]/70 hover:bg-white/10 flex items-center justify-center transition-all" />
+              </a>
+              <a href={settings?.contactInstagram || '#'} target="_blank" rel="noreferrer" aria-label="Instagram">
+                <IconInstagram className="overflow-clip relative shrink-0 text-white/90 hover:text-white size-[34px] sm:size-[36px] md:size-[38px] rounded-full border border-white/20 hover:border-[#eea137]/70 hover:bg-white/10 flex items-center justify-center transition-all" />
+              </a>
+              <a href={settings?.contactLinkedin || '#'} target="_blank" rel="noreferrer" aria-label="LinkedIn">
+                <IconLinkedin className="overflow-clip relative shrink-0 text-white/90 hover:text-white size-[34px] sm:size-[36px] md:size-[38px] rounded-full border border-white/20 hover:border-[#eea137]/70 hover:bg-white/10 flex items-center justify-center transition-all" />
+              </a>
             </div>
           </div>
           <div className="content-stretch flex flex-col sm:flex-row md:flex-wrap lg:flex-nowrap gap-[20px] sm:gap-[24px] md:gap-[28px] lg:gap-[24px] xl:gap-[40px] 2xl:gap-[80px] items-start justify-start md:justify-start lg:justify-between xl:justify-center relative shrink-0 w-full md:w-auto md:flex-1 lg:flex-initial lg:flex-grow lg:max-w-[580px] xl:max-w-none" data-node-id="35:5034">
@@ -158,7 +183,7 @@ export default function Footer() {
         </div>
         <div className="content-stretch flex flex-col sm:flex-row gap-[8px] sm:gap-[12px] h-auto sm:h-[60px] items-center justify-center relative shrink-0 w-full max-w-full px-[12px] sm:px-0" data-name="Copyright - Desktop" data-node-id="35:5063">
           <p className="font-['Alexandria'] font-normal leading-[normal] relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[14px] md:text-[16px] lg:text-[17px] xl:text-[18px] text-center" data-node-id="I35:5063;1:246">
-            Copyright © 2025
+            Copyright © {new Date().getFullYear()}
           </p>
           <div className="relative shrink-0 h-[16px] sm:h-[20px] md:h-[22px] w-auto" data-name="Layer 1" data-node-id="I35:5063;1:279">
             <img alt="Payment methods" className="block h-full w-auto object-contain" src={layer1Image} />

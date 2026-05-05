@@ -1,9 +1,15 @@
 // Single digital order — GET /api/digital-orders/:id (separate from /track-order /api/orders).
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getDigitalOrderById } from '../services/digitalOrders.service';
+import {
+  extractDigitalOrderDeliveryItems,
+  getDigitalOrderById,
+  launchDigitalOrderPayment,
+  openPaymentGatewayPlaceholderTab,
+  payDigitalOrder,
+} from '../services/digitalOrders.service';
 import arrowDownIcon from '../assets/ArrowRight.svg';
 
 const imgArrowDown = arrowDownIcon;
@@ -33,47 +39,128 @@ export default function DigitalOrderDetail() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [paying, setPaying] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [copiedKey, setCopiedKey] = useState(null);
+  const [clipboardError, setClipboardError] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      if (!isAuthenticated) {
-        setLoading(false);
+  const loadOrder = useCallback(async ({ silent = false } = {}) => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      setOrder(null);
+      return;
+    }
+    if (!id) {
+      setError('Missing order id.');
+      setLoading(false);
+      return;
+    }
+    if (silent) setRefreshing(true);
+    else setLoading(true);
+    setError('');
+    try {
+      const data = await getDigitalOrderById({ orderId: id });
+      if (!data || typeof data !== 'object') {
         setOrder(null);
-        return;
+        setError('Order not found.');
+      } else {
+        setOrder(data);
       }
-      if (!id) {
-        setError('Missing order id.');
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      setError('');
-      try {
-        const data = await getDigitalOrderById({ orderId: id });
-        if (cancelled) return;
-        if (!data || typeof data !== 'object') {
-          setOrder(null);
-          setError('Order not found.');
-        } else {
-          setOrder(data);
-        }
-      } catch (e) {
-        if (cancelled) return;
-        setOrder(null);
-        setError(e?.response?.data?.message || e?.message || 'Failed to load digital order.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    load();
-    return () => {
-      cancelled = true;
-    };
+    } catch (e) {
+      setOrder(null);
+      setError(e?.response?.data?.message || e?.message || 'Failed to load digital order.');
+    } finally {
+      if (silent) setRefreshing(false);
+      else setLoading(false);
+    }
   }, [id, isAuthenticated]);
 
+  useEffect(() => {
+    loadOrder();
+  }, [loadOrder]);
+
   const items = toArray(order?.items);
+  const deliveryCredentials = useMemo(
+    () => (order ? extractDigitalOrderDeliveryItems(order) : []),
+    [order],
+  );
   const placed = order?.created_at ?? order?.date;
+  const paymentStatusText = String(order?.payment_status ?? order?.paymentStatus ?? '').toLowerCase();
+  const orderStatusText = String(order?.status || '').toLowerCase();
+  const isPendingSync =
+    paymentStatusText.includes('pending')
+    || paymentStatusText.includes('unpaid')
+    || orderStatusText.includes('pending');
+  const canPay =
+    !paying
+    && !paymentStatusText.includes('paid')
+    && !paymentStatusText.includes('success')
+    && !String(order?.status || '').toLowerCase().includes('cancel');
+
+  const handlePayDigitalOrder = async () => {
+    if (!order?.id || !canPay) return;
+    setActionError('');
+    setPaying(true);
+    const paymentTab = openPaymentGatewayPlaceholderTab();
+    try {
+      const result = await payDigitalOrder({ orderId: order.id });
+      const ok = launchDigitalOrderPayment({ payload: result, preOpenedTab: paymentTab });
+      if (!ok) {
+        paymentTab?.close();
+        setActionError('Payment started but no redirect link was returned. Please try again.');
+      } else {
+        // Gateway status sync can be asynchronous, so refresh soon after handoff.
+        window.setTimeout(() => {
+          loadOrder({ silent: true });
+        }, 4000);
+      }
+    } catch (e) {
+      paymentTab?.close();
+      setActionError(e?.response?.data?.message || 'Failed to start payment. Please try again.');
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated || !id || !isPendingSync) return undefined;
+    const interval = window.setInterval(() => {
+      loadOrder({ silent: true });
+    }, 15000);
+    return () => window.clearInterval(interval);
+  }, [id, isAuthenticated, isPendingSync, loadOrder]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !id) return undefined;
+    const handleFocus = () => {
+      loadOrder({ silent: true });
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadOrder({ silent: true });
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [id, isAuthenticated, loadOrder]);
+
+  const copyToClipboard = async (text, key) => {
+    const value = String(text || '').trim();
+    if (!value) return;
+    setClipboardError('');
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedKey(key);
+      window.setTimeout(() => setCopiedKey((current) => (current === key ? null : current)), 2000);
+    } catch {
+      setClipboardError('Could not copy automatically. Select the code and copy manually.');
+    }
+  };
 
   return (
     <div className="bg-white relative w-full min-h-screen">
@@ -134,6 +221,86 @@ export default function DigitalOrderDetail() {
 
         {isAuthenticated && !loading && order && !error ? (
           <div className="flex flex-col gap-[20px]">
+            {deliveryCredentials.length > 0 ? (
+              <div
+                className="rounded-[4px] border-2 border-emerald-200 bg-emerald-50/80 p-[20px] sm:p-[24px] shadow-sm"
+                role="region"
+                aria-label="Your digital codes"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-[12px] mb-[16px]">
+                  <div>
+                    <h2 className="font-['Poppins'] font-semibold text-[17px] text-[#065f46] mb-[4px]">
+                      Your digital code{deliveryCredentials.length > 1 ? 's' : ''}
+                    </h2>
+                    <p className="font-['Poppins'] text-[13px] text-[#047857] leading-relaxed max-w-[640px]">
+                      Save these details — you will need them to redeem your purchase. We also recommend storing them somewhere safe outside this page.
+                    </p>
+                    {deliveryCredentials[0]?.providerLabel ? (
+                      <p className="font-['Poppins'] text-[12px] text-[#059669] mt-[8px]">
+                        Provider:{' '}
+                        <span className="font-semibold">{deliveryCredentials[0].providerLabel}</span>
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                {clipboardError ? (
+                  <p className="font-['Poppins'] text-[13px] text-[#991b1b] mb-[12px]">{clipboardError}</p>
+                ) : null}
+                <ul className="flex flex-col gap-[14px]">
+                  {deliveryCredentials.map((row, idx) => {
+                    const serialKey = `serial-${idx}`;
+                    const pinKey = `pin-${idx}`;
+                    return (
+                      <li
+                        key={`${row.label}-${idx}`}
+                        className="rounded-[4px] border border-emerald-100 bg-white p-[16px] sm:p-[18px]"
+                      >
+                        <p className="font-['Poppins'] font-semibold text-[14px] text-[#0e1c47] mb-[12px]">
+                          {row.label}
+                        </p>
+                        <dl className="space-y-[10px] font-['Poppins'] text-[14px]">
+                          {row.serial ? (
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-[10px]">
+                              <dt className="text-[#666] shrink-0">Serial / code</dt>
+                              <dd className="flex flex-wrap items-center gap-[8px] justify-end min-w-0 w-full sm:w-auto">
+                                <code className="text-[13px] sm:text-[14px] font-semibold text-[#0e1c47] bg-[#f1f5f9] px-[12px] py-[8px] rounded-[4px] break-all tabular-nums tracking-wide">
+                                  {row.serial}
+                                </code>
+                                <button
+                                  type="button"
+                                  onClick={() => copyToClipboard(row.serial, serialKey)}
+                                  className="font-['Poppins'] text-[12px] font-semibold px-[12px] py-[8px] rounded-[4px] border border-[#0e1c47] text-[#0e1c47] hover:bg-[#0e1c47] hover:text-white transition-colors shrink-0"
+                                >
+                                  {copiedKey === serialKey ? 'Copied' : 'Copy'}
+                                </button>
+                              </dd>
+                            </div>
+                          ) : null}
+                          {row.pin ? (
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-[10px]">
+                              <dt className="text-[#666] shrink-0">PIN</dt>
+                              <dd className="flex flex-wrap items-center gap-[8px] justify-end min-w-0 w-full sm:w-auto">
+                                <code className="text-[13px] sm:text-[14px] font-semibold text-[#0e1c47] bg-[#f1f5f9] px-[12px] py-[8px] rounded-[4px] break-all tabular-nums">
+                                  {row.pin}
+                                </code>
+                                <button
+                                  type="button"
+                                  onClick={() => copyToClipboard(row.pin, pinKey)}
+                                  className="font-['Poppins'] text-[12px] font-semibold px-[12px] py-[8px] rounded-[4px] border border-[#0e1c47] text-[#0e1c47] hover:bg-[#0e1c47] hover:text-white transition-colors shrink-0"
+                                >
+                                  {copiedKey === pinKey ? 'Copied' : 'Copy'}
+                                </button>
+                              </dd>
+                            </div>
+                          ) : null}
+                        </dl>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : null}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
               <div className="border border-[#e6e6e6] rounded-[4px] p-[20px] sm:p-[24px] shadow-sm">
                 <h2 className="font-['Poppins'] font-semibold text-[16px] text-[#0e1c47] mb-[14px]">Status</h2>
@@ -158,6 +325,33 @@ export default function DigitalOrderDetail() {
                     {order.notes}
                   </p>
                 ) : null}
+                <div className="mt-[14px] pt-[12px] border-t border-[#f1f5f9] flex flex-col gap-[10px]">
+                  <div className="flex flex-wrap items-center gap-[8px]">
+                    <button
+                      type="button"
+                      onClick={handlePayDigitalOrder}
+                      disabled={!canPay}
+                      className={`font-['Poppins'] text-[13px] sm:text-[14px] font-semibold px-[14px] py-[10px] rounded-[4px] border transition-colors ${
+                        canPay
+                          ? 'bg-[#0e1c47] text-white border-[#0e1c47] hover:bg-[#152a5c]'
+                          : 'bg-[#e2e8f0] text-[#64748b] border-[#cbd5e1] cursor-not-allowed'
+                      }`}
+                    >
+                      {paying ? 'Starting payment…' : 'Pay digital order'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => loadOrder({ silent: true })}
+                      disabled={refreshing || loading}
+                      className="font-['Poppins'] text-[13px] sm:text-[14px] font-semibold px-[14px] py-[10px] rounded-[4px] border border-[#e2e8f0] text-[#0e1c47] hover:border-[#eea137] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {refreshing ? 'Refreshing…' : 'Refresh status'}
+                    </button>
+                  </div>
+                  {actionError ? (
+                    <p className="font-['Poppins'] text-[13px] text-[#8e0909]">{actionError}</p>
+                  ) : null}
+                </div>
               </div>
 
               <div className="border border-[#e6e6e6] rounded-[4px] p-[20px] sm:p-[24px] shadow-sm">

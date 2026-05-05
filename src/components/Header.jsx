@@ -8,6 +8,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import ThemeToggle from './ThemeToggle';
 import { getCategories, resolveCountryId } from '../services/catalog.service';
 import { getNotifications } from '../services/notifications.service';
+import { getSettings } from '../services/settings.service';
 import { VENDOR_REGISTER_URL } from '../utils/vendorUrls';
 
 // Import assets
@@ -106,6 +107,7 @@ export default function Header() {
   const [showNavCategoryDropdown, setShowNavCategoryDropdown] = useState(false);
   const [apiCategories, setApiCategories] = useState([]);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [settings, setSettings] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const dropdownRef = useRef(null);
@@ -124,6 +126,22 @@ export default function Header() {
     };
 
     loadHeaderCategories();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadSettings = async () => {
+      try {
+        const data = await getSettings();
+        if (!cancelled) setSettings(data);
+      } catch {
+        if (!cancelled) setSettings(null);
+      }
+    };
+    loadSettings();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -243,8 +261,8 @@ export default function Header() {
             </div>
             <p className="capitalize font-['Pacifico'] leading-[normal] not-italic relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[12px] md:text-[12px] lg:text-[12px] text-center" dir="auto">
               <span className="font-['Poppins'] font-semibold">{`Call us `}</span>
-              <span className="font-['Poppins'] font-sm hidden sm:inline">: +965 XXX XXXX</span>
-              <span className="font-['Poppins'] font-sm sm:hidden">: +965...</span>
+              <span className="font-['Poppins'] font-sm hidden sm:inline">: {settings?.contactPhone || '+965 XXX XXXX'}</span>
+              <span className="font-['Poppins'] font-sm sm:hidden">: {settings?.contactPhone ? `${String(settings.contactPhone).slice(0, 6)}...` : '+965...'}</span>
             </p>
           </div>
           <div className="hidden sm:flex h-[24px] items-center justify-center relative shrink-0 w-0">
@@ -361,7 +379,14 @@ export default function Header() {
       <div className="bg-[#0e1c47]   dark:bg-[#0a1529] content-stretch flex flex-col items-start px-[12px]  sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[120px] 2xl:px-[140px] py-[0] sm:py-[12px] md:py-[14px] lg:py-[14px] xl:py-[20px] 2xl:py-[22px] relative shrink-0 w-full max-w-full overflow-visible transition-colors duration-300"   style={{ paddingTop: '0px'  ,paddingBottom: '0px'}}>
         <div className="content-stretch flex flex-col sm:flex-row items-center justify-between relative shrink-0 w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto gap-[12px] sm:gap-[14px] lg:gap-[16px] xl:gap-[24px]">
           <Link to="/" className="relative shrink-0 size-[36px] sm:size-[38px] md:size-[42px] lg:size-[42px] xl:size-[52px] 2xl:size-[56px] self-start sm:self-center cursor-pointer hover:opacity-80 transition-opacity">
-            <img alt="Logo" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgUntitled111} />
+            <img
+              alt={settings?.appName || 'Logo'}
+              className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full"
+              src={settings?.appLogo || imgUntitled111}
+              onError={(e) => {
+                e.currentTarget.src = imgUntitled111;
+              }}
+            />
           </Link>
           <form 
             onSubmit={(e) => {

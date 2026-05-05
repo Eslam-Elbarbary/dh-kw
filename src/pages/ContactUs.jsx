@@ -3,6 +3,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getSettings } from '../services/settings.service';
+import { submitContactRequest } from '../services/contact.service';
 
 // Icon Assets
 // Import assets
@@ -23,6 +25,9 @@ export default function ContactUs() {
     message: ''
   });
   const [successOpen, setSuccessOpen] = useState(false);
+  const [settings, setSettings] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const continueBtnRef = useRef(null);
 
   const closeSuccess = useCallback(() => {
@@ -44,6 +49,22 @@ export default function ContactUs() {
     };
   }, [successOpen, closeSuccess]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadSettings = async () => {
+      try {
+        const data = await getSettings();
+        if (!cancelled) setSettings(data);
+      } catch {
+        if (!cancelled) setSettings(null);
+      }
+    };
+    loadSettings();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -52,16 +73,31 @@ export default function ContactUs() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccessOpen(true);
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      subject: '',
-      message: ''
-    });
+    setSubmitError('');
+    try {
+      setSubmitting(true);
+      await submitContactRequest(formData);
+      setSuccessOpen(true);
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        subject: '',
+        message: ''
+      });
+    } catch (err) {
+      const responseData = err?.response?.data;
+      const message =
+        responseData?.message
+        || (Array.isArray(responseData?.errors?.email) ? responseData.errors.email[0] : '')
+        || (Array.isArray(responseData?.errors?.name) ? responseData.errors.name[0] : '')
+        || 'Could not send your message right now. Please try again.';
+      setSubmitError(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -147,7 +183,7 @@ export default function ContactUs() {
               Phone
             </h3>
             <p className="font-['Poppins'] font-normal text-[14px] sm:text-[16px] text-[#666]">
-              +965 XXX XXXX
+              {settings?.contactPhone || '+965 XXX XXXX'}
             </p>
             <p className="font-['Poppins'] font-normal text-[14px] sm:text-[16px] text-[#666] mt-[4px]">
               Mon - Fri: 9:00 AM - 6:00 PM
@@ -162,7 +198,7 @@ export default function ContactUs() {
               Email
             </h3>
             <p className="font-['Poppins'] font-normal text-[14px] sm:text-[16px] text-[#666]">
-              support@example.com
+              {settings?.contactEmail || 'support@example.com'}
             </p>
             <p className="font-['Poppins'] font-normal text-[14px] sm:text-[16px] text-[#666] mt-[4px]">
               We'll respond within 24 hours
@@ -262,11 +298,15 @@ export default function ContactUs() {
                   className="w-full px-[16px] py-[12px] border border-[#e6e6e6] rounded-[4px] font-['Poppins'] font-normal text-[14px] sm:text-[16px] text-[#0e1c47] focus:outline-none focus:border-[#eea137] transition-colors resize-none"
                 />
               </div>
+              {submitError ? (
+                <p className="font-['Poppins'] text-[14px] text-[#8e0909]">{submitError}</p>
+              ) : null}
               <button
                 type="submit"
-                className="bg-[#eea137] text-white font-['Poppins'] font-semibold px-[32px] py-[14px] rounded-[4px] hover:bg-[#d8902f] transition-colors text-[16px] sm:text-[18px]"
+                disabled={submitting}
+                className="bg-[#eea137] text-white font-['Poppins'] font-semibold px-[32px] py-[14px] rounded-[4px] hover:bg-[#d8902f] transition-colors text-[16px] sm:text-[18px] disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Send Message
+                {submitting ? 'Sending...' : 'Send Message'}
               </button>
             </form>
           </div>

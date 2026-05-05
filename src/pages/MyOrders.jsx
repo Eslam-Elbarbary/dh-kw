@@ -17,6 +17,11 @@ import {
   isOrderRateable,
 } from '../services/orders.service';
 import { getMyDigitalOrders } from '../services/digitalOrders.service';
+import {
+  extractDigitalOrderPaymentUrl,
+  openPaymentGatewayPlaceholderTab as openDigitalPaymentPlaceholderTab,
+  payDigitalOrder,
+} from '../services/digitalOrders.service';
 
 // Icon Assets
 // Import assets
@@ -299,6 +304,31 @@ export default function MyOrders() {
       setActionLoadingByOrderId((prev) => ({ ...prev, [orderId]: true }));
       const result = await payOrder({ orderId, paymentMethod });
       const paymentUrl = extractOrderPaymentUrl(result);
+      if (paymentUrl) {
+        navigateToPaymentGateway(paymentUrl, paymentTab);
+        return;
+      }
+      paymentTab?.close();
+      setActionBanner({
+        message: 'Payment started but no redirect link was returned. Try again or contact support.',
+        variant: 'error',
+      });
+    } catch (err) {
+      paymentTab?.close();
+      setActionBanner({ message: resolveOrderActionErrorMessage(err), variant: 'error' });
+    } finally {
+      setActionLoadingByOrderId((prev) => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  const handlePayDigitalOrder = async (orderId, orderStatus, paymentStatus) => {
+    if (!isOrderPayableByStatus(orderStatus, paymentStatus)) return;
+    const paymentTab = openDigitalPaymentPlaceholderTab();
+    try {
+      setActionBanner(null);
+      setActionLoadingByOrderId((prev) => ({ ...prev, [orderId]: true }));
+      const result = await payDigitalOrder({ orderId });
+      const paymentUrl = extractDigitalOrderPaymentUrl(result);
       if (paymentUrl) {
         navigateToPaymentGateway(paymentUrl, paymentTab);
         return;
@@ -1035,6 +1065,22 @@ export default function MyOrders() {
                           >
                             View order details
                           </Link>
+                          <button
+                            type="button"
+                            onClick={() => handlePayDigitalOrder(order.id, order.status, order.paymentStatus)}
+                            disabled={
+                              Boolean(actionLoadingByOrderId[order.id])
+                              || !isOrderPayableByStatus(order.status, order.paymentStatus)
+                            }
+                            title={payButtonsTitle(order.status, order.paymentStatus)}
+                            className={`font-['Poppins'] text-[12px] sm:text-[13px] px-[10px] py-[6px] rounded-[4px] border border-[#e6e6e6] transition-colors ${
+                              isOrderPayableByStatus(order.status, order.paymentStatus)
+                                ? 'hover:border-[#eea137]'
+                                : 'opacity-50 cursor-not-allowed'
+                            } disabled:opacity-50`}
+                          >
+                            Pay now
+                          </button>
                         </div>
                       </div>
                     </div>
