@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { verifyEmailRequest, resendVerificationCodeRequest } from '../services/auth.service';
 
 const RESEND_SECONDS = 30;
@@ -211,6 +211,12 @@ export default function VerificationCode() {
         <button onClick={handleResend} disabled={resending || resendCooldown > 0} className="text-[#0e1c47] font-['Poppins'] font-medium text-[14px] underline disabled:opacity-60 disabled:cursor-not-allowed">
           {resending ? 'Resending...' : resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
         </button>
+        <Link
+          to="/sign-in"
+          className="w-full text-center text-[#64748b] hover:text-[#0e1c47] font-['Poppins'] text-[14px] underline transition-colors"
+        >
+          Back to sign in
+        </Link>
       </div>
     </div>
   );

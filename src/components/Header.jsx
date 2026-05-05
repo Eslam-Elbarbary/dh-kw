@@ -95,6 +95,7 @@ function ArrowSwapHorizontal({ className }) {
 }
 
 export default function Header() {
+  const SHOW_REPORT_FRAUD = false;
   const { isAuthenticated, user, logout } = useAuth();
   const { cartItemsCount } = useCart();
   const navigate = useNavigate();
@@ -257,34 +258,38 @@ export default function Header() {
               Help Center
             </p>
           </Link>
-          <div className="hidden sm:flex h-[24px] items-center justify-center relative shrink-0 w-0">
-            <div className="flex-none rotate-[270deg]">
-              <div className="h-0 relative w-[24px]">
-                <div className="absolute inset-[-0.5px_0_0_0]">
-                  <img alt="" className="block max-w-none size-full" src={imgLine1} />
+          {SHOW_REPORT_FRAUD ? (
+            <>
+              <div className="hidden sm:flex h-[24px] items-center justify-center relative shrink-0 w-0">
+                <div className="flex-none rotate-[270deg]">
+                  <div className="h-0 relative w-[24px]">
+                    <div className="absolute inset-[-0.5px_0_0_0]">
+                      <img alt="" className="block max-w-none size-full" src={imgLine1} />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-          <Link to="/report-fraud" className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
-            <div className="relative shrink-0 size-[16px]">
-              <div className="absolute contents inset-0">
-                <img alt="" className="block max-w-none size-full" src={img2} />
-              </div>
-            </div>
-            <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[12px] md:text-[12px] lg:text-[12px] text-center hidden lg:block" dir="auto">
-              Report Fraud
-            </p>
-          </Link>
-          <div className="hidden sm:flex h-[24px] items-center justify-center relative shrink-0 w-0">
-            <div className="flex-none rotate-[270deg]">
-              <div className="h-0 relative w-[24px]">
-                <div className="absolute inset-[-0.5px_0_0_0]">
-                  <img alt="" className="block max-w-none size-full" src={imgLine1} />
+              <Link to="/report-fraud" className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
+                <div className="relative shrink-0 size-[16px]">
+                  <div className="absolute contents inset-0">
+                    <img alt="" className="block max-w-none size-full" src={img2} />
+                  </div>
+                </div>
+                <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[12px] md:text-[12px] lg:text-[12px] text-center hidden lg:block" dir="auto">
+                  Report Fraud
+                </p>
+              </Link>
+              <div className="hidden sm:flex h-[24px] items-center justify-center relative shrink-0 w-0">
+                <div className="flex-none rotate-[270deg]">
+                  <div className="h-0 relative w-[24px]">
+                    <div className="absolute inset-[-0.5px_0_0_0]">
+                      <img alt="" className="block max-w-none size-full" src={imgLine1} />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </>
+          ) : null}
           <a
             href={VENDOR_REGISTER_URL}
             target="_blank"

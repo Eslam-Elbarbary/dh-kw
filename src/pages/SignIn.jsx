@@ -33,9 +33,19 @@ export default function SignIn() {
 
   const getReadableError = (err) => {
     const responseData = err?.response?.data;
+    const rawMessage = String(responseData?.message || '').trim();
+    const normalizedMessage = rawMessage.toLowerCase();
 
-    if (responseData?.message) {
-      return responseData.message;
+    if (
+      normalizedMessage.includes('credentials do not match')
+      || normalizedMessage.includes('invalid email or password')
+      || err?.response?.status === 401
+    ) {
+      return 'The email or password you entered is incorrect. Please try again.';
+    }
+
+    if (rawMessage) {
+      return rawMessage;
     }
 
     if (typeof responseData?.error === 'string') {
@@ -47,14 +57,6 @@ export default function SignIn() {
       if (Array.isArray(firstErrorGroup) && firstErrorGroup[0]) {
         return firstErrorGroup[0];
       }
-    }
-
-    if (err?.response?.status === 401) {
-      return 'Invalid email or password.';
-    }
-
-    if (responseData?.message === 'These credentials do not match our records.') {
-      return 'Email or password is incorrect. If you just changed password, use the new one exactly and try again.';
     }
 
     if (!err?.response) {
