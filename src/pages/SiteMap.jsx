@@ -16,7 +16,6 @@ export default function SiteMap() {
       title: "Shop",
       links: [
         { name: "Home", path: "/" },
-        { name: "PC Components", path: "/pc-components" },
         { name: "Digital products", path: "/digital-products" },
         { name: "Digital categories", path: "/digital-categories" },
         { name: "Search Products", path: "/search" },
@@ -46,8 +45,7 @@ export default function SiteMap() {
       links: [
         { name: "Help Center", path: "/help-center" },
         { name: "Contact Us", path: "/contact-us" },
-        { name: "FAQs", path: "/faqs" },
-        { name: "Report Fraud", path: "/report-fraud" }
+        { name: "FAQs", path: "/faqs" }
       ]
     },
     {
@@ -146,12 +144,6 @@ export default function SiteMap() {
               className="bg-white text-[#0e1c47] font-['Poppins'] font-semibold px-[20px] sm:px-[24px] py-[10px] sm:py-[12px] rounded-[4px] hover:bg-[#eea137] hover:text-white transition-colors"
             >
               Home
-            </Link>
-            <Link
-              to="/pc-components"
-              className="bg-white text-[#0e1c47] font-['Poppins'] font-semibold px-[20px] sm:px-[24px] py-[10px] sm:py-[12px] rounded-[4px] hover:bg-[#eea137] hover:text-white transition-colors"
-            >
-              PC Components
             </Link>
             <Link
               to="/shopping-cart"

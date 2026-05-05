@@ -274,12 +274,6 @@ export default function HelpCenter() {
               <span>Call Us: +965 XXX XXXX</span>
             </a>
             <Link
-              to="/report-fraud"
-              className="bg-transparent border-2 border-white text-white font-['Poppins'] font-semibold px-[24px] sm:px-[32px] py-[12px] sm:py-[14px] rounded-[4px] hover:bg-white hover:text-[#0e1c47] transition-colors"
-            >
-              Report Fraud
-            </Link>
-            <Link
               to="/my-tickets"
               className="bg-transparent border-2 border-white text-white font-['Poppins'] font-semibold px-[24px] sm:px-[32px] py-[12px] sm:py-[14px] rounded-[4px] hover:bg-white hover:text-[#0e1c47] transition-colors"
             >
