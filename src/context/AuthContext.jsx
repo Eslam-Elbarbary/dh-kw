@@ -8,6 +8,15 @@ export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
+  const resolveEmailVerified = (source) => {
+    if (!source || typeof source !== 'object') return false;
+    const directBoolean = source?.is_email_verified ?? source?.is_verified ?? source?.verified;
+    if (typeof directBoolean === 'boolean') return directBoolean;
+    const directNumber = Number(directBoolean);
+    if (Number.isFinite(directNumber)) return directNumber === 1;
+    return Boolean(source?.email_verified_at || source?.verified_at);
+  };
+
   const normalizeUser = (rawProfile) => {
     const source = rawProfile?.user || rawProfile?.data?.user || rawProfile?.data || rawProfile || {};
     const fullName = String(source?.name || '').trim();
@@ -25,6 +34,7 @@ export function AuthProvider({ children }) {
       email: source?.email || '',
       phone: source?.phone || '',
       country_id: source?.country_id ?? source?.countryId ?? null,
+      isEmailVerified: resolveEmailVerified(source),
     };
   };
 
@@ -37,6 +47,11 @@ export function AuthProvider({ children }) {
     const profileCountryId = normalizedProfile?.country_id ?? normalizedProfile?.countryId;
     if (profileCountryId) {
       localStorage.setItem('selectedCountryId', String(profileCountryId));
+    }
+    if (!normalizedProfile?.isEmailVerified && normalizedProfile?.email) {
+      localStorage.setItem('pendingVerificationEmail', String(normalizedProfile.email).trim().toLowerCase());
+    } else {
+      localStorage.removeItem('pendingVerificationEmail');
     }
   };
 
@@ -88,6 +103,11 @@ export function AuthProvider({ children }) {
     setIsAuthenticated(true);
     localStorage.setItem('user', JSON.stringify(normalizedProfile));
     localStorage.setItem('isAuthenticated', 'true');
+    if (!normalizedProfile?.isEmailVerified && normalizedProfile?.email) {
+      localStorage.setItem('pendingVerificationEmail', String(normalizedProfile.email).trim().toLowerCase());
+    } else {
+      localStorage.removeItem('pendingVerificationEmail');
+    }
   };
 
   const logout = async () => {

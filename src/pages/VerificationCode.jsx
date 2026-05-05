@@ -16,6 +16,7 @@ export default function VerificationCode() {
     const raw = localStorage.getItem('pendingVerificationEmail');
     return raw ? String(raw).trim().toLowerCase() : '';
   }, []);
+  const [email, setEmail] = useState(pendingEmail);
   const inputRefs = useRef([]);
 
   const handleCodeInput = (index, value) => {
@@ -55,8 +56,9 @@ export default function VerificationCode() {
     setError('');
     setSuccess('');
 
-    if (!pendingEmail) {
-      setError('Missing email for verification. Please sign up again.');
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError('Please enter your email to verify.');
       return;
     }
 
@@ -68,12 +70,29 @@ export default function VerificationCode() {
 
     try {
       setLoading(true);
-      await verifyEmailRequest({ email: pendingEmail.trim().toLowerCase(), code });
+      const storedUser = localStorage.getItem('user');
+      let userValue = normalizedEmail;
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          userValue = String(parsed?.name || parsed?.full_name || parsed?.firstName || parsed?.first_name || normalizedEmail).trim() || normalizedEmail;
+        } catch {
+          userValue = normalizedEmail;
+        }
+      }
+
+      await verifyEmailRequest({ email: normalizedEmail, code, user: userValue });
       localStorage.removeItem('pendingVerificationEmail');
       setSuccess('Email verified successfully. Please sign in.');
       navigate('/sign-in');
     } catch (err) {
       const message = err?.response?.data?.message || 'Verification failed. Please try again.';
+      if (message.toLowerCase().includes('already verified')) {
+        localStorage.removeItem('pendingVerificationEmail');
+        setSuccess('Your account is already verified. Please sign in.');
+        navigate('/sign-in');
+        return;
+      }
       if (message.toLowerCase().includes('invalid verification code')) {
         setError('Invalid verification code. Please tap "Resend code" and use the latest code only.');
         return;
@@ -92,14 +111,16 @@ export default function VerificationCode() {
       return;
     }
 
-    if (!pendingEmail) {
-      setError('Missing email for verification. Please sign up again.');
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError('Please enter your email to resend the code.');
       return;
     }
 
     try {
       setResending(true);
-      await resendVerificationCodeRequest({ email: pendingEmail });
+      await resendVerificationCodeRequest({ email: normalizedEmail });
+      localStorage.setItem('pendingVerificationEmail', normalizedEmail);
       setSuccess('Verification code sent again.');
       setResendCooldown(RESEND_SECONDS);
     } catch (err) {
@@ -143,11 +164,16 @@ export default function VerificationCode() {
               Enter the verification code sent to your email
             </p>
           </div>
-          {pendingEmail ? (
-            <div className="flex flex-col font-['Poppins'] font-normal justify-center relative shrink-0 text-[#666] text-[14px] whitespace-nowrap">
-              <p className="leading-[normal]" dir="auto">{pendingEmail}</p>
-            </div>
-          ) : null}
+          <div className="content-stretch flex items-start relative shrink-0 w-full">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value.toLowerCase())}
+              autoComplete="email"
+              className="border border-[#d7dbe0] border-solid flex h-[48px] items-start justify-center p-[12px] rounded-[6px] font-['Poppins'] font-normal text-[#111827] text-[15px] w-full placeholder:text-[#9ca3af] focus:outline-none focus:border-[#0e1c47] focus:ring-2 focus:ring-[#0e1c47]/10 transition-colors"
+              placeholder="Enter your email"
+            />
+          </div>
         </div>
         <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full" data-node-id="35:4798">
           <div className="flex flex-col font-['Poppins'] font-semibold h-[32px] justify-center leading-[0] not-italic relative shrink-0 text-[#121212] text-[18px] w-full" data-node-id="35:4799">

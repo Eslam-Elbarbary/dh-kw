@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
-import { registerRequest } from '../services/auth.service';
+import { registerRequest, resendVerificationCodeRequest } from '../services/auth.service';
 import { getCountries } from '../services/meta.service';
 import { combineDialAndNationalPhone } from '../utils/phoneE164';
 
@@ -44,6 +44,7 @@ export default function SignUp() {
   const [countryId, setCountryId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -72,6 +73,7 @@ export default function SignUp() {
 
   const handleSignUp = async () => {
     setError('');
+    setSuccess('');
 
     if (!firstName.trim() || !lastName.trim() || !phone.trim() || !email.trim() || !password.trim() || !passwordConfirmation.trim() || !countryId) {
       setError('Please fill all required fields.');
@@ -95,8 +97,12 @@ export default function SignUp() {
         countryId: Number(countryId),
       });
       localStorage.setItem('selectedCountryId', String(countryId));
-      localStorage.setItem('pendingVerificationEmail', email.trim().toLowerCase());
-      navigate('/verification');
+      const normalizedEmail = email.trim().toLowerCase();
+      localStorage.setItem('pendingVerificationEmail', normalizedEmail);
+      localStorage.removeItem('pendingVerificationPhone');
+      sessionStorage.setItem('postSignupPendingEmail', normalizedEmail);
+      await resendVerificationCodeRequest({ email: normalizedEmail });
+      setSuccess('Account created successfully. You can verify your email now or do it later from sign in.');
     } catch (err) {
       const message = err?.response?.data?.message || 'Sign up failed. Please try again.';
       setError(message);
@@ -296,6 +302,9 @@ export default function SignUp() {
           {error ? (
             <div className="text-[#8e0909] text-[14px] font-['Poppins'] w-full">{error}</div>
           ) : null}
+          {success ? (
+            <div className="text-[#00a651] text-[14px] font-['Poppins'] w-full">{success}</div>
+          ) : null}
           <button onClick={handleSignUp} disabled={loading} className="bg-[#0e1c47] content-stretch cursor-pointer flex h-[56px] items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed" data-name="btn-01" data-node-id="35:4791">
             <div className="capitalize flex flex-col font-['Poppins'] font-semibold justify-center leading-[0] not-italic relative shrink-0 text-[18px] text-left text-white tracking-[-0.18px] whitespace-nowrap" data-node-id="35:4792">
               <p className="leading-[1.2]" dir="auto">
@@ -303,9 +312,18 @@ export default function SignUp() {
               </p>
             </div>
           </button>
+          {success ? (
+            <button
+              type="button"
+              onClick={() => navigate('/verification')}
+              className="bg-white border border-[#0e1c47] text-[#0e1c47] content-stretch cursor-pointer flex h-[50px] items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:bg-[#f7f9fc] transition-colors"
+            >
+              Verify email now
+            </button>
+          ) : null}
           <Link to="/sign-in" className="content-stretch flex items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:opacity-80 transition-opacity">
             <div className="capitalize flex flex-col font-['Poppins'] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[#0e1c47] text-[16px] tracking-[-0.16px] whitespace-nowrap">
-              <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-solid leading-[1.2] underline">Already have an account? Sign in</p>
+              <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-solid leading-[1.2] underline">{success ? 'Verify later? Continue to sign in' : 'Already have an account? Sign in'}</p>
             </div>
           </Link>
         </div>

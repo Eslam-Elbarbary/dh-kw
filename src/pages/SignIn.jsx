@@ -1,19 +1,35 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { loginRequest } from '../services/auth.service';
-
-// Eye icon for password visibility - using inline SVG
-const imgGroup = "data:image/svg+xml,%3Csvg width='20' height='13' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 0C5.5 0 1.73 3.11 0 7.5c1.73 4.39 5.5 7.5 10 7.5s8.27-3.11 10-7.5C18.27 3.11 14.5 0 10 0zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z' fill='%23999'/%3E%3C/svg%3E";
 
 export default function SignIn() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
+  const [hidePendingNotice, setHidePendingNotice] = useState(false);
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+
+  useEffect(() => {
+    const pendingFromSignup = sessionStorage.getItem('postSignupPendingEmail');
+    if (pendingFromSignup) {
+      const normalized = String(pendingFromSignup).trim().toLowerCase();
+      setPendingVerificationEmail(normalized);
+      setIdentifier((prev) => prev || normalized);
+      sessionStorage.removeItem('postSignupPendingEmail');
+      return;
+    }
+    const pendingStored = localStorage.getItem('pendingVerificationEmail');
+    if (pendingStored) {
+      const normalized = String(pendingStored).trim().toLowerCase();
+      setPendingVerificationEmail(normalized);
+    }
+  }, []);
 
   const getReadableError = (err) => {
     const responseData = err?.response?.data;
@@ -46,6 +62,14 @@ export default function SignIn() {
     }
 
     return 'Sign in failed. Please try again.';
+  };
+
+  const isUnverifiedAccountError = (message) => {
+    const normalized = String(message || '').toLowerCase();
+    return normalized.includes('not verified')
+      || normalized.includes('verify your account')
+      || normalized.includes('verify your email')
+      || normalized.includes('email is not verified');
   };
 
   const handleSignIn = async (event) => {
@@ -91,7 +115,15 @@ export default function SignIn() {
         navigate('/');
       }
     } catch (err) {
-      setError(getReadableError(err));
+      const message = getReadableError(err);
+      setError(message);
+      if (isUnverifiedAccountError(message)) {
+        const normalizedEmail = identifier.trim().toLowerCase();
+        if (normalizedEmail) {
+          localStorage.setItem('pendingVerificationEmail', normalizedEmail);
+          setPendingVerificationEmail(normalizedEmail);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -135,24 +167,88 @@ export default function SignIn() {
                 Password
               </p>
             </div>
-            <div className="border border-[#e6e6e6] border-solid content-stretch flex h-[48px] items-center justify-between p-[8px] relative rounded-[4px] shrink-0 w-full" data-node-id="35:4725">
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#111827] text-[16px] placeholder:text-[#9ca3af] flex-1 outline-none border-none bg-transparent" placeholder="Enter your password" autoComplete="current-password" data-node-id="35:4726" />
-              <div className="h-[13px] overflow-clip relative shrink-0 w-[20px]" data-name="Frame" data-node-id="35:4727">
-                <div className="absolute contents inset-[0_0_7.69%_0]" data-name="Group" data-node-id="35:4728">
-                  <div className="absolute inset-[0_0_7.69%_0]" data-name="Group" data-node-id="35:4729">
-                    <img alt="" className="block max-w-none size-full" src={imgGroup} />
-                  </div>
-                </div>
-              </div>
+            <div className="border border-[#e6e6e6] border-solid content-stretch flex h-[48px] items-center justify-between px-[8px] relative rounded-[4px] shrink-0 w-full focus-within:border-[#0e1c47] focus-within:ring-2 focus-within:ring-[#0e1c47]/10 transition-colors" data-node-id="35:4725">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#111827] text-[16px] placeholder:text-[#9ca3af] flex-1 outline-none border-none bg-transparent"
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                data-node-id="35:4726"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="shrink-0 flex items-center justify-center size-[32px] rounded-[6px] text-[#94a3b8] hover:text-[#0e1c47] hover:bg-[#f8fafc] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0e1c47]/25 transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
+                    <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
+                    <path d="M14.12 14.12a3 3 0 01-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
         </div>
         <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full" data-name="cta" data-node-id="35:4731">
+          {pendingVerificationEmail && !hidePendingNotice ? (
+            <div className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-[8px] px-[12px] py-[10px] font-['Poppins'] text-[13px] text-[#334155] leading-[1.45] flex items-start justify-between gap-[10px]">
+              <div>
+                <p>
+                  Email verification pending for <span className="font-semibold text-[#0f172a]">{pendingVerificationEmail}</span>.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem('pendingVerificationEmail', pendingVerificationEmail);
+                    navigate('/verification');
+                  }}
+                  className="mt-[4px] text-[#0e1c47] font-semibold underline hover:opacity-80 transition-opacity"
+                >
+                  Verify now
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHidePendingNotice(true)}
+                className="text-[#94a3b8] hover:text-[#64748b] transition-colors leading-none pt-[2px]"
+                aria-label="Dismiss verification reminder"
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
           <Link to="/forgot-password" className="text-[#0e1c47] font-['Poppins'] text-[14px] underline w-full text-right">
             Forgot password?
           </Link>
           {error ? (
             <div className="text-[#8e0909] text-[14px] font-['Poppins'] w-full">{error}</div>
+          ) : null}
+          {error && isUnverifiedAccountError(error) ? (
+            <button
+              type="button"
+              onClick={() => {
+                const normalizedEmail = identifier.trim().toLowerCase();
+                if (normalizedEmail) {
+                  localStorage.setItem('pendingVerificationEmail', normalizedEmail);
+                }
+                navigate('/verification');
+              }}
+              className="w-full bg-[#eef4ff] border border-[#bfdbfe] text-[#0e1c47] rounded-[6px] px-[12px] py-[10px] text-left font-['Poppins'] text-[13px] hover:bg-[#e6efff] transition-colors"
+            >
+              Verify your email now
+            </button>
           ) : null}
           <button type="submit" disabled={loading} className="bg-[#0e1c47] content-stretch cursor-pointer flex h-[56px] items-center justify-center p-[16px] relative rounded-[6px] shrink-0 w-full hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed" data-name="btn-01" data-node-id="35:4732">
             <div className="capitalize flex flex-col font-['Poppins'] font-semibold justify-center leading-[0] not-italic relative shrink-0 text-[18px] text-left text-white tracking-[-0.18px] whitespace-nowrap" data-node-id="35:4733">
@@ -163,7 +259,7 @@ export default function SignIn() {
           </button>
           <Link to="/sign-up" className="content-stretch flex items-center justify-center p-[12px] relative rounded-[4px] shrink-0 w-full hover:opacity-80 transition-opacity" data-name="btn-02" data-node-id="35:4734">
             <div className="capitalize flex flex-col font-['Poppins'] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[#0e1c47] text-[16px] tracking-[-0.16px] whitespace-nowrap" data-node-id="35:4735">
-              <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-solid leading-[1.2] underline">Don't have an account? Sign up</p>
+              <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-solid leading-[1.2] underline">Don&apos;t have an account? Sign up</p>
             </div>
           </Link>
         </div>

@@ -191,34 +191,27 @@ export const updatePasswordRequest = async ({
  * POST {baseURL}/api/auth/verify-email — JSON body: { "email": string, "code": string }
  * (same contract as API clients / Thunder / Postman).
  */
-export const verifyEmailRequest = async ({ email, code }) => {
+export const verifyEmailRequest = async ({ email, code, user }) => {
   const normalizedEmail = String(email || '').trim().toLowerCase();
   const normalizedCode = String(code || '').trim();
+  const normalizedUser = String(user || '').trim();
   const res = await api.post('/api/auth/verify-email', {
     email: normalizedEmail,
     code: normalizedCode,
+    user: normalizedUser || normalizedEmail,
   });
   return res.data;
 };
 
-export const verifyPhoneRequest = async ({ phone, code }) => {
-  const res = await api.post('/api/auth/verify-phone', { phone, code });
-  return res.data;
-};
-
-export const resendVerificationCodeRequest = async ({ email, phone } = {}) => {
+export const resendVerificationCodeRequest = async ({ email } = {}) => {
   const normalizedEmail = String(email || '').trim().toLowerCase();
-  if (normalizedEmail) {
-    const res = await api.post('/api/auth/resend-verification-code', {
-      channel: 'email',
-      email: normalizedEmail,
-    });
-    return res.data;
+  if (!normalizedEmail) {
+    throw new Error('Missing email for verification resend.');
   }
-  const normalizedPhone = String(phone || '').trim();
+
   const res = await api.post('/api/auth/resend-verification-code', {
-    channel: 'phone',
-    phone: normalizedPhone,
+    channel: 'email',
+    email: normalizedEmail,
   });
   return res.data;
 };

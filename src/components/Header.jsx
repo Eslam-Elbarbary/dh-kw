@@ -498,6 +498,19 @@ export default function Header() {
                           </svg>
                           <span className="whitespace-nowrap">My Profile</span>
                         </Link>
+
+                        {!user?.isEmailVerified ? (
+                          <Link
+                            to="/verification"
+                            onClick={() => setShowDropdown(false)}
+                            className="flex items-center gap-[12px] px-[16px] sm:px-[18px] py-[10px] sm:py-[12px] text-[14px] sm:text-[15px] font-['Poppins'] font-medium text-[#0e1c47] hover:bg-[#f8f9fa] transition-colors duration-150 group cursor-pointer"
+                          >
+                            <svg className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] text-[#666] group-hover:text-[#eea137] transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span className="whitespace-nowrap">Verify Email</span>
+                          </Link>
+                        ) : null}
                         
                         <Link
                           to="/my-orders"
