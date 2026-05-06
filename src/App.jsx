@@ -40,6 +40,9 @@ import Compare from './pages/Compare';
 import Notifications from './pages/Notifications';
 import MyTickets from './pages/MyTickets';
 import ErrorPage from './pages/ErrorPage';
+import PaymentLogic from './pages/PaymentLogic';
+import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentFailed from './pages/PaymentFailed';
 import { PageLoader } from './components/Loader';
 
 function VendorRegisterRedirect() {
@@ -202,6 +205,18 @@ const router = createBrowserRouter([
       {
         path: '/my-tickets',
         element: <MyTickets />,
+      },
+      {
+        path: '/payment/logic',
+        element: <PaymentLogic />,
+      },
+      {
+        path: '/payment/success',
+        element: <PaymentSuccess />,
+      },
+      {
+        path: '/payment/failed',
+        element: <PaymentFailed />,
       },
       {
         path: '*',

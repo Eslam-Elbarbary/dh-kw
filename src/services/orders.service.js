@@ -1,5 +1,8 @@
 import api from './api';
 
+const PAYMENT_RETURN_NOTIFY_ENDPOINT =
+  import.meta.env.VITE_PAYMENT_RETURN_NOTIFY_ENDPOINT || '/api/payments/notify-return';
+
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -223,9 +226,46 @@ export const payOrder = async ({ orderId, paymentMethod = 'sadad' } = {}) => {
   }
 
   const normalizedPaymentMethod = toTrimmedString(paymentMethod) || 'sadad';
+  const returnBase = `${window.location.origin}/payment`;
+  const successUrl = `${returnBase}/success?orderId=${encodeURIComponent(normalizedOrderId)}`;
+  const failedUrl = `${returnBase}/failed?orderId=${encodeURIComponent(normalizedOrderId)}`;
+  const logicUrl = `${returnBase}/logic?orderId=${encodeURIComponent(normalizedOrderId)}`;
+
   const res = await api.post(`/api/orders/${encodeURIComponent(normalizedOrderId)}/pay`, {
     payment_method: normalizedPaymentMethod,
+    success_url: successUrl,
+    failed_url: failedUrl,
+    return_url: logicUrl,
+    callback_url: logicUrl,
   });
+  return res.data;
+};
+
+export const notifyPaymentReturnUrl = async ({
+  orderId,
+  status = '',
+  paymentMethod = '',
+  returnUrl = '',
+  params = {},
+} = {}) => {
+  const normalizedOrderId = toTrimmedString(orderId);
+  const normalizedStatus = toTrimmedString(status);
+  const normalizedMethod = toTrimmedString(paymentMethod);
+  const normalizedReturnUrl = toTrimmedString(returnUrl);
+
+  if (!normalizedReturnUrl) {
+    throw new Error('Return url is required.');
+  }
+
+  const payload = {
+    order_id: normalizedOrderId || null,
+    status: normalizedStatus || null,
+    payment_method: normalizedMethod || null,
+    return_url: normalizedReturnUrl,
+    params,
+  };
+
+  const res = await api.post(PAYMENT_RETURN_NOTIFY_ENDPOINT, payload);
   return res.data;
 };
 
