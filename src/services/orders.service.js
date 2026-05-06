@@ -63,47 +63,19 @@ const normalizeOrder = (order) => {
   const totalRaw = order?.total ?? order?.total_amount ?? order?.grand_total ?? 0;
   const createdAt = order?.created_at ?? order?.date ?? new Date().toISOString();
   const rawItems = Array.isArray(order?.items) ? order.items : [];
-  const itemPreviews = rawItems
-    .map((item, idx) => {
-      if (!item || typeof item !== 'object') return null;
-      const productNode = item.product ?? item.product_data ?? {};
-      const productId = item.product_id ?? productNode?.id ?? null;
-      const name = String(
-        item.name
-        ?? item.title
-        ?? item.product_name
-        ?? productNode?.name
-        ?? productNode?.title
-        ?? `Item ${idx + 1}`
-      ).trim();
-      const image = String(
-        item.image
-        ?? item.image_url
-        ?? productNode?.image
-        ?? productNode?.image_url
-        ?? ''
-      ).trim();
-      const quantity = Number(item.quantity ?? item.qty ?? 1) || 1;
-      const unitPrice = Number(item.price ?? item.unit_price ?? item.unitPrice ?? 0) || 0;
-      const subtotal = Number(item.total ?? item.total_price ?? item.subtotal ?? unitPrice * quantity) || 0;
-      return {
-        id: item.id ?? `${id}-${idx}`,
-        productId: productId != null ? String(productId) : '',
-        name,
-        image,
-        quantity,
-        unitPrice,
-        subtotal,
-      };
-    })
-    .filter(Boolean);
-  const itemsCount = itemPreviews.length || Number(
+  const itemsCount = Number(
     order?.items_count
     ?? order?.itemsCount
     ?? order?.order_items_count
     ?? order?.orderItemsCount
+    ?? order?.total_items
+    ?? order?.totalItems
+    ?? order?.total_quantity
+    ?? order?.totalQuantity
+    ?? order?.quantity
     ?? order?.products_count
     ?? order?.productsCount
+    ?? (rawItems.length > 0 ? rawItems.length : 0)
     ?? order?.qty
     ?? 0
   ) || 0;
@@ -116,7 +88,6 @@ const normalizeOrder = (order) => {
     total: Number(totalRaw) || 0,
     items: Number(itemsCount) || 0,
     image: firstImage,
-    itemPreviews,
     paymentStatus: inferPaymentStatusLabel(order),
   };
 };

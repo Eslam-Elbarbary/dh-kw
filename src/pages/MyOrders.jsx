@@ -6,7 +6,6 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   getMyOrders,
-  getOrderDetails,
   cancelOrder,
   reorderOrder,
   payOrder,
@@ -206,54 +205,6 @@ export default function MyOrders() {
     return { id, status, total, date, items, paymentStatus: String(paymentStatus || '').trim() };
   };
 
-  const buildStoreOrderPreviewItems = (orderDetails) => {
-    const rowsCandidates = [
-      orderDetails?.items,
-      orderDetails?.order_items,
-      orderDetails?.orderItems,
-      orderDetails?.products,
-      orderDetails?.order_products,
-      orderDetails?.orderProducts,
-      orderDetails?.lines,
-      orderDetails?.line_items,
-    ];
-    const rows = rowsCandidates.find((entry) => Array.isArray(entry)) || [];
-    return rows
-      .map((item, idx) => {
-        if (!item || typeof item !== 'object') return null;
-        const product = item.product ?? item.product_data ?? {};
-        const productId = item.product_id ?? product?.id ?? null;
-        const name = String(
-          item.name
-          ?? item.title
-          ?? item.product_name
-          ?? product?.name
-          ?? product?.title
-          ?? `Item ${idx + 1}`
-        ).trim();
-        const image = String(
-          item.image
-          ?? item.image_url
-          ?? product?.image
-          ?? product?.image_url
-          ?? ''
-        ).trim();
-        const quantity = Number(item.quantity ?? item.qty ?? 1) || 1;
-        const unitPrice = Number(item.price ?? item.unit_price ?? item.unitPrice ?? 0) || 0;
-        const subtotal = Number(item.total ?? item.total_price ?? item.subtotal ?? unitPrice * quantity) || 0;
-        return {
-          id: item.id ?? `${orderDetails?.id ?? 'order'}-${idx}`,
-          productId: productId != null ? String(productId) : '',
-          name,
-          image,
-          quantity,
-          unitPrice,
-          subtotal,
-        };
-      })
-      .filter(Boolean);
-  };
-
   const loadOrders = async () => {
     if (!isAuthenticated) {
       setOrders([]);
@@ -264,50 +215,7 @@ export default function MyOrders() {
       setLoading(true);
       setError('');
       const response = await getMyOrders();
-      const needsHydration = response.filter(
-        (order) => (Number(order?.items || 0) <= 0) || !Array.isArray(order?.itemPreviews) || order.itemPreviews.length === 0
-      );
-
-      if (!needsHydration.length) {
-        setOrders(response);
-        return;
-      }
-
-      const hydratedEntries = await Promise.allSettled(
-        needsHydration.map(async (order) => {
-          const details = await getOrderDetails({ orderId: order.id });
-          const previews = buildStoreOrderPreviewItems(details);
-          const itemsCountFromDetails = Number(
-            details?.items_count
-            ?? details?.itemsCount
-            ?? details?.order_items_count
-            ?? details?.orderItemsCount
-            ?? details?.products_count
-            ?? details?.productsCount
-            ?? details?.qty
-            ?? 0
-          ) || 0;
-          return {
-            id: String(order.id),
-            items: previews.length || itemsCountFromDetails || Number(order.items || 0) || 0,
-            image: previews[0]?.image || order.image || '',
-            itemPreviews: previews,
-          };
-        })
-      );
-
-      const hydratedMap = new Map(
-        hydratedEntries
-          .filter((entry) => entry.status === 'fulfilled' && entry.value)
-          .map((entry) => [entry.value.id, entry.value])
-      );
-
-      const merged = response.map((order) => {
-        const extra = hydratedMap.get(String(order.id));
-        if (!extra) return order;
-        return { ...order, ...extra };
-      });
-      setOrders(merged);
+      setOrders(response);
     } catch (err) {
       const message = err?.response?.data?.message || 'Failed to load orders.';
       setError(message);
@@ -969,35 +877,6 @@ export default function MyOrders() {
                             </div>
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-[12px] pt-[12px] border-t border-[#e6e6e6]">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">
-                                {order.items} {order.items === 1 ? 'item' : 'items'}
-                              </p>
-                              {Array.isArray(order.itemPreviews) && order.itemPreviews.length > 0 ? (
-                                <div className="mt-[10px] grid grid-cols-1 sm:grid-cols-2 gap-[8px]">
-                                  {order.itemPreviews.slice(0, 2).map((item) => (
-                                    <div
-                                      key={item.id}
-                                      className="rounded-[6px] border border-[#edf2f7] bg-[#fafcff] px-[10px] py-[8px] flex items-center gap-[10px]"
-                                    >
-                                      <div className="size-[38px] rounded-[4px] overflow-hidden bg-[#f1f5f9] shrink-0">
-                                        {item.image ? (
-                                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                                        ) : null}
-                                      </div>
-                                      <div className="min-w-0 flex-1">
-                                        <p className="font-['Poppins'] font-medium text-[12px] text-[#0e1c47] truncate">
-                                          {item.name}
-                                        </p>
-                                        <p className="font-['Poppins'] text-[11px] text-[#64748b]">
-                                          Qty {item.quantity} {item.unitPrice > 0 ? `· $${Number(item.unitPrice).toFixed(2)}` : ''}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : null}
-                            </div>
                             <div className="flex gap-[12px]">
                               <Link
                                 to={`/track-order?orderId=${order.id}`}
@@ -1006,7 +885,7 @@ export default function MyOrders() {
                                 Track Order
                               </Link>
                               <Link
-                                to={`/track-order?orderId=${order.id}`}
+                                to={`/order/${encodeURIComponent(String(order.id))}`}
                                 className="font-['Poppins'] font-semibold text-[14px] sm:text-[16px] text-[#0e1c47] hover:text-[#eea137] transition-colors"
                               >
                                 View Details
@@ -1181,35 +1060,6 @@ export default function MyOrders() {
                           </div>
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-[12px] pt-[12px] border-t border-[#e6e6e6]">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">
-                              {order.items} digital {order.items === 1 ? 'item' : 'items'} · no shipping
-                            </p>
-                            {Array.isArray(order.itemPreviews) && order.itemPreviews.length > 0 ? (
-                              <div className="mt-[10px] grid grid-cols-1 sm:grid-cols-2 gap-[8px]">
-                                {order.itemPreviews.slice(0, 2).map((item) => (
-                                  <div
-                                    key={item.id}
-                                    className="rounded-[6px] border border-[#edf2f7] bg-[#fafcff] px-[10px] py-[8px] flex items-center gap-[10px]"
-                                  >
-                                    <div className="size-[38px] rounded-[4px] overflow-hidden bg-[#f1f5f9] shrink-0">
-                                      {item.image ? (
-                                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                                      ) : null}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="font-['Poppins'] font-medium text-[12px] text-[#0e1c47] truncate">
-                                        {item.name}
-                                      </p>
-                                      <p className="font-['Poppins'] text-[11px] text-[#64748b]">
-                                        Qty {item.quantity} {item.unitPrice > 0 ? `· $${Number(item.unitPrice).toFixed(2)}` : ''}
-                                      </p>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
                           <Link
                             to={`/digital-order/${order.id}`}
                             className="font-['Poppins'] font-semibold text-[14px] sm:text-[16px] text-[#eea137] hover:text-[#d8902f] transition-colors"

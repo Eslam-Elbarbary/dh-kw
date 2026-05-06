@@ -36,6 +36,7 @@ import SiteMap from './pages/SiteMap';
 import MyProfile from './pages/MyProfile';
 import MyOrders from './pages/MyOrders';
 import DigitalOrderDetail from './pages/DigitalOrderDetail';
+import StoreOrderDetail from './pages/StoreOrderDetail';
 import Compare from './pages/Compare';
 import Notifications from './pages/Notifications';
 import MyTickets from './pages/MyTickets';
@@ -193,6 +194,10 @@ const router = createBrowserRouter([
       {
         path: '/digital-order/:id',
         element: <DigitalOrderDetail />,
+      },
+      {
+        path: '/order/:id',
+        element: <StoreOrderDetail />,
       },
       {
         path: '/compare',
