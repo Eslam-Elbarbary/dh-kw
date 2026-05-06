@@ -260,7 +260,6 @@ export default function DigitalOrderDetail() {
                 <ul className="flex flex-col gap-[14px]">
                   {deliveryCredentials.map((row, idx) => {
                     const serialKey = `serial-${idx}`;
-                    const pinKey = `pin-${idx}`;
                     return (
                       <li
                         key={`${row.label}-${idx}`}
@@ -283,23 +282,6 @@ export default function DigitalOrderDetail() {
                                   className="font-['Poppins'] text-[12px] font-semibold px-[12px] py-[8px] rounded-[4px] border border-[#0e1c47] text-[#0e1c47] hover:bg-[#0e1c47] hover:text-white transition-colors shrink-0"
                                 >
                                   {copiedKey === serialKey ? 'Copied' : 'Copy'}
-                                </button>
-                              </dd>
-                            </div>
-                          ) : null}
-                          {row.pin ? (
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-[10px]">
-                              <dt className="text-[#666] shrink-0">PIN</dt>
-                              <dd className="flex flex-wrap items-center gap-[8px] justify-end min-w-0 w-full sm:w-auto">
-                                <code className="text-[13px] sm:text-[14px] font-semibold text-[#0e1c47] bg-[#f1f5f9] px-[12px] py-[8px] rounded-[4px] break-all tabular-nums">
-                                  {row.pin}
-                                </code>
-                                <button
-                                  type="button"
-                                  onClick={() => copyToClipboard(row.pin, pinKey)}
-                                  className="font-['Poppins'] text-[12px] font-semibold px-[12px] py-[8px] rounded-[4px] border border-[#0e1c47] text-[#0e1c47] hover:bg-[#0e1c47] hover:text-white transition-colors shrink-0"
-                                >
-                                  {copiedKey === pinKey ? 'Copied' : 'Copy'}
                                 </button>
                               </dd>
                             </div>

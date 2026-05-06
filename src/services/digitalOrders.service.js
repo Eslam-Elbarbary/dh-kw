@@ -62,86 +62,124 @@ export const extractDigitalOrderDeliveryItems = (order) => {
   if (!order || typeof order !== 'object') return [];
 
   const deliveredType = normalizeDeliveredType(order);
-  const providerResponses = [
-    ...getProviderResponseEntries(order.provider_response ?? order.providerResponse),
-    ...toArray(order.items).flatMap((item) => getProviderResponseEntries(item?.provider_response ?? item?.providerResponse)),
-  ];
-  if (!providerResponses.length) return [];
+  const orderItems = toArray(order.items);
 
-  const payloads = providerResponses
-    .map((response) => (response?.data && typeof response.data === 'object' ? response.data : response))
-    .filter((data) => data && typeof data === 'object');
+  const providerHint = String(
+    order?.company_name
+    ?? orderItems[0]?.digital_product?.company_name
+    ?? orderItems[0]?.digital_product?.merchant?.company_name
+    ?? ''
+  ).trim().toLowerCase();
 
-  const looksLikeEezeePayload = payloads.some(
-    (data) => toArrayLike(data.items).some((it) => it && typeof it === 'object' && 'product_name_en' in it),
-  );
-
-  const isEezee =
-    deliveredType === 'eezee'
-    || deliveredType.includes('eezee')
-    || (!deliveredType && looksLikeEezeePayload);
-
-  const isOneCard =
-    deliveredType === 'one_card'
-    || deliveredType === 'onecard'
-    || deliveredType.includes('one_card')
-    || deliveredType.includes('onecard');
-
-  const isLikeCard =
-    deliveredType === 'like_card'
-    || deliveredType === 'likecard'
-    || deliveredType.includes('like_card')
-    || deliveredType.includes('likecard');
+  const providerKey = (() => {
+    if (deliveredType.includes('eezee') || providerHint.includes('eezee')) return 'eezee';
+    if (deliveredType.includes('one_card') || deliveredType.includes('onecard') || providerHint.includes('one_card') || providerHint.includes('onecard')) return 'one_card';
+    if (deliveredType.includes('like_card') || deliveredType.includes('likecard') || providerHint.includes('like_card') || providerHint.includes('likecard')) return 'like_card';
+    return deliveredType || providerHint || 'unknown';
+  })();
 
   const providerLabel = (() => {
-    if (isEezee) return 'Eezee Pay';
-    if (isOneCard) return 'One Card';
-    if (isLikeCard) return 'Like Card';
-    if (deliveredType) return deliveredType.replace(/_/g, ' ');
+    if (providerKey === 'eezee') return 'Eezee Pay';
+    if (providerKey === 'one_card') return 'One Card';
+    if (providerKey === 'like_card') return 'Like Card';
+    if (providerKey && providerKey !== 'unknown') return providerKey.replace(/_/g, ' ');
     return 'Digital code';
   })();
 
-  if (!isEezee && !isOneCard && !isLikeCard) return [];
+  const rows = [];
 
-  return payloads
-    .flatMap((data) => toArrayLike(data.items))
-    .map((it, idx) => {
-      if (!it || typeof it !== 'object') return null;
-      const label =
+  const pushCandidate = (candidate, fallbackLabel) => {
+    if (!candidate || typeof candidate !== 'object') return;
+    const serial = pickNonEmptyString(
+      candidate.serial,
+      candidate.card_serial,
+      candidate.voucher_serial,
+      candidate.voucher_code,
+      candidate.card_number,
+      candidate.number,
+      candidate.code,
+    );
+    const pin = pickNonEmptyString(
+      candidate.pin,
+      candidate.password,
+      candidate.secret,
+      candidate.activation_code,
+      candidate.activationCode,
+    );
+    if (!serial && !pin) return;
+
+    rows.push({
+      providerKey,
+      providerLabel,
+      label:
         pickNonEmptyString(
-          it.product_name_en,
-          it.product_name,
-          it.product_name_ar,
-          it.name,
-          it.title,
-          it.product_title,
-        ) || `Item ${idx + 1}`;
-      const serial = pickNonEmptyString(
-        it.serial,
-        it.card_serial,
-        it.voucher_serial,
-        it.voucher_code,
-        it.card_number,
-        it.number,
-        it.code,
-      );
-      const pin = pickNonEmptyString(
-        it.pin,
-        it.password,
-        it.secret,
-        it.activation_code,
-        it.activationCode,
-      );
-      if (!serial && !pin) return null;
-      return {
-        providerKey: deliveredType || 'unknown',
-        providerLabel,
-        label,
-        serial,
-        pin,
-      };
-    })
-    .filter(Boolean);
+          candidate.product_name_en,
+          candidate.product_name,
+          candidate.product_name_ar,
+          candidate.name,
+          candidate.title,
+          candidate.product_title,
+          fallbackLabel,
+        ) || 'Digital code',
+      serial,
+      pin,
+      image: pickNonEmptyString(candidate.image, candidate.image_url),
+      providerRef: pickNonEmptyString(candidate.provider_ref, candidate.bbTrxRefNumber, candidate.resellerRefNumber),
+    });
+  };
+
+  // First priority: item-scoped sources (works for One Card + Like Card + Eezee variations).
+  orderItems.forEach((item, itemIndex) => {
+    if (!item || typeof item !== 'object') return;
+    const fallbackLabel =
+      pickNonEmptyString(
+        item?.digital_product?.name,
+        item?.product_name,
+        item?.name,
+        item?.title,
+      ) || `Item ${itemIndex + 1}`;
+
+    toArrayLike(item?.delivered_data ?? item?.deliveredData).forEach((entry) => pushCandidate(entry, fallbackLabel));
+
+    getProviderResponseEntries(item?.provider_response ?? item?.providerResponse).forEach((entry) => {
+      const payload = (entry?.data && typeof entry.data === 'object') ? entry.data : entry;
+      const nestedItems = toArrayLike(payload?.items);
+      if (nestedItems.length) nestedItems.forEach((nested) => pushCandidate(nested, fallbackLabel));
+      else pushCandidate(payload, fallbackLabel);
+    });
+  });
+
+  // Fallback: order-level sources.
+  if (!rows.length) {
+    toArrayLike(order?.delivered_data ?? order?.deliveredData).forEach((entry, idx) => {
+      pushCandidate(entry, `Item ${idx + 1}`);
+    });
+  }
+
+  if (!rows.length) {
+    getProviderResponseEntries(order.provider_response ?? order.providerResponse).forEach((entry, idx) => {
+      const payload = (entry?.data && typeof entry.data === 'object') ? entry.data : entry;
+      const nestedItems = toArrayLike(payload?.items);
+      if (nestedItems.length) nestedItems.forEach((nested) => pushCandidate(nested, `Item ${idx + 1}`));
+      else pushCandidate(payload, `Item ${idx + 1}`);
+    });
+  }
+
+  // One Card can return the same credential in delivered_data and provider_response.
+  // Keep unique cards by serial/pin/reference to avoid duplicate UI cards.
+  const seen = new Set();
+  return rows.filter((row) => {
+    const key = [
+      String(row?.serial || '').trim(),
+      String(row?.pin || '').trim(),
+      String(row?.providerRef || '').trim(),
+      String(row?.label || '').trim(),
+    ].join('|');
+    if (!key.replace(/\|/g, '')) return false;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 
 const extractDigitalOrderList = (payload) => {
