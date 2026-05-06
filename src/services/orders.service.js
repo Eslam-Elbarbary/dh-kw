@@ -62,7 +62,51 @@ const normalizeOrder = (order) => {
   const statusRaw = order?.status ?? order?.order_status ?? 'Processing';
   const totalRaw = order?.total ?? order?.total_amount ?? order?.grand_total ?? 0;
   const createdAt = order?.created_at ?? order?.date ?? new Date().toISOString();
-  const itemsCount = Array.isArray(order?.items) ? order.items.length : (order?.items_count ?? order?.qty ?? 0);
+  const rawItems = Array.isArray(order?.items) ? order.items : [];
+  const itemPreviews = rawItems
+    .map((item, idx) => {
+      if (!item || typeof item !== 'object') return null;
+      const productNode = item.product ?? item.product_data ?? {};
+      const productId = item.product_id ?? productNode?.id ?? null;
+      const name = String(
+        item.name
+        ?? item.title
+        ?? item.product_name
+        ?? productNode?.name
+        ?? productNode?.title
+        ?? `Item ${idx + 1}`
+      ).trim();
+      const image = String(
+        item.image
+        ?? item.image_url
+        ?? productNode?.image
+        ?? productNode?.image_url
+        ?? ''
+      ).trim();
+      const quantity = Number(item.quantity ?? item.qty ?? 1) || 1;
+      const unitPrice = Number(item.price ?? item.unit_price ?? item.unitPrice ?? 0) || 0;
+      const subtotal = Number(item.total ?? item.total_price ?? item.subtotal ?? unitPrice * quantity) || 0;
+      return {
+        id: item.id ?? `${id}-${idx}`,
+        productId: productId != null ? String(productId) : '',
+        name,
+        image,
+        quantity,
+        unitPrice,
+        subtotal,
+      };
+    })
+    .filter(Boolean);
+  const itemsCount = itemPreviews.length || Number(
+    order?.items_count
+    ?? order?.itemsCount
+    ?? order?.order_items_count
+    ?? order?.orderItemsCount
+    ?? order?.products_count
+    ?? order?.productsCount
+    ?? order?.qty
+    ?? 0
+  ) || 0;
   const firstImage = order?.items?.[0]?.product?.image || order?.items?.[0]?.image || '';
 
   return {
@@ -72,6 +116,7 @@ const normalizeOrder = (order) => {
     total: Number(totalRaw) || 0,
     items: Number(itemsCount) || 0,
     image: firstImage,
+    itemPreviews,
     paymentStatus: inferPaymentStatusLabel(order),
   };
 };
@@ -227,9 +272,10 @@ export const payOrder = async ({ orderId, paymentMethod = 'sadad' } = {}) => {
 
   const normalizedPaymentMethod = toTrimmedString(paymentMethod) || 'sadad';
   const returnBase = `${window.location.origin}/payment`;
-  const successUrl = `${returnBase}/success?orderId=${encodeURIComponent(normalizedOrderId)}`;
-  const failedUrl = `${returnBase}/failed?orderId=${encodeURIComponent(normalizedOrderId)}`;
-  const logicUrl = `${returnBase}/logic?orderId=${encodeURIComponent(normalizedOrderId)}`;
+  const qs = `orderId=${encodeURIComponent(normalizedOrderId)}&scope=store&paymentMethod=${encodeURIComponent(normalizedPaymentMethod)}`;
+  const successUrl = `${returnBase}/success?${qs}`;
+  const failedUrl = `${returnBase}/failed?${qs}`;
+  const logicUrl = `${returnBase}/logic?${qs}`;
 
   const res = await api.post(`/api/orders/${encodeURIComponent(normalizedOrderId)}/pay`, {
     payment_method: normalizedPaymentMethod,
@@ -237,6 +283,10 @@ export const payOrder = async ({ orderId, paymentMethod = 'sadad' } = {}) => {
     failed_url: failedUrl,
     return_url: logicUrl,
     callback_url: logicUrl,
+    successUrl,
+    failedUrl,
+    returnUrl: logicUrl,
+    callbackUrl: logicUrl,
   });
   return res.data;
 };

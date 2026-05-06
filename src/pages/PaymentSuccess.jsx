@@ -1,8 +1,24 @@
-import { Link, useSearchParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 export default function PaymentSuccess() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('orderId') || '';
+  const [secondsLeft, setSecondsLeft] = useState(5);
+
+  useEffect(() => {
+    const tick = window.setInterval(() => {
+      setSecondsLeft((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    const timer = window.setTimeout(() => {
+      navigate('/', { replace: true });
+    }, 5000);
+    return () => {
+      window.clearInterval(tick);
+      window.clearTimeout(timer);
+    };
+  }, [navigate]);
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4">
@@ -10,6 +26,9 @@ export default function PaymentSuccess() {
         <h1 className="font-['Poppins'] text-[26px] font-semibold text-[#027a48]">Payment Successful</h1>
         <p className="mt-2 font-['Poppins'] text-[14px] text-[#444]">
           Your payment has been completed successfully.
+        </p>
+        <p className="mt-2 font-['Poppins'] text-[13px] text-[#666]">
+          Redirecting to home page in {secondsLeft}s...
         </p>
         {orderId ? (
           <p className="mt-2 font-['Poppins'] text-[13px] text-[#666]">

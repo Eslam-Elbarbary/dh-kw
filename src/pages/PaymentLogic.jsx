@@ -60,8 +60,10 @@ export default function PaymentLogic() {
         setProcessing(false);
 
         const orderId = searchParams.get('orderId') || '';
+        const scope = searchParams.get('scope') || 'store';
+        const paymentMethod = searchParams.get('paymentMethod') || 'sadad';
         const targetBase = status === 'success' ? '/payment/success' : '/payment/failed';
-        const target = `${targetBase}${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ''}`;
+        const target = `${targetBase}?orderId=${encodeURIComponent(orderId)}&scope=${encodeURIComponent(scope)}&paymentMethod=${encodeURIComponent(paymentMethod)}`;
         setTimeout(() => navigate(target, { replace: true }), 300);
       }
     };

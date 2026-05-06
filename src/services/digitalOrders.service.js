@@ -183,6 +183,48 @@ export const normalizeDigitalOrderListItem = (row) => {
   const items = toArray(row.items);
   const total =
     Number(row.total_cost ?? row.total ?? row.grand_total ?? 0) || 0;
+  const itemPreviews = items
+    .map((item, idx) => {
+      if (!item || typeof item !== 'object') return null;
+      const productNode = item.digital_product ?? item.product ?? {};
+      const productId = item.digital_product_id ?? item.product_id ?? productNode?.id ?? null;
+      const name = String(
+        item.name
+        ?? item.title
+        ?? item.product_name
+        ?? productNode?.name
+        ?? productNode?.title
+        ?? `Item ${idx + 1}`
+      ).trim();
+      const image = String(
+        item.image
+        ?? item.image_url
+        ?? productNode?.image
+        ?? productNode?.image_url
+        ?? ''
+      ).trim();
+      const quantity = Number(item.quantity ?? item.qty ?? 1) || 1;
+      const unitPrice = Number(
+        item.price
+        ?? item.unit_price
+        ?? item.unitPrice
+        ?? item.digital_product_price
+        ?? item.subtotal
+        ?? 0
+      ) || 0;
+      const subtotal = Number(item.total ?? item.total_price ?? item.subtotal ?? unitPrice * quantity) || 0;
+      return {
+        id: item.id ?? `${id}-${idx}`,
+        productId: productId != null ? String(productId) : '',
+        name,
+        image,
+        quantity,
+        unitPrice,
+        subtotal,
+      };
+    })
+    .filter(Boolean);
+
   return {
     id: String(id),
     date: row.created_at ?? row.updated_at ?? row.date ?? new Date().toISOString(),
@@ -190,6 +232,7 @@ export const normalizeDigitalOrderListItem = (row) => {
     paymentStatus: inferPaymentLabel(row),
     total,
     items: items.length,
+    itemPreviews,
     notes: String(row.notes ?? '').trim(),
   };
 };
@@ -237,8 +280,21 @@ export const payDigitalOrder = async ({ orderId, paymentMethod = 'sadad' } = {})
   const id = String(orderId ?? '').trim();
   if (!id) throw new Error('Digital order id is required.');
   const method = String(paymentMethod || '').trim() || 'sadad';
+  const returnBase = `${window.location.origin}/payment`;
+  const qs = `orderId=${encodeURIComponent(id)}&scope=digital&paymentMethod=${encodeURIComponent(method)}`;
+  const successUrl = `${returnBase}/success?${qs}`;
+  const failedUrl = `${returnBase}/failed?${qs}`;
+  const logicUrl = `${returnBase}/logic?${qs}`;
   const res = await api.post(`/api/digital-orders/${encodeURIComponent(id)}/pay`, {
     payment_method: method,
+    success_url: successUrl,
+    failed_url: failedUrl,
+    return_url: logicUrl,
+    callback_url: logicUrl,
+    successUrl,
+    failedUrl,
+    returnUrl: logicUrl,
+    callbackUrl: logicUrl,
   });
   return res.data;
 };

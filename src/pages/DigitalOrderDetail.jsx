@@ -16,6 +16,17 @@ const imgArrowDown = arrowDownIcon;
 
 const toArray = (v) => (Array.isArray(v) ? v : []);
 
+const toItemPrice = (line) => {
+  const value = Number(
+    line?.price
+    ?? line?.unit_price
+    ?? line?.unitPrice
+    ?? line?.digital_product_price
+    ?? 0
+  );
+  return Number.isFinite(value) ? value : 0;
+};
+
 const formatMoney = (n) => {
   const x = Number(n);
   if (!Number.isFinite(x)) return '—';
@@ -412,55 +423,90 @@ export default function DigitalOrderDetail() {
             ) : null}
 
             <div className="border border-[#e6e6e6] rounded-[4px] overflow-hidden shadow-sm">
-              <h2 className="font-['Poppins'] font-semibold text-[16px] text-[#0e1c47] px-[20px] pt-[20px] sm:px-[24px] sm:pt-[24px] pb-[12px]">
-                Items ({items.length})
-              </h2>
+              <div className="px-[20px] pt-[20px] sm:px-[24px] sm:pt-[24px] pb-[14px] border-b border-[#eef2f6]">
+                <h2 className="font-['Poppins'] font-semibold text-[16px] text-[#0e1c47]">
+                  Order items ({items.length})
+                </h2>
+                <p className="font-['Poppins'] text-[13px] text-[#64748b] mt-[4px]">
+                  Product details, quantity, and item totals.
+                </p>
+              </div>
               {items.length === 0 ? (
-                <p className="px-[20px] pb-[20px] font-['Poppins'] text-[14px] text-[#666]">No line items in the response.</p>
+                <p className="px-[20px] py-[20px] font-['Poppins'] text-[14px] text-[#666]">No line items in the response.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left font-['Poppins'] text-[14px]">
-                    <thead>
-                      <tr className="bg-[#f8fafc] text-[#64748b] text-[12px] uppercase tracking-wide">
-                        <th className="px-[20px] sm:px-[24px] py-[10px] font-semibold">#</th>
-                        <th className="px-[20px] sm:px-[24px] py-[10px] font-semibold">Digital product</th>
-                        <th className="px-[20px] sm:px-[24px] py-[10px] font-semibold text-right">Qty</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((line, idx) => {
-                        const pid =
-                          line.digital_product_id
-                          ?? line.digital_product?.id
-                          ?? line.product_id;
-                        const label =
-                          line.name
-                          ?? line.title
-                          ?? line.product_name
-                          ?? (pid != null ? `Product #${pid}` : `Line ${idx + 1}`);
-                        const qty = line.quantity ?? line.qty ?? 1;
-                        return (
-                          <tr key={line.id ?? idx} className="border-t border-[#e6e6e6]">
-                            <td className="px-[20px] sm:px-[24px] py-[14px] text-[#666]">{idx + 1}</td>
-                            <td className="px-[20px] sm:px-[24px] py-[14px] text-[#0e1c47]">
+                <ul className="divide-y divide-[#eef2f6]">
+                  {items.map((line, idx) => {
+                    const pid =
+                      line.digital_product_id
+                      ?? line.digital_product?.id
+                      ?? line.product_id;
+                    const label =
+                      line.name
+                      ?? line.title
+                      ?? line.product_name
+                      ?? line.digital_product?.name
+                      ?? line.product?.name
+                      ?? (pid != null ? `Product #${pid}` : `Line ${idx + 1}`);
+                    const qty = Number(line.quantity ?? line.qty ?? 1) || 1;
+                    const unitPrice = toItemPrice(line);
+                    const itemTotal = Number(line.total ?? line.total_price ?? line.subtotal ?? unitPrice * qty) || 0;
+                    const image = String(
+                      line.image
+                      ?? line.image_url
+                      ?? line.digital_product?.image
+                      ?? line.product?.image
+                      ?? ''
+                    ).trim();
+
+                    return (
+                      <li key={line.id ?? idx} className="p-[20px] sm:p-[24px]">
+                        <div className="flex items-start gap-[14px]">
+                          <div className="size-[58px] rounded-[6px] overflow-hidden bg-[#f1f5f9] border border-[#e2e8f0] shrink-0">
+                            {image ? (
+                              <img src={image} alt={label} className="w-full h-full object-cover" />
+                            ) : null}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-[10px]">
+                              <div className="min-w-0">
+                                <p className="font-['Poppins'] text-[12px] text-[#94a3b8] mb-[2px]">Item {idx + 1}</p>
+                                {pid != null && String(pid).length > 0 ? (
+                                  <Link
+                                    to={`/digital-product/${pid}`}
+                                    className="font-['Poppins'] font-semibold text-[15px] text-[#0e1c47] hover:text-[#eea137] transition-colors block truncate"
+                                  >
+                                    {label}
+                                  </Link>
+                                ) : (
+                                  <p className="font-['Poppins'] font-semibold text-[15px] text-[#0e1c47] truncate">{label}</p>
+                                )}
+                              </div>
+                              <p className="font-['Poppins'] font-semibold text-[16px] text-[#0e1c47] tabular-nums">
+                                {formatMoney(itemTotal)}
+                              </p>
+                            </div>
+                            <div className="mt-[8px] flex flex-wrap gap-x-[16px] gap-y-[6px]">
+                              <p className="font-['Poppins'] text-[13px] text-[#64748b]">
+                                Qty: <span className="font-medium text-[#0e1c47]">{qty}</span>
+                              </p>
+                              <p className="font-['Poppins'] text-[13px] text-[#64748b]">
+                                Unit: <span className="font-medium text-[#0e1c47]">{formatMoney(unitPrice)}</span>
+                              </p>
                               {pid != null && String(pid).length > 0 ? (
                                 <Link
                                   to={`/digital-product/${pid}`}
-                                  className="font-semibold text-[#eea137] hover:underline"
+                                  className="font-['Poppins'] text-[13px] font-medium text-[#eea137] hover:underline"
                                 >
-                                  {label}
+                                  View product
                                 </Link>
-                              ) : (
-                                label
-                              )}
-                            </td>
-                            <td className="px-[20px] sm:px-[24px] py-[14px] text-right tabular-nums">{qty}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
             </div>
           </div>
