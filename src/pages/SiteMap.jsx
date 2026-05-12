@@ -45,7 +45,8 @@ export default function SiteMap() {
       links: [
         { name: "Help Center", path: "/help-center" },
         { name: "Contact Us", path: "/contact-us" },
-        { name: "FAQs", path: "/faqs" }
+        { name: "FAQs", path: "/faqs" },
+        { name: "Report Fraud", path: "/report-fraud" }
       ]
     },
     {
@@ -168,6 +169,12 @@ export default function SiteMap() {
               className="bg-white text-[#0e1c47] font-['Poppins'] font-semibold px-[20px] sm:px-[24px] py-[10px] sm:py-[12px] rounded-[4px] hover:bg-[#eea137] hover:text-white transition-colors"
             >
               Contact Us
+            </Link>
+            <Link
+              to="/report-fraud"
+              className="bg-white text-[#0e1c47] font-['Poppins'] font-semibold px-[20px] sm:px-[24px] py-[10px] sm:py-[12px] rounded-[4px] hover:bg-[#eea137] hover:text-white transition-colors"
+            >
+              Report Fraud
             </Link>
           </div>
         </div>

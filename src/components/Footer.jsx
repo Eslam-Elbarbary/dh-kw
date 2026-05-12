@@ -128,6 +128,9 @@ export default function Footer() {
                 <Link to="/delivery-return" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors" data-node-id="35:5041">
                   <p className="leading-[19.5px]">{`Delivery & Return`}</p>
                 </Link>
+                <Link to="/report-fraud" className="flex flex-col justify-center relative shrink-0 cursor-pointer hover:text-[#eea137] transition-colors">
+                  <p className="leading-[19.5px]">Report Fraud</p>
+                </Link>
               </div>
             </div>
             <div className="content-stretch flex flex-col gap-[12px] sm:gap-[14px] md:gap-[16px] lg:gap-[18px] items-start relative shrink-0 w-full sm:w-[150px] md:w-[160px] lg:w-[160px] xl:w-[180px]" data-node-id="35:5042">

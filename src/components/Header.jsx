@@ -97,7 +97,7 @@ function ArrowSwapHorizontal({ className }) {
 }
 
 export default function Header() {
-  const SHOW_REPORT_FRAUD = false;
+  const SHOW_REPORT_FRAUD = true;
   const { isAuthenticated, user, logout } = useAuth();
   const { cartItemsCount } = useCart();
   const navigate = useNavigate();
@@ -616,6 +616,17 @@ export default function Header() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <span className="whitespace-nowrap">Track Order</span>
+                        </Link>
+
+                        <Link
+                          to="/report-fraud"
+                          onClick={() => setShowDropdown(false)}
+                          className="flex items-center gap-[12px] px-[16px] sm:px-[18px] py-[10px] sm:py-[12px] text-[14px] sm:text-[15px] font-['Poppins'] font-medium text-[#0e1c47] hover:bg-[#f8f9fa] transition-colors duration-150 group cursor-pointer"
+                        >
+                          <svg className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] text-[#666] group-hover:text-[#eea137] transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          <span className="whitespace-nowrap">Report Fraud</span>
                         </Link>
                       </div>
                       
