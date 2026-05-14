@@ -4,9 +4,10 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ThemeToggle from './ThemeToggle';
 import { getCategories, resolveCountryId } from '../services/catalog.service';
+import { getCountries } from '../services/meta.service';
 import { getNotifications } from '../services/notifications.service';
 import { getSettings } from '../services/settings.service';
 import { VENDOR_REGISTER_URL } from '../utils/vendorUrls';
@@ -37,8 +38,25 @@ const img1 = deliveryIcon;
 const img2 = customerSupportIcon;
 // Become a Seller icon
 const img3 = handshakeIcon;
-// Egypt flag for country selector
-const imgFlat = egyptFlag;
+/** Fallback when API has no flag and no ISO code */
+const defaultCountryFlag = egyptFlag;
+
+function resolveCountryFlagSrc(country, fallbackSrc = defaultCountryFlag) {
+  if (!country) return fallbackSrc;
+  const apiUrl = country.flagUrl;
+  if (apiUrl) {
+    const u = String(apiUrl).trim();
+    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    const base = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    if (u.startsWith('/') && base) return `${base}${u}`;
+    return u;
+  }
+  const code = country.code;
+  if (code && String(code).trim().length === 2) {
+    return `https://flagcdn.com/w40/${String(code).trim().toLowerCase()}.png`;
+  }
+  return fallbackSrc;
+}
 // Dropdown arrow
 const img4 = arrowDownIcon;
 // Category dropdown arrow
@@ -113,7 +131,26 @@ export default function Header() {
   const dropdownRef = useRef(null);
   const categoryDropdownRef = useRef(null);
   const navCategoryDropdownRef = useRef(null);
+  const countryDropdownRef = useRef(null);
+  const [countries, setCountries] = useState([]);
+  const [countriesLoadError, setCountriesLoadError] = useState(false);
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+
   const countryId = resolveCountryId(1);
+
+  const activeCountry = useMemo(() => {
+    if (!countries.length) return null;
+    return countries.find((c) => String(c.id) === String(countryId)) || null;
+  }, [countries, countryId, user?.country_id]);
+
+  const countryFlagSrc = useMemo(
+    () => resolveCountryFlagSrc(activeCountry, defaultCountryFlag),
+    [activeCountry],
+  );
+
+  const countryDisplayName =
+    activeCountry?.name
+    || (countries.length > 0 ? 'Select country' : countriesLoadError ? 'Country' : '…');
 
   useEffect(() => {
     const loadHeaderCategories = async () => {
@@ -126,6 +163,29 @@ export default function Header() {
     };
 
     loadHeaderCategories();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadCountries = async () => {
+      try {
+        setCountriesLoadError(false);
+        const list = await getCountries();
+        if (!cancelled) {
+          const arr = Array.isArray(list) ? list : [];
+          setCountries(arr);
+        }
+      } catch {
+        if (!cancelled) {
+          setCountries([]);
+          setCountriesLoadError(true);
+        }
+      }
+    };
+    loadCountries();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -216,6 +276,9 @@ export default function Header() {
       if (navCategoryDropdownRef.current && !navCategoryDropdownRef.current.contains(event.target)) {
         setShowNavCategoryDropdown(false);
       }
+      if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target)) {
+        setShowCountryDropdown(false);
+      }
     }
 
     function handleEscapeKey(event) {
@@ -223,10 +286,11 @@ export default function Header() {
         setShowDropdown(false);
         setShowCategoryDropdown(false);
         setShowNavCategoryDropdown(false);
+        setShowCountryDropdown(false);
       }
     }
 
-    if (showDropdown || showCategoryDropdown || showNavCategoryDropdown) {
+    if (showDropdown || showCategoryDropdown || showNavCategoryDropdown || showCountryDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleEscapeKey);
       // Prevent body scroll when dropdown is open on mobile
@@ -240,7 +304,7 @@ export default function Header() {
       document.removeEventListener('keydown', handleEscapeKey);
       document.body.style.overflow = 'unset';
     };
-  }, [showDropdown, showCategoryDropdown, showNavCategoryDropdown]);
+  }, [showDropdown, showCategoryDropdown, showNavCategoryDropdown, showCountryDropdown]);
 
   const handleLogout = async () => {
     await logout();
@@ -251,7 +315,7 @@ export default function Header() {
   return (
     <div className="relative z-[50]">
       {/* Top bar */}
-      <div className="bg-[#0e1c47] dark:bg-[#0a1529] border-[#4b505e] dark:border-[#2a3a5a] border-b border-l-0 border-r-0 border-solid border-t-0 content-stretch flex flex-col sm:flex-row items-start sm:items-center justify-between px-[12px] sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[120px] 2xl:px-[140px] py-[8px] sm:py-[10px] md:py-[12px] lg:py-[12px] xl:py-[8px] 2xl:py-[20px] relative shrink-0 w-full max-w-full overflow-hidden transition-colors duration-300" data-node-id="39:5520">
+      <div className="bg-[#0e1c47] dark:bg-[#0a1529] border-[#4b505e] dark:border-[#2a3a5a] border-b border-l-0 border-r-0 border-solid border-t-0 content-stretch flex flex-col sm:flex-row items-start sm:items-center justify-between px-[12px] sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[120px] 2xl:px-[140px] py-[8px] sm:py-[10px] md:py-[12px] lg:py-[12px] xl:py-[8px] 2xl:py-[20px] relative z-[70] shrink-0 w-full max-w-full overflow-visible transition-colors duration-300" data-node-id="39:5520">
         <div className="content-stretch h-[15px !important]  flex gap-[6px] sm:gap-[8px] md:gap-[12px] lg:gap-[16px] items-center relative shrink-0 flex-wrap w-full sm:w-auto " data-node-id="39:5521" >
           <div className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0" data-name="new-next-logo-gold 4" data-node-id="39:5522">
             <div className="relative shrink-0 size-[16px]" data-name="call" data-node-id="39:5523">
@@ -350,18 +414,89 @@ export default function Header() {
           </a>
         </div>
         <div className="content-stretch flex gap-[6px] sm:gap-[8px] items-center justify-end relative shrink-0 w-full sm:w-auto mt-[8px] sm:mt-0">
-          <div className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0">
-            <div className="overflow-clip relative shrink-0 size-[20px] rounded-[2px]">
-              <img alt="Egypt" className="block size-full object-cover" src={imgFlat} />
-            </div>
-            <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[#f2f2f2] text-[14px] sm:text-[15px] lg:text-[14px] text-center" dir="auto">
-              egypt
-            </p>
-            <div className="relative shrink-0 size-[16px]">
-              <div className="absolute contents inset-0">
-                <img alt="" className="block max-w-none size-full" src={img4} />
+          <div className="relative z-[100]" ref={countryDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setShowCountryDropdown((v) => !v)}
+              className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+              aria-expanded={showCountryDropdown}
+              aria-haspopup="listbox"
+              aria-label="Store country"
+            >
+              <div className="overflow-clip relative shrink-0 size-[20px] rounded-full ring-1 ring-white/25">
+                <img
+                  alt=""
+                  className="block size-full object-cover"
+                  src={countryFlagSrc}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = defaultCountryFlag;
+                  }}
+                />
               </div>
-            </div>
+              <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[#f2f2f2] text-[14px] sm:text-[15px] lg:text-[14px] text-center max-w-[120px] sm:max-w-[160px] truncate" dir="auto" title={countryDisplayName}>
+                {countryDisplayName}
+              </p>
+              <div className={`relative shrink-0 size-[16px] transition-transform duration-200 ${showCountryDropdown ? 'rotate-90' : ''}`}>
+                <div className="absolute contents inset-0">
+                  <img alt="" className="block max-w-none size-full" src={img4} />
+                </div>
+              </div>
+            </button>
+            {showCountryDropdown ? (
+              <>
+                <div
+                  className="fixed inset-0 z-[9997] sm:hidden bg-black/20"
+                  onClick={() => setShowCountryDropdown(false)}
+                  aria-hidden="true"
+                />
+                <div
+                  className="absolute right-0 top-full mt-[8px] min-w-[220px] max-h-[min(70vh,360px)] overflow-y-auto rounded-[8px] border border-[#e6e6e6] bg-white py-[4px] shadow-[0_8px_24px_rgba(0,0,0,0.18)] dark:border-[#334155] dark:bg-[#1e293b] z-[10050]"
+                  role="listbox"
+                  aria-label="Choose country"
+                >
+                  {countries.length === 0 ? (
+                    <p className="px-[12px] py-[14px] font-['Poppins'] text-[12px] text-[#666] dark:text-[#cbd5e1]">
+                      {countriesLoadError
+                        ? 'Could not load countries. Check your API connection or sign in again.'
+                        : 'Loading countries…'}
+                    </p>
+                  ) : (
+                    countries.map((c) => {
+                      const selected = String(c.id) === String(countryId);
+                      const rowFlag = resolveCountryFlagSrc(c, defaultCountryFlag);
+                      return (
+                        <button
+                          key={String(c.id)}
+                          type="button"
+                          role="option"
+                          aria-selected={selected}
+                          className={`flex w-full items-center gap-[10px] px-[12px] py-[10px] text-left font-['Poppins'] text-[13px] transition-colors hover:bg-[#f3f4f6] dark:hover:bg-[#334155] ${selected ? 'bg-[#eef2ff] dark:bg-[#312e81]/40 font-semibold' : ''}`}
+                          onClick={() => {
+                            localStorage.setItem('selectedCountryId', String(c.id));
+                            setShowCountryDropdown(false);
+                            window.location.reload();
+                          }}
+                        >
+                          <span className="relative size-[22px] shrink-0 overflow-hidden rounded-full ring-1 ring-black/10">
+                            <img
+                              alt=""
+                              className="size-full object-cover"
+                              src={rowFlag}
+                              onError={(e) => {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = defaultCountryFlag;
+                              }}
+                            />
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-[#191c1f] dark:text-white">{c.name}</span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            ) : null}
           </div>
           <div className="content-stretch flex gap-[8px] items-center justify-center overflow-clip p-[4px] relative shrink-0">
             <p className="capitalize font-['Poppins'] font-semibold leading-[normal] not-italic relative shrink-0 text-[#f2f2f2] text-[14px] sm:text-[15px] lg:text-[14px] text-center" dir="auto">
@@ -376,7 +511,7 @@ export default function Header() {
         </div>
       </div>
       {/* Search bar and logo */}
-      <div className="bg-[#0e1c47]   dark:bg-[#0a1529] content-stretch flex flex-col items-start px-[12px]  sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[120px] 2xl:px-[140px] py-[0] sm:py-[12px] md:py-[14px] lg:py-[14px] xl:py-[20px] 2xl:py-[22px] relative shrink-0 w-full max-w-full overflow-visible transition-colors duration-300"   style={{ paddingTop: '0px'  ,paddingBottom: '0px'}}>
+      <div className="bg-[#0e1c47]   dark:bg-[#0a1529] content-stretch flex flex-col items-start px-[12px]  sm:px-[16px] md:px-[40px] lg:px-[60px] xl:px-[120px] 2xl:px-[140px] py-[0] sm:py-[12px] md:py-[14px] lg:py-[14px] xl:py-[20px] 2xl:py-[22px] relative z-[50] shrink-0 w-full max-w-full overflow-visible transition-colors duration-300"   style={{ paddingTop: '0px'  ,paddingBottom: '0px'}}>
         <div className="content-stretch flex flex-col sm:flex-row items-center justify-between relative shrink-0 w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto gap-[12px] sm:gap-[14px] lg:gap-[16px] xl:gap-[24px]">
           <Link to="/" className="relative shrink-0 size-[36px] sm:size-[38px] md:size-[42px] lg:size-[42px] xl:size-[52px] 2xl:size-[56px] self-start sm:self-center cursor-pointer hover:opacity-80 transition-opacity">
             <img

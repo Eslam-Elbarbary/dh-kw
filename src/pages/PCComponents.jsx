@@ -1,9 +1,13 @@
 // PC Components page component - exact Figma implementation
 // Based on Figma design - PC Components Page
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getCategories, getProducts, resolveCountryId } from '../services/catalog.service';
+import { getCategories, getProducts, resolveCountryId, toggleFavoriteProduct } from '../services/catalog.service';
+import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
+import { ProductCardQuickActions } from '../components/ProductCardQuickActions';
+import { ProductVariantPickModal } from '../components/ProductVariantPickModal';
+import { productNeedsVariantPick } from '../utils/productVariants';
 import { useCart } from '../context/CartContext';
 
 // Import assets
@@ -48,6 +52,13 @@ export default function PCComponents() {
   const [categoryOptions, setCategoryOptions] = useState(['All Categories']);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productsError, setProductsError] = useState('');
+  const [compareIds, setCompareIds] = useState(() => getCompareIds());
+  const [favoriteBusyId, setFavoriteBusyId] = useState(null);
+  const [cartBusyId, setCartBusyId] = useState(null);
+  const [compareToast, setCompareToast] = useState('');
+  const compareToastTimerRef = useRef(null);
+  const [variantPickModal, setVariantPickModal] = useState(null);
+  const [variantPickSubmitting, setVariantPickSubmitting] = useState(false);
   
   // Filter states
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
@@ -92,6 +103,120 @@ export default function PCComponents() {
 
     loadCatalogData();
   }, [countryId]);
+
+  useEffect(() => {
+    const syncCompareIds = () => setCompareIds(getCompareIds());
+    const onStorage = (e) => {
+      if (e.key === 'dh_compare_product_ids' || e.key === null) syncCompareIds();
+    };
+    window.addEventListener('dh-compare-updated', syncCompareIds);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('dh-compare-updated', syncCompareIds);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
+  useEffect(() => () => {
+    if (compareToastTimerRef.current) window.clearTimeout(compareToastTimerRef.current);
+  }, []);
+
+  const showCompareToast = (text) => {
+    if (compareToastTimerRef.current) window.clearTimeout(compareToastTimerRef.current);
+    setCompareToast(text);
+    compareToastTimerRef.current = window.setTimeout(() => {
+      setCompareToast('');
+      compareToastTimerRef.current = null;
+    }, 4500);
+  };
+
+  const isProductInCompare = (productId) => compareIds.includes(Number(productId));
+
+  const handleAddToCompare = (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!productId) return;
+    const result = addCompareProductId(productId);
+    setCompareIds(getCompareIds());
+    if (!result.ok && result.reason === 'full') {
+      showCompareToast(`You can compare up to ${MAX_COMPARE_ITEMS} products. Open Compare to remove one.`);
+      return;
+    }
+    if (result.added) showCompareToast('Added to your compare list.');
+    else showCompareToast('This product is already in your compare list.');
+  };
+
+  const handleToggleFavorite = async (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!productId || favoriteBusyId === productId) return;
+    setFavoriteBusyId(productId);
+    setProductsError('');
+    setAllProducts((prev) =>
+      prev.map((item) =>
+        item.id === productId ? { ...item, isFavorite: !Boolean(item.isFavorite) } : item
+      )
+    );
+    try {
+      await toggleFavoriteProduct({ productId });
+    } catch (error) {
+      setAllProducts((prev) =>
+        prev.map((item) =>
+          item.id === productId ? { ...item, isFavorite: !Boolean(item.isFavorite) } : item
+        )
+      );
+      setProductsError(error?.response?.data?.message || 'Failed to update favorite.');
+    } finally {
+      setFavoriteBusyId(null);
+    }
+  };
+
+  const handleAddToCartCard = async (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!productId || cartBusyId) return;
+    setCartBusyId(productId);
+    try {
+      await addToCart({ productId, quantity: 1 });
+      setNotificationMessage('Added to cart.');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    } catch (error) {
+      setNotificationMessage(error?.response?.data?.message || 'Could not add to cart.');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 5000);
+    } finally {
+      setCartBusyId(null);
+    }
+  };
+
+  const handleVariantPickConfirm = async ({ intent, productId, variantId }) => {
+    setVariantPickSubmitting(true);
+    try {
+      if (intent === 'details') {
+        navigate(`/product/${productId}`);
+        setVariantPickModal(null);
+        return;
+      }
+      if (!productId || cartBusyId) return;
+      setCartBusyId(productId);
+      try {
+        await addToCart({ productId, quantity: 1, ...(variantId ? { variantId } : {}) });
+        setVariantPickModal(null);
+        setNotificationMessage('Added to cart.');
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+      } catch (error) {
+        setNotificationMessage(error?.response?.data?.message || 'Could not add to cart.');
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 5000);
+      } finally {
+        setCartBusyId(null);
+      }
+    } finally {
+      setVariantPickSubmitting(false);
+    }
+  };
 
   // Filter products
   const getFilteredProducts = () => {
@@ -587,10 +712,21 @@ export default function PCComponents() {
             {/* Products Grid Container */}
             <div className="flex-1 w-full lg:w-auto">
               {/* Results Count */}
-              <div className="mb-[16px] sm:mb-[20px]">
+              <div className="mb-[16px] sm:mb-[20px] space-y-[10px]">
                 <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">
                   Showing {startIndex + 1}-{Math.min(endIndex, sortedProducts.length)} of {sortedProducts.length} products
                 </p>
+                {compareToast ? (
+                  <p
+                    className="font-['Poppins'] text-[13px] sm:text-[14px] text-[#92400e] dark:text-[#fde68a] bg-[#fffbeb] dark:bg-[#422006]/50 border border-[#fde68a] dark:border-[#854d0e] rounded-[6px] px-[14px] py-[10px]"
+                    role="status"
+                  >
+                    {compareToast}{' '}
+                    <Link to="/compare" className="font-semibold text-[#0e1c47] dark:text-[#eea137] underline underline-offset-2">
+                      View compare
+                    </Link>
+                  </p>
+                ) : null}
               </div>
 
               {/* Product Grid - 5 columns on large screens */}
@@ -621,7 +757,7 @@ export default function PCComponents() {
                   <Link
                     key={product.id}
                     to={`/product/${product.id}`}
-                    className="bg-white dark:bg-[#1e293b] border-[#e4e7e9] dark:border-[#334155] border-[0.849px] border-solid flex flex-col gap-[6.789px] items-start overflow-hidden p-[10px] sm:p-[12px] md:p-[13.578px] rounded-[3.394px] w-full sm:w-[calc(50%-6px)] md:w-[calc(33.333%-13.333px)] lg:w-[calc((100%-80px)/5)] hover:shadow-lg transition-all cursor-pointer"
+                    className="group bg-white dark:bg-[#1e293b] border-[#e4e7e9] dark:border-[#334155] border-[0.849px] border-solid flex flex-col gap-[6.789px] items-start overflow-hidden p-[10px] sm:p-[12px] md:p-[13.578px] rounded-[3.394px] w-full sm:w-[calc(50%-6px)] md:w-[calc(33.333%-13.333px)] lg:w-[calc((100%-80px)/5)] hover:shadow-lg transition-all cursor-pointer"
                   >
                     {/* Product Image */}
                     <div className="h-[120px] sm:h-[140px] md:h-[159.537px] relative w-full">
@@ -629,6 +765,19 @@ export default function PCComponents() {
                         alt={product.name}
                         className="absolute inset-0 w-full h-full object-cover pointer-events-none" 
                         src={product.image} 
+                      />
+
+                      <ProductCardQuickActions
+                        variantChoiceRequired={productNeedsVariantPick(product)}
+                        onVariantChoiceView={() => setVariantPickModal({ product, intent: 'details' })}
+                        onVariantChoiceCart={() => setVariantPickModal({ product, intent: 'cart' })}
+                        isFavorite={Boolean(product.isFavorite)}
+                        inCompare={isProductInCompare(product.id)}
+                        favoriteBusy={favoriteBusyId === product.id}
+                        cartBusy={cartBusyId === product.id || (variantPickSubmitting && variantPickModal?.product?.id === product.id)}
+                        onToggleFavorite={(e) => handleToggleFavorite(e, product.id)}
+                        onAddToCompare={(e) => handleAddToCompare(e, product.id)}
+                        onAddToCart={(e) => handleAddToCartCard(e, product.id)}
                       />
                       
                       {/* Badges */}
@@ -934,6 +1083,15 @@ export default function PCComponents() {
           }
         }
       `}</style>
+
+      <ProductVariantPickModal
+        open={Boolean(variantPickModal)}
+        intent={variantPickModal?.intent ?? 'cart'}
+        product={variantPickModal?.product}
+        onClose={() => !variantPickSubmitting && setVariantPickModal(null)}
+        onConfirm={handleVariantPickConfirm}
+        isSubmitting={variantPickSubmitting}
+      />
     </div>
   );
 }
