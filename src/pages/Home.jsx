@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { getCategories, getProducts, getSliders, getVendors, resolveCountryId } from '../services/catalog.service';
+import { getCategories, getProducts, getSliders, resolveCountryId } from '../services/catalog.service';
 import { getDigitalProducts } from '../services/digitalProducts.service';
 
 // Import assets
@@ -132,27 +132,29 @@ function ProductCategoryCard({ title, mainImage, mainImageAlt, linkText, subCate
               </div>
             </div>
           </div>
-          {/* Sub Categories */}
-          <div className="flex gap-[12px] sm:gap-[14px] md:gap-[16px] items-center relative shrink-0 w-full">
-            {subCategories.map((sub, index) => (
-              <div key={index} className="flex flex-[1_0_0] flex-col gap-[10px] sm:gap-[12px] md:gap-[14px] items-start justify-start min-h-px min-w-px relative shrink-0">
-                <div className="bg-[#0e1c47] flex flex-col items-start overflow-clip p-[12px] sm:p-[16px] md:p-[20px] relative rounded-[4px] shrink-0 w-full">
-                  <div className="flex flex-col items-center justify-center relative shrink-0 w-full min-h-[90px] sm:min-h-[110px] md:min-h-[128px]">
-                    {sub.image ? (
-                      <img alt={sub.imageAlt} className="h-[90px] w-[60px] sm:h-[110px] sm:w-[75px] md:h-[128px] md:w-[86.116px] object-contain" src={sub.image} />
-                    ) : (
-                      <p className="font-['Poppins'] font-normal text-white text-[10px] sm:text-[12px] text-center">No image</p>
-                    )}
+          {/* Sub Categories — only when present so card height matches peers */}
+          {Array.isArray(subCategories) && subCategories.length > 0 ? (
+            <div className="flex gap-[12px] sm:gap-[14px] md:gap-[16px] items-center relative shrink-0 w-full">
+              {subCategories.map((sub, index) => (
+                <div key={index} className="flex flex-[1_0_0] flex-col gap-[10px] sm:gap-[12px] md:gap-[14px] items-start justify-start min-h-px min-w-px relative shrink-0">
+                  <div className="bg-[#0e1c47] flex flex-col items-start overflow-clip p-[12px] sm:p-[16px] md:p-[20px] relative rounded-[4px] shrink-0 w-full">
+                    <div className="flex flex-col items-center justify-center relative shrink-0 w-full min-h-[90px] sm:min-h-[110px] md:min-h-[128px]">
+                      {sub.image ? (
+                        <img alt={sub.imageAlt} className="h-[90px] w-[60px] sm:h-[110px] sm:w-[75px] md:h-[128px] md:w-[86.116px] object-contain" src={sub.image} />
+                      ) : (
+                        <p className="font-['Poppins'] font-normal text-white text-[10px] sm:text-[12px] text-center">No image</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center relative shrink-0 w-full min-h-[50px] px-[2px]">
+                    <p className="capitalize font-['Poppins'] font-medium leading-[1.25] not-italic relative text-[13px] sm:text-[14px] md:text-[15px] lg:text-[16px] xl:text-[17px] text-black text-center line-clamp-2 break-words w-full max-w-full overflow-hidden" dir="auto">
+                      {sub.linkText}
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center justify-center relative shrink-0 w-full min-h-[50px] px-[2px]">
-                  <p className="capitalize font-['Poppins'] font-medium leading-[1.25] not-italic relative text-[13px] sm:text-[14px] md:text-[15px] lg:text-[16px] xl:text-[17px] text-black text-center line-clamp-2 break-words w-full max-w-full overflow-hidden" dir="auto">
-                    {sub.linkText}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
     </Link>
@@ -210,8 +212,6 @@ function FeaturesSection() {
 export default function Home() {
   const [apiCategories, setApiCategories] = React.useState([]);
   const [apiCategoryProducts, setApiCategoryProducts] = React.useState({});
-  const [apiVendors, setApiVendors] = React.useState([]);
-  const [apiVendorProducts, setApiVendorProducts] = React.useState({});
   const [sliders, setSliders] = React.useState([]);
   const [loadingHomeData, setLoadingHomeData] = React.useState(true);
   const [digitalPreview, setDigitalPreview] = React.useState([]);
@@ -219,33 +219,17 @@ export default function Home() {
   const countryId = React.useMemo(() => resolveCountryId(1), []);
 
   React.useEffect(() => {
-    let cancelled = false;
-    const loadDigital = async () => {
-      try {
-        setDigitalPreviewLoading(true);
-        const { items } = await getDigitalProducts({ countryId, page: 1, perPage: 8 });
-        if (!cancelled) setDigitalPreview(items);
-      } catch {
-        if (!cancelled) setDigitalPreview([]);
-      } finally {
-        if (!cancelled) setDigitalPreviewLoading(false);
-      }
-    };
-    loadDigital();
-    return () => {
-      cancelled = true;
-    };
-  }, [countryId]);
-
-  React.useEffect(() => {
     const loadHomeData = async () => {
       try {
         setLoadingHomeData(true);
-        const [categoriesList, vendorsList, slidersList] = await Promise.all([
+        setDigitalPreviewLoading(true);
+        const [categoriesList, slidersList, digitalListRes] = await Promise.all([
           getCategories(),
-          getVendors(),
           getSliders(),
+          getDigitalProducts({ countryId, page: 1, perPage: 8 }).catch(() => ({ items: [] })),
         ]);
+        const digitalItems = Array.isArray(digitalListRes?.items) ? digitalListRes.items : [];
+
         const topCategories = categoriesList.slice(0, 3);
         const categoryProductPairs = await Promise.all(
           topCategories.map(async (category) => {
@@ -258,42 +242,31 @@ export default function Home() {
             return [category.id, list];
           })
         );
-        const topVendors = vendorsList.slice(0, 3);
-        const vendorProductPairs = await Promise.all(
-          topVendors.map(async (vendor) => {
-            const list = await getProducts({
-              countryId,
-              vendorId: vendor.id,
-              perPage: 2,
-              page: 1,
-            });
-            return [vendor.id, list];
-          })
-        );
         setApiCategories(topCategories);
         setApiCategoryProducts(Object.fromEntries(categoryProductPairs));
-        setApiVendors(topVendors);
-        setApiVendorProducts(Object.fromEntries(vendorProductPairs));
         setSliders(Array.isArray(slidersList) ? slidersList : []);
+        setDigitalPreview(digitalItems);
       } catch {
         setApiCategories([]);
         setApiCategoryProducts({});
-        setApiVendors([]);
-        setApiVendorProducts({});
+        setDigitalPreview([]);
         setSliders([]);
       } finally {
         setLoadingHomeData(false);
+        setDigitalPreviewLoading(false);
       }
     };
 
     loadHomeData();
   }, [countryId]);
 
-  const productCategories = apiCategories.map((category) => {
+  const productCategories = React.useMemo(() => {
+    const physical = apiCategories.map((category) => {
       const previews = apiCategoryProducts[category.id] || [];
       const mainPreview = previews[0];
 
       return {
+        key: `cat-${category.id}`,
         title: category.name,
         mainImage: category.image || mainPreview?.image || '',
         mainImageAlt: category.name,
@@ -309,25 +282,25 @@ export default function Home() {
       };
     });
 
-  const vendorCards = apiVendors.map((vendor) => {
-    const previews = apiVendorProducts[vendor.id] || [];
-    const mainPreview = previews[0];
+    const firstDigital = digitalPreview[0];
+    const hubPreviews = digitalPreview.length > 1 ? digitalPreview.slice(1, 3) : [];
 
-    return {
-      title: vendor.name,
-      mainImage: vendor.image || mainPreview?.image || '',
-      mainImageAlt: vendor.name,
-      linkText: `Shop ${vendor.name}`,
-      linkTo: `/search?country_id=${countryId}&vendor_id=${vendor.id}`,
-      subCategories: previews.length > 0
-        ? previews.map((item) => ({
-            image: item.image || '',
-            imageAlt: item.name || `${vendor.name} product`,
-            linkText: item.name || 'Product',
-          }))
-        : [],
+    const digitalHub = {
+      key: 'digital-products-hub',
+      title: 'Digital products',
+      mainImage: firstDigital?.image || '',
+      mainImageAlt: 'Digital products',
+      linkText: 'Browse digital',
+      linkTo: '/digital-categories',
+      subCategories: hubPreviews.map((item) => ({
+        image: item.image || '',
+        imageAlt: item.name || 'Digital product',
+        linkText: item.name || 'Product',
+      })),
     };
-  });
+
+    return [...physical, digitalHub];
+  }, [apiCategories, apiCategoryProducts, digitalPreview, countryId]);
 
   return (
     <div className="bg-white dark:bg-[#0f172a] relative w-full min-h-screen transition-colors duration-300" data-name="home" data-node-id="35:497">
@@ -340,34 +313,18 @@ export default function Home() {
         {/* Product Categories Section */}
         <div className="flex flex-col gap-[20px] sm:gap-[24px] md:gap-[28px] lg:gap-[32px] xl:gap-[36px] 2xl:gap-[40px] items-center relative w-full px-[12px] sm:px-[16px] md:px-[24px] lg:px-[60px] xl:px-[80px] 2xl:px-[100px]" data-node-id="35:561">
           <div className="w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto">
-            <p className="font-['Poppins'] font-semibold text-[#0e1c47] text-[22px] sm:text-[26px]">Top Categories</p>
+            <p className="font-['Poppins'] font-semibold text-[#0e1c47] dark:text-white text-[22px] sm:text-[26px]">Top Categories</p>
           </div>
           {/* First Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto" data-node-id="35:9481">
+          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto" data-node-id="35:9481">
             {loadingHomeData ? (
-              <p className="font-['Poppins'] font-normal text-[#666] text-[16px] py-[20px]">Loading categories...</p>
+              <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[16px] py-[20px]">Loading categories...</p>
             ) : productCategories.length > 0 ? (
-              productCategories.map((category, index) => (
-                <ProductCategoryCard key={index} {...category} linkTo={category.linkTo} />
+              productCategories.map(({ key, ...category }) => (
+                <ProductCategoryCard key={key} {...category} linkTo={category.linkTo} />
               ))
             ) : (
-              <p className="font-['Poppins'] font-normal text-[#666] text-[16px] py-[20px]">No categories available.</p>
-            )}
-          </div>
-
-          <div className="w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto">
-            <p className="font-['Poppins'] font-semibold text-[#0e1c47] text-[22px] sm:text-[26px]">Top Vendors</p>
-          </div>
-          {/* Second Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px] xl:gap-[28px] 2xl:gap-[32px] relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto" data-node-id="35:9604">
-            {loadingHomeData ? (
-              <p className="font-['Poppins'] font-normal text-[#666] text-[16px] py-[20px]">Loading vendors...</p>
-            ) : vendorCards.length > 0 ? (
-              vendorCards.map((vendor, index) => (
-                <ProductCategoryCard key={index} {...vendor} linkTo={vendor.linkTo} />
-              ))
-            ) : (
-              <p className="font-['Poppins'] font-normal text-[#666] text-[16px] py-[20px]">No vendors available.</p>
+              <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[16px] py-[20px]">No categories available.</p>
             )}
           </div>
         </div>

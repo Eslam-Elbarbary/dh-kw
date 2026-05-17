@@ -2,9 +2,13 @@
 // Based on node 35:2469 and 35:3733
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getCategories, getProducts, resolveCountryId, toggleFavoriteProduct } from '../services/catalog.service';
 import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
+import { useCart } from '../context/CartContext';
+import { ProductCardQuickActions } from '../components/ProductCardQuickActions';
+import { ProductVariantPickModal } from '../components/ProductVariantPickModal';
+import { productNeedsVariantPick } from '../utils/productVariants';
 
 // Import assets
 import productImage1 from '../assets/2c2703028e858e93057b03391653381259c5700c.png';
@@ -18,9 +22,6 @@ import productImage8 from '../assets/76236df7a5ad3774e8e14a241d83f4af473d2f52.pn
 import productImage9 from '../assets/89ed235ee47f8d384c57df36ae75c564312166e3.png';
 import productImage10 from '../assets/95835fab043de209b7a372fca8d7f780a4915f2b.png';
 import arrowDownIcon from '../assets/ArrowRight.svg';
-import heartIcon from '../assets/wishlist.svg';
-import compareIcon from '../assets/arrow-swap-horizontal.svg';
-import shoppingCartIcon from '../assets/shopping-basket-01.svg';
 import filterHorizontalIcon from '../assets/filter-horizontal.svg';
 import checkIcon from '../assets/CheckCircle.svg';
 
@@ -36,10 +37,6 @@ const imgProductImage = productImage1; // For the 4K TV search results
 const imgArrowDown = arrowDownIcon;
 const imgRegularCaretDown = arrowDownIcon;
 const imgRegularCaretDownVector = arrowDownIcon;
-const imgHeart = heartIcon;
-const imgShoppingCart = shoppingCartIcon;
-const imgHeart3 = heartIcon;
-const imgCompare = compareIcon;
 const imgDropdownCaret = arrowDownIcon;
 
 // Filter Assets
@@ -55,6 +52,8 @@ const imgFilterHorizontalElements = filterHorizontalIcon;
 
 export default function SearchResults() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
   const params = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
   const countryId = Number(params.get('country_id')) || resolveCountryId(1);
   const preselectedCategoryId = params.get('category_id');
@@ -78,9 +77,12 @@ export default function SearchResults() {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productsError, setProductsError] = useState('');
   const [favoriteBusyId, setFavoriteBusyId] = useState(null);
+  const [cartBusyId, setCartBusyId] = useState(null);
   const [compareIds, setCompareIds] = useState(() => getCompareIds());
   const [compareToast, setCompareToast] = useState('');
   const compareToastTimerRef = useRef(null);
+  const [variantPickModal, setVariantPickModal] = useState(null);
+  const [variantPickSubmitting, setVariantPickSubmitting] = useState(false);
 
   useEffect(() => {
     const syncCompareIds = () => setCompareIds(getCompareIds());
@@ -122,6 +124,45 @@ export default function SearchResults() {
     }
     if (result.added) showCompareToast('Added to your compare list.');
     else showCompareToast('This product is already in your compare list.');
+  };
+
+  const handleAddToCartCard = async (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!productId || cartBusyId) return;
+    setCartBusyId(productId);
+    setProductsError('');
+    try {
+      await addToCart({ productId, quantity: 1 });
+    } catch (error) {
+      setProductsError(error?.response?.data?.message || 'Could not add to cart. You may need to sign in.');
+    } finally {
+      setCartBusyId(null);
+    }
+  };
+
+  const handleVariantPickConfirm = async ({ intent, productId, variantId }) => {
+    setVariantPickSubmitting(true);
+    setProductsError('');
+    try {
+      if (intent === 'details') {
+        navigate(`/product/${productId}`);
+        setVariantPickModal(null);
+        return;
+      }
+      if (!productId || cartBusyId) return;
+      setCartBusyId(productId);
+      try {
+        await addToCart({ productId, quantity: 1, ...(variantId ? { variantId } : {}) });
+        setVariantPickModal(null);
+      } catch (error) {
+        setProductsError(error?.response?.data?.message || 'Could not add to cart. You may need to sign in.');
+      } finally {
+        setCartBusyId(null);
+      }
+    } finally {
+      setVariantPickSubmitting(false);
+    }
   };
 
   const toggleBrand = (brand) => {
@@ -558,7 +599,7 @@ export default function SearchResults() {
                         <Link
                           key={product.id}
                           to={`/product/${product.id}`}
-                          className={`bg-white dark:bg-[#1e293b] border-[#e4e7e9] dark:border-[#334155] border-[0.849px] border-solid flex flex-col gap-[6.789px] items-start overflow-hidden p-[13.578px] rounded-[3.394px] w-full sm:w-[calc(50%-10.183px)] md:w-[calc(33.333%-13.577px)] ${getGridColumns()} hover:shadow-lg transition-all cursor-pointer`}
+                          className={`group bg-white dark:bg-[#1e293b] border-[#e4e7e9] dark:border-[#334155] border-[0.849px] border-solid flex flex-col gap-[6.789px] items-start overflow-hidden p-[13.578px] rounded-[3.394px] w-full sm:w-[calc(50%-10.183px)] md:w-[calc(33.333%-13.577px)] ${getGridColumns()} hover:shadow-lg transition-all cursor-pointer`}
                           data-name="Product"
                           data-node-id={rowStart === 0 && idx === 0 ? "35:3856" : undefined}
                         >
@@ -576,44 +617,19 @@ export default function SearchResults() {
                               </p>
                             )}
 
-                            <div className="absolute top-[10px] right-[10px] z-10 flex flex-row-reverse items-center gap-[8px]">
-                              <button
-                                type="button"
-                                onClick={(event) => handleToggleFavorite(event, product.id)}
-                                aria-label={product.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-                                title={product.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-                                className={`inline-flex items-center justify-center size-[34px] rounded-full border shadow-sm transition-all duration-200 ${
-                                  product.isFavorite
-                                    ? 'bg-[#fee2e2] text-[#dc2626] border-[#fecaca]'
-                                    : 'bg-white text-[#0e1c47] border-[#e2e8f0] hover:text-[#dc2626] hover:border-[#fecaca] hover:shadow-md'
-                                } ${favoriteBusyId === product.id ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'} focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0e1c47] focus-visible:ring-offset-1 dark:bg-[#1e293b] dark:border-[#475569] dark:text-[#e5e7eb]`}
-                                disabled={favoriteBusyId === product.id}
-                              >
-                                <svg className="size-[16px]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                  <path d="M12 21s-6.716-4.438-9.193-8.11C1.205 10.518 1 8.41 1 7.5 1 4.462 3.462 2 6.5 2c2.06 0 3.854 1.133 4.5 2.81C11.646 3.133 13.44 2 15.5 2 18.538 2 21 4.462 21 7.5c0 .91-.205 3.018-1.807 5.39C18.716 16.562 12 21 12 21z" />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(event) => handleAddToCompare(event, product.id)}
-                                aria-label={isProductInCompare(product.id) ? 'In compare list' : 'Add to compare'}
-                                title={isProductInCompare(product.id) ? 'In compare list — click Compare in the header to view' : 'Add to compare'}
-                                aria-pressed={isProductInCompare(product.id)}
-                                className={`inline-flex items-center justify-center size-[34px] rounded-full border shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0e1c47] focus-visible:ring-offset-1 dark:focus-visible:ring-offset-[#1e293b] ${
-                                  isProductInCompare(product.id)
-                                    ? 'bg-[#fff8eb] dark:bg-[#422006]/60 border-[#f5c06a] dark:border-[#eea137]/50 shadow-md'
-                                    : 'bg-white dark:bg-[#1e293b] border-[#e2e8f0] dark:border-[#475569] hover:border-[#eea137]/60 hover:shadow-md'
-                                } cursor-pointer`}
-                              >
-                                <img
-                                  src={imgCompare}
-                                  alt=""
-                                  className="size-[16px] object-contain pointer-events-none dark:opacity-90"
-                                  style={{ filter: 'brightness(0) saturate(100%)' }}
-                                />
-                              </button>
-                            </div>
-                            
+                            <ProductCardQuickActions
+                              variantChoiceRequired={productNeedsVariantPick(product)}
+                              onVariantChoiceView={() => setVariantPickModal({ product, intent: 'details' })}
+                              onVariantChoiceCart={() => setVariantPickModal({ product, intent: 'cart' })}
+                              isFavorite={Boolean(product.isFavorite)}
+                              inCompare={isProductInCompare(product.id)}
+                              favoriteBusy={favoriteBusyId === product.id}
+                              cartBusy={cartBusyId === product.id || (variantPickSubmitting && variantPickModal?.product?.id === product.id)}
+                              onToggleFavorite={(e) => handleToggleFavorite(e, product.id)}
+                              onAddToCompare={(e) => handleAddToCompare(e, product.id)}
+                              onAddToCart={(e) => handleAddToCartCard(e, product.id)}
+                            />
+
                             {/* Badges */}
                             {product.badges.length > 0 && (
                               <div className="absolute flex flex-col gap-[6.789px] items-start left-[13.15px] top-[13.15px]" data-name="Badge" data-node-id="35:3864">
@@ -1016,6 +1032,15 @@ export default function SearchResults() {
           </div>
         </div>
       </div>
+
+      <ProductVariantPickModal
+        open={Boolean(variantPickModal)}
+        intent={variantPickModal?.intent ?? 'cart'}
+        product={variantPickModal?.product}
+        onClose={() => !variantPickSubmitting && setVariantPickModal(null)}
+        onConfirm={handleVariantPickConfirm}
+        isSubmitting={variantPickSubmitting}
+      />
     </div>
   );
 }

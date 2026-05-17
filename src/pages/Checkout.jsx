@@ -2,10 +2,13 @@
 // Based on Figma design - Checkout Page
 
 import { Link, useNavigate } from 'react-router-dom';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { createAddress, deleteAddress, getAddresses } from '../services/address.service';
+import { resolveCountryId } from '../services/catalog.service';
+import { getCountries } from '../services/meta.service';
+import { getShippingStates, getShippingCities, getShippingCityDetails } from '../services/shipping.service';
 import {
   calculateOrderShipping,
   createOrder,
@@ -128,6 +131,28 @@ export default function Checkout() {
   const [checkoutError, setCheckoutError] = useState('');
   const [checkoutWarning, setCheckoutWarning] = useState('');
   const [nextCheckoutAttemptAt, setNextCheckoutAttemptAt] = useState(0);
+  const [countriesMeta, setCountriesMeta] = useState([]);
+  const [shippingStates, setShippingStates] = useState([]);
+  const [shippingCities, setShippingCities] = useState([]);
+  const [selectedShippingStateId, setSelectedShippingStateId] = useState('');
+  const [selectedShippingCityId, setSelectedShippingCityId] = useState('');
+  const [statesLoading, setStatesLoading] = useState(false);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [shippingRegionsError, setShippingRegionsError] = useState('');
+  const [cityDetailsLoading, setCityDetailsLoading] = useState(false);
+  const [cityDetailsError, setCityDetailsError] = useState('');
+  /** Zone rate from GET /api/shipping/cities/:id; null = none / not loaded */
+  const [cityZoneShippingCost, setCityZoneShippingCost] = useState(null);
+
+  const activeCountryId = resolveCountryId(1);
+  const activeCountry = useMemo(
+    () => countriesMeta.find((c) => String(c.id) === String(activeCountryId)),
+    [countriesMeta, activeCountryId],
+  );
+  const shippingCountryCode = useMemo(
+    () => (activeCountry?.code ? String(activeCountry.code).toLowerCase() : ''),
+    [activeCountry],
+  );
 
   const normalizeAddressType = (type) => {
     const raw = String(type || '').trim().toLowerCase();
@@ -144,8 +169,28 @@ export default function Checkout() {
     const typeLabel = formatAddressTypeLabel(addressType);
     const normalizedAddress = String(address || '').trim();
     if (!normalizedAddress) return '';
-    return `[${typeLabel}] ${normalizedAddress}`;
-  }, [addressType, address]);
+
+    const stateLabel = shippingStates.find((s) => String(s.id) === String(selectedShippingStateId))?.name || '';
+    const cityLabel = shippingCities.find((c) => String(c.id) === String(selectedShippingCityId))?.name || '';
+    const regionParts = [];
+    if (stateLabel) regionParts.push(`Governorate: ${stateLabel}`);
+    if (cityLabel) regionParts.push(`Area: ${cityLabel}`);
+    if (cityZoneShippingCost != null && Number.isFinite(Number(cityZoneShippingCost))) {
+      const z = Number(cityZoneShippingCost);
+      regionParts.push(z > 0 ? `Zone ship: $${z.toFixed(2)}` : 'Zone ship: Free');
+    }
+    const regionSuffix = regionParts.length ? ` | ${regionParts.join(' | ')}` : '';
+
+    return `[${typeLabel}] ${normalizedAddress}${regionSuffix}`;
+  }, [
+    addressType,
+    address,
+    shippingStates,
+    shippingCities,
+    selectedShippingStateId,
+    selectedShippingCityId,
+    cityZoneShippingCost,
+  ]);
 
   const toProfessionalAddressError = (error, fallbackMessage) => {
     const status = error?.response?.status;
@@ -196,6 +241,129 @@ export default function Checkout() {
   }, [loadAddresses]);
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await getCountries();
+        if (!cancelled) setCountriesMeta(list);
+      } catch {
+        if (!cancelled) setCountriesMeta([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!shippingCountryCode) {
+      setShippingStates([]);
+      setShippingCities([]);
+      setSelectedShippingStateId('');
+      setSelectedShippingCityId('');
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setStatesLoading(true);
+      setShippingRegionsError('');
+      try {
+        const states = await getShippingStates(shippingCountryCode);
+        if (cancelled) return;
+        setShippingStates(states);
+        setSelectedShippingStateId('');
+        setSelectedShippingCityId('');
+        setShippingCities([]);
+      } catch {
+        if (!cancelled) {
+          setShippingStates([]);
+          setShippingRegionsError('Unable to load governorates for your region. You can still type the full address.');
+        }
+      } finally {
+        if (!cancelled) setStatesLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shippingCountryCode]);
+
+  useEffect(() => {
+    if (!shippingCountryCode || !selectedShippingStateId) {
+      setShippingCities([]);
+      setSelectedShippingCityId('');
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setCitiesLoading(true);
+      setShippingRegionsError('');
+      try {
+        const cities = await getShippingCities({
+          countryCode: shippingCountryCode,
+          stateId: selectedShippingStateId,
+        });
+        if (cancelled) return;
+        setShippingCities(cities);
+        setSelectedShippingCityId('');
+      } catch {
+        if (!cancelled) {
+          setShippingCities([]);
+          setShippingRegionsError('Unable to load areas for this governorate.');
+        }
+      } finally {
+        if (!cancelled) setCitiesLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shippingCountryCode, selectedShippingStateId]);
+
+  useEffect(() => {
+    if (!shippingCountryCode || !selectedShippingCityId) {
+      setCityZoneShippingCost(null);
+      setCityDetailsError('');
+      setCityDetailsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setCityDetailsLoading(true);
+      setCityDetailsError('');
+      setCityZoneShippingCost(null);
+      try {
+        const details = await getShippingCityDetails({
+          countryCode: shippingCountryCode,
+          cityId: selectedShippingCityId,
+        });
+        if (cancelled) return;
+        if (details && Number.isFinite(details.shippingCost)) {
+          setCityZoneShippingCost(details.shippingCost);
+        } else {
+          setCityZoneShippingCost(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setCityZoneShippingCost(null);
+          setCityDetailsError('Could not load delivery rate for this area.');
+        }
+      } finally {
+        if (!cancelled) setCityDetailsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shippingCountryCode, selectedShippingCityId]);
+
+  useEffect(() => {
     if (!selectedSavedAddressId && savedAddresses.length) {
       applySavedAddress(savedAddresses[0]);
     }
@@ -220,6 +388,84 @@ export default function Checkout() {
       total: Number(data?.total ?? data?.grand_total ?? cart.summary?.total ?? 0) || 0,
     };
   }, [cart.summary?.total]);
+
+  const orderSummaryPricing = useMemo(() => {
+    const roundMoney = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 0;
+      return Math.round(Math.max(0, n) * 100) / 100;
+    };
+
+    const subtotal = roundMoney(cart.summary?.subtotal);
+    const discount = roundMoney(shippingQuote?.discount ?? cart.summary?.discount);
+    const tax = roundMoney(cart.summary?.tax);
+    const serverShip = roundMoney(shippingQuote?.shipping ?? cart.summary?.shipping);
+    const serverTotalFromQuote = shippingQuote != null ? roundMoney(shippingQuote.total) : 0;
+    const cartTotal = roundMoney(cart.summary?.total);
+
+    const zoneShip =
+      cityZoneShippingCost != null && Number.isFinite(Number(cityZoneShippingCost))
+        ? roundMoney(cityZoneShippingCost)
+        : null;
+
+    const awaitingZoneRate =
+      Boolean(selectedShippingCityId) && cityDetailsLoading && serverShip <= 0;
+
+    if (shippingLoading || awaitingZoneRate) {
+      return {
+        loading: true,
+        shippingText: '',
+        totalAmount: roundMoney(shippingQuote?.total ?? cart.summary?.total ?? 0),
+        estimateNote: '',
+      };
+    }
+
+    let shippingAmount = serverShip;
+    let totalAmount;
+    let estimateNote = '';
+
+    if (serverShip > 0) {
+      shippingAmount = serverShip;
+      totalAmount =
+        serverTotalFromQuote > 0
+          ? serverTotalFromQuote
+          : roundMoney(subtotal + serverShip + tax - discount);
+    } else if (zoneShip != null && zoneShip > 0) {
+      shippingAmount = zoneShip;
+      totalAmount = roundMoney(subtotal + zoneShip + tax - discount);
+      estimateNote =
+        'Delivery fee is based on your selected governorate and area. Final charges are confirmed when you complete checkout with a saved delivery address.';
+    } else {
+      shippingAmount = serverShip;
+      if (shippingQuote != null && serverTotalFromQuote > 0) {
+        totalAmount = serverTotalFromQuote;
+      } else {
+        totalAmount = cartTotal;
+      }
+    }
+
+    totalAmount = roundMoney(Math.max(0, totalAmount));
+
+    const shippingText = shippingAmount <= 0 ? 'Free' : `$${shippingAmount.toFixed(2)}`;
+
+    return {
+      loading: false,
+      shippingText,
+      totalAmount,
+      estimateNote,
+    };
+  }, [
+    shippingLoading,
+    cityDetailsLoading,
+    selectedShippingCityId,
+    cart.summary?.subtotal,
+    cart.summary?.discount,
+    cart.summary?.tax,
+    cart.summary?.total,
+    cart.summary?.shipping,
+    shippingQuote,
+    cityZoneShippingCost,
+  ]);
 
   useEffect(() => {
     const loadShipping = async () => {
@@ -305,6 +551,10 @@ export default function Checkout() {
     setAddress(item.address || '');
     setAddressType(normalizeAddressType(item.name || item.title || 'house'));
     setContactPhone(item.phone || '');
+    setSelectedShippingStateId('');
+    setSelectedShippingCityId('');
+    setCityZoneShippingCost(null);
+    setCityDetailsError('');
     if (item.latitude && item.longitude) {
       setMapPosition([item.latitude, item.longitude]);
     }
@@ -463,6 +713,16 @@ export default function Checkout() {
       setAddressesError('Please enter phone number before saving.');
       return;
     }
+    if (shippingStates.length > 0) {
+      if (!selectedShippingStateId) {
+        setAddressesError('Please select a governorate / state from the list.');
+        return;
+      }
+      if (!selectedShippingCityId) {
+        setAddressesError('Please select an area / city from the list.');
+        return;
+      }
+    }
     try {
       setAddressActionLoading(true);
       setAddressesError('');
@@ -571,6 +831,96 @@ export default function Checkout() {
                     placeholder="Last name"
                   />
                 </div>
+              </div>
+
+              {/* Region from account / store country — drives shipping API */}
+              <div className="flex flex-col gap-[10px] w-full rounded-[6px] border border-[#e8ecf4] bg-[#f8fafc] px-[12px] py-[12px]">
+                <div className="flex flex-col gap-[4px]">
+                  <p className="font-['Poppins'] font-medium text-[13px] text-[#0e1c47]">Governorate &amp; area</p>
+                  <p className="font-['Poppins'] text-[12px] text-[#666] leading-snug">
+                    Lists follow your current store country
+                    {activeCountry?.name ? (
+                      <span className="font-medium text-[#333]"> ({activeCountry.name})</span>
+                    ) : null}
+                    . Change country from sign-up selection or your profile, then refresh this page if needed.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-[12px] w-full">
+                  <div className="flex flex-col gap-[6px] flex-1 min-w-0">
+                    <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">Governorate / State</label>
+                    <select
+                      value={selectedShippingStateId}
+                      onChange={(e) => setSelectedShippingStateId(e.target.value)}
+                      disabled={statesLoading || !shippingStates.length}
+                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] py-[10px] font-['Poppins'] font-normal text-[13px] text-[#333] bg-white outline-none focus:border-[#0e1c47] transition-colors w-full disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <option value="">
+                        {statesLoading
+                          ? 'Loading…'
+                          : shippingStates.length
+                            ? 'Select governorate'
+                            : shippingCountryCode
+                              ? 'No list for this country — use address field'
+                              : 'Loading country…'}
+                      </option>
+                      {shippingStates.map((s) => (
+                        <option key={String(s.id)} value={String(s.id)}>
+                          {s.name || `State ${s.id}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-[6px] flex-1 min-w-0">
+                    <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">Area / City</label>
+                    <select
+                      value={selectedShippingCityId}
+                      onChange={(e) => setSelectedShippingCityId(e.target.value)}
+                      disabled={citiesLoading || !selectedShippingStateId || !shippingCities.length}
+                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] py-[10px] font-['Poppins'] font-normal text-[13px] text-[#333] bg-white outline-none focus:border-[#0e1c47] transition-colors w-full disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <option value="">
+                        {citiesLoading
+                          ? 'Loading…'
+                          : !selectedShippingStateId
+                            ? 'Select governorate first'
+                            : shippingCities.length
+                              ? 'Select area'
+                              : 'No areas listed'}
+                      </option>
+                      {shippingCities.map((c) => (
+                        <option key={String(c.id)} value={String(c.id)}>
+                          {c.name || `City ${c.id}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {shippingRegionsError ? (
+                  <p className="font-['Poppins'] text-[12px] text-[#b45309]">{shippingRegionsError}</p>
+                ) : null}
+                {selectedShippingCityId &&
+                (cityDetailsLoading || cityDetailsError || cityZoneShippingCost != null) ? (
+                  <div className="rounded-[4px] border border-[#e4e7e9] bg-white px-[10px] py-[8px]">
+                    {cityDetailsLoading ? (
+                      <p className="font-['Poppins'] text-[12px] text-[#666]">Loading area delivery rate…</p>
+                    ) : cityDetailsError ? (
+                      <p className="font-['Poppins'] text-[12px] text-[#b45309]">{cityDetailsError}</p>
+                    ) : cityZoneShippingCost != null ? (
+                      <p className="font-['Poppins'] text-[12px] text-[#0e1c47]">
+                        <span className="font-medium">Shipping zone rate:</span>{' '}
+                        {Number(cityZoneShippingCost) > 0 ? (
+                          <span className="font-semibold tabular-nums">${Number(cityZoneShippingCost).toFixed(2)}</span>
+                        ) : (
+                          <span className="font-semibold">Free</span>
+                        )}
+                        <span className="text-[#666] font-normal">
+                          {' '}
+                          (Included in order summary when your cart does not return a shipping charge.)
+                        </span>
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
 
               {/* Address with map */}
@@ -836,15 +1186,18 @@ export default function Checkout() {
                 <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Sub-total</p>
                 <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">${Number(cart.summary?.subtotal || 0).toFixed(2)}</p>
               </div>
-              <div className="flex justify-between items-center w-full">
-                <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Shipping</p>
-                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">
-                  {shippingLoading
-                    ? 'Calculating...'
-                    : Number(shippingQuote?.shipping ?? cart.summary?.shipping ?? 0) > 0
-                      ? `$${Number(shippingQuote?.shipping ?? cart.summary?.shipping ?? 0).toFixed(2)}`
-                      : 'Free'}
-                </p>
+              <div className="flex flex-col gap-[6px] w-full">
+                <div className="flex justify-between items-center w-full">
+                  <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Shipping</p>
+                  <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">
+                    {orderSummaryPricing.loading ? 'Calculating...' : orderSummaryPricing.shippingText}
+                  </p>
+                </div>
+                {!orderSummaryPricing.loading && orderSummaryPricing.estimateNote ? (
+                  <p className="font-['Poppins'] text-[11px] sm:text-[12px] text-[#666] leading-relaxed">
+                    {orderSummaryPricing.estimateNote}
+                  </p>
+                ) : null}
               </div>
               <div className="flex justify-between items-center w-full">
                 <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Discount</p>
@@ -859,7 +1212,13 @@ export default function Checkout() {
               <div className="flex justify-between items-center w-full border-t border-[#e4e7e9] pt-[12px] mt-[4px]">
                 <p className="font-['Poppins'] font-semibold text-[16px] sm:text-[18px] text-[#333]">Total</p>
                 <p className="font-['Poppins'] font-semibold text-[16px] sm:text-[18px] text-[#333]">
-                  ${Number(shippingQuote?.total ?? cart.summary?.total ?? 0).toFixed(2)} USD
+                  {orderSummaryPricing.loading ? (
+                    'Calculating...'
+                  ) : (
+                    <>
+                      ${orderSummaryPricing.totalAmount.toFixed(2)} USD
+                    </>
+                  )}
                 </p>
               </div>
             </div>

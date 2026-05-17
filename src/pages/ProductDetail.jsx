@@ -1,7 +1,7 @@
 // Product Detail page component - exact Figma implementation
 // Based on Figma design - Product Detail Page
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import {
   getProduct,
@@ -17,7 +17,10 @@ import {
   reportProduct,
   reportVendor,
 } from '../services/ratings-reports.service';
-import { addCompareProductId, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
+import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
+import { buildVariantGroups, getSelectedVariantId, productNeedsVariantPick } from '../utils/productVariants';
+import { ProductCardQuickActions } from '../components/ProductCardQuickActions';
+import { ProductVariantPickModal } from '../components/ProductVariantPickModal';
 
 // Import assets
 import productImage1 from '../assets/4290b5299d7820aab27a24eef721fc6a3de6f994.png';
@@ -103,6 +106,7 @@ function IconTwitter({ className }) {
 export default function ProductDetail() {
   const { addToCart } = useCart();
   const { id } = useParams();
+  const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedVariants, setSelectedVariants] = useState({});
   const [quantity, setQuantity] = useState(1);
@@ -125,7 +129,25 @@ export default function ProductDetail() {
   const [feedbackSuccess, setFeedbackSuccess] = useState('');
   const [favoriteBusy, setFavoriteBusy] = useState(false);
   const [cartBusy, setCartBusy] = useState(false);
+  const [compareIds, setCompareIds] = useState(() => getCompareIds());
+  const [relatedFavoriteBusyId, setRelatedFavoriteBusyId] = useState(null);
+  const [relatedCartBusyId, setRelatedCartBusyId] = useState(null);
+  const [relatedVariantModal, setRelatedVariantModal] = useState(null);
+  const [relatedVariantPickSubmitting, setRelatedVariantPickSubmitting] = useState(false);
   const countryId = resolveCountryId(1);
+
+  useEffect(() => {
+    const syncCompareIds = () => setCompareIds(getCompareIds());
+    const onStorage = (e) => {
+      if (e.key === 'dh_compare_product_ids' || e.key === null) syncCompareIds();
+    };
+    window.addEventListener('dh-compare-updated', syncCompareIds);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('dh-compare-updated', syncCompareIds);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -161,8 +183,11 @@ export default function ProductDetail() {
               name: item.name,
               brand: item.brand,
               price: item.salePrice,
+              salePrice: item.salePrice,
               image: item.image || '',
-              badges: [],
+              badges: Array.isArray(item.badges) ? item.badges : [],
+              isFavorite: Boolean(item.isFavorite),
+              variants: Array.isArray(item.variants) ? item.variants : [],
             }))
             .filter((item) => item.image)
         );
@@ -192,82 +217,11 @@ export default function ProductDetail() {
     return `$${productData.discount} OFF`;
   }, [productData]);
 
-  const variantGroups = useMemo(() => {
-    const groups = {};
-    const variants = Array.isArray(productData?.variants) ? productData.variants : [];
-    variants.forEach((variant) => {
-      const key = variant?.attribute || variant?.type || variant?.group || 'Option';
-      const optionsSource = Array.isArray(variant?.options)
-        ? variant.options
-        : Array.isArray(variant?.values)
-        ? variant.values
-        : variant?.value
-        ? [variant.value]
-        : [];
-      const values = optionsSource
-        .map((item) => {
-          if (typeof item === 'string') {
-            return { value: item, variantId: variant?.id ?? variant?.variant_id ?? null };
-          }
-          const value = item?.value || item?.name;
-          if (!value) return null;
-          return {
-            value,
-            // Backend cart endpoint expects the parent product-variant id.
-            variantId:
-              variant?.id
-              ?? variant?.variant_id
-              ?? item?.variant_id
-              ?? item?.variant?.id
-              ?? item?.variant_option?.variant_id
-              ?? item?.id
-              ?? null,
-          };
-        })
-        .filter(Boolean);
-
-      // Some APIs return flat variant rows with only a name (no options/values array).
-      if (values.length === 0 && variant?.name) {
-        if (!groups.Option) groups.Option = new Set();
-        groups.Option.add(JSON.stringify({
-          value: String(variant.name),
-          variantId: variant?.id ?? variant?.variant_id ?? null,
-        }));
-        return;
-      }
-
-      if (!groups[key]) groups[key] = new Set();
-      values.forEach((valueObj) => groups[key].add(JSON.stringify(valueObj)));
-    });
-
-    return Object.entries(groups).map(([name, set]) => ({
-      name,
-      values: [...set]
-        .map((item) => {
-          try {
-            return JSON.parse(item);
-          } catch {
-            return { value: String(item), variantId: null };
-          }
-        })
-        .filter((item) => item?.value),
-    }));
-  }, [productData]);
-  const selectedVariantId = useMemo(() => {
-    const selectedIds = variantGroups
-      .map((group) => {
-        const selectedValue = selectedVariants[group.name] || group.values[0]?.value;
-        const selectedOption = group.values.find((item) => item.value === selectedValue);
-        return selectedOption?.variantId;
-      })
-      .filter((value) => value !== null && value !== undefined && value !== '');
-
-    if (selectedIds.length === 0) {
-      const firstVariant = Array.isArray(productData?.variants) ? productData.variants[0] : null;
-      return firstVariant?.id ?? firstVariant?.variant_id ?? null;
-    }
-    return selectedIds[0];
-  }, [selectedVariants, variantGroups, productData?.variants]);
+  const variantGroups = useMemo(() => buildVariantGroups(productData), [productData]);
+  const selectedVariantId = useMemo(
+    () => getSelectedVariantId(variantGroups, selectedVariants, productData?.variants),
+    [selectedVariants, variantGroups, productData?.variants],
+  );
   const additionalInfo = useMemo(() => {
     const entries = [];
     if (productData?.sku) entries.push({ label: 'SKU', value: productData.sku });
@@ -369,12 +323,102 @@ export default function ProductDetail() {
   const handleAddToCompare = () => {
     if (!productData?.id) return;
     const result = addCompareProductId(productData.id);
+    setCompareIds(getCompareIds());
     if (!result.ok && result.reason === 'full') {
       showCompareHint(`You can compare up to ${MAX_COMPARE_ITEMS} products. Open Compare to remove one.`);
       return;
     }
     if (result.added) showCompareHint('Added to your compare list.');
     else showCompareHint('This product is already in your compare list.');
+  };
+
+  const isProductInCompare = (productId) => compareIds.includes(Number(productId));
+
+  const handleRelatedCompare = (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!productId) return;
+    const result = addCompareProductId(productId);
+    setCompareIds(getCompareIds());
+    if (!result.ok && result.reason === 'full') {
+      showCompareHint(`You can compare up to ${MAX_COMPARE_ITEMS} products. Open Compare to remove one.`);
+      return;
+    }
+    if (result.added) showCompareHint('Added to your compare list.');
+    else showCompareHint('This product is already in your compare list.');
+  };
+
+  const handleRelatedFavorite = async (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!productId || relatedFavoriteBusyId === productId) return;
+    setRelatedFavoriteBusyId(productId);
+    setRelatedProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, isFavorite: !Boolean(p.isFavorite) } : p))
+    );
+    try {
+      await toggleFavoriteProduct({ productId });
+    } catch (error) {
+      setRelatedProducts((prev) =>
+        prev.map((p) => (p.id === productId ? { ...p, isFavorite: !Boolean(p.isFavorite) } : p))
+      );
+      setProductError(error?.response?.data?.message || 'Failed to update favorite.');
+    } finally {
+      setRelatedFavoriteBusyId(null);
+    }
+  };
+
+  const handleRelatedAddToCart = async (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!productId || relatedCartBusyId) return;
+    setRelatedCartBusyId(productId);
+    setProductError('');
+    try {
+      await addToCart({ productId, quantity: 1 });
+    } catch (error) {
+      const responseData = error?.response?.data;
+      const validationErrors = responseData?.errors && typeof responseData.errors === 'object'
+        ? Object.values(responseData.errors).flat().filter(Boolean)
+        : [];
+      const errorMessage = validationErrors.length > 0
+        ? validationErrors.join(' ')
+        : (responseData?.message || error?.message || 'Failed to add product to cart.');
+      setProductError(errorMessage);
+    } finally {
+      setRelatedCartBusyId(null);
+    }
+  };
+
+  const handleRelatedVariantConfirm = async ({ intent, productId, variantId }) => {
+    setRelatedVariantPickSubmitting(true);
+    setProductError('');
+    try {
+      if (intent === 'details') {
+        navigate(`/product/${productId}`);
+        setRelatedVariantModal(null);
+        return;
+      }
+      if (!productId || relatedCartBusyId) return;
+      setRelatedCartBusyId(productId);
+      try {
+        await addToCart({ productId, quantity: 1, ...(variantId ? { variantId } : {}) });
+        setRelatedVariantModal(null);
+      } catch (error) {
+        const responseData = error?.response?.data;
+        const validationErrors = responseData?.errors && typeof responseData.errors === 'object'
+          ? Object.values(responseData.errors).flat().filter(Boolean)
+          : [];
+        const errorMessage = validationErrors.length > 0
+          ? validationErrors.join(' ')
+          : (responseData?.message || error?.message || 'Failed to add product to cart.');
+        setProductError(errorMessage);
+      } finally {
+        setRelatedCartBusyId(null);
+      }
+    } finally {
+      setRelatedVariantPickSubmitting(false);
+    }
   };
 
   useEffect(() => () => {
@@ -994,10 +1038,22 @@ export default function ProductDetail() {
                 <Link
                   key={product.id}
                   to={`/product/${product.id}`}
-                  className="flex-shrink-0 md:flex-shrink-0 w-[160px] sm:w-[180px] md:w-[calc((100%-80px)/5)] lg:w-[calc((100%-80px)/5)] bg-white border border-[#e4e7e9] rounded-[8px] overflow-hidden hover:shadow-lg transition-shadow"
+                  className="group flex-shrink-0 md:flex-shrink-0 w-[160px] sm:w-[180px] md:w-[calc((100%-80px)/5)] lg:w-[calc((100%-80px)/5)] bg-white border border-[#e4e7e9] rounded-[8px] overflow-hidden hover:shadow-lg transition-shadow"
                 >
                   <div className="relative h-[140px] sm:h-[160px] md:h-[180px] bg-[#f5f5f5]">
                     <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                    <ProductCardQuickActions
+                      variantChoiceRequired={productNeedsVariantPick(product)}
+                      onVariantChoiceView={() => setRelatedVariantModal({ product, intent: 'details' })}
+                      onVariantChoiceCart={() => setRelatedVariantModal({ product, intent: 'cart' })}
+                      isFavorite={Boolean(product.isFavorite)}
+                      inCompare={isProductInCompare(product.id)}
+                      favoriteBusy={relatedFavoriteBusyId === product.id}
+                      cartBusy={relatedCartBusyId === product.id || (relatedVariantPickSubmitting && relatedVariantModal?.product?.id === product.id)}
+                      onToggleFavorite={(e) => handleRelatedFavorite(e, product.id)}
+                      onAddToCompare={(e) => handleRelatedCompare(e, product.id)}
+                      onAddToCart={(e) => handleRelatedAddToCart(e, product.id)}
+                    />
                     {product.badges.length > 0 && (
                       <div className="absolute top-[6px] sm:top-[8px] left-[6px] sm:left-[8px] flex flex-col gap-[3px] sm:gap-[4px]">
                         {product.badges.map((badge, badgeIdx) => (
@@ -1032,6 +1088,15 @@ export default function ProductDetail() {
           </div>
         </div>
       ) : null}
+
+      <ProductVariantPickModal
+        open={Boolean(relatedVariantModal)}
+        intent={relatedVariantModal?.intent ?? 'cart'}
+        product={relatedVariantModal?.product}
+        onClose={() => !relatedVariantPickSubmitting && setRelatedVariantModal(null)}
+        onConfirm={handleRelatedVariantConfirm}
+        isSubmitting={relatedVariantPickSubmitting}
+      />
     </div>
   );
 }
