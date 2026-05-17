@@ -3,10 +3,11 @@
 
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCountry } from '../context/CountryContext';
 import { useCart } from '../context/CartContext';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ThemeToggle from './ThemeToggle';
-import { getCategories, resolveCountryId } from '../services/catalog.service';
+import { getCategories } from '../services/catalog.service';
 import { getCountries } from '../services/meta.service';
 import { getNotifications } from '../services/notifications.service';
 import { getSettings } from '../services/settings.service';
@@ -117,6 +118,7 @@ function ArrowSwapHorizontal({ className }) {
 export default function Header() {
   const SHOW_REPORT_FRAUD = true;
   const { isAuthenticated, user, logout } = useAuth();
+  const { countryId, setCountryId } = useCountry();
   const { cartItemsCount } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
@@ -135,8 +137,6 @@ export default function Header() {
   const [countries, setCountries] = useState([]);
   const [countriesLoadError, setCountriesLoadError] = useState(false);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
-
-  const countryId = resolveCountryId(1);
 
   const activeCountry = useMemo(() => {
     if (!countries.length) return null;
@@ -473,9 +473,9 @@ export default function Header() {
                           aria-selected={selected}
                           className={`flex w-full items-center gap-[10px] px-[12px] py-[10px] text-left font-['Poppins'] text-[13px] transition-colors hover:bg-[#f3f4f6] dark:hover:bg-[#334155] ${selected ? 'bg-[#eef2ff] dark:bg-[#312e81]/40 font-semibold' : ''}`}
                           onClick={() => {
-                            localStorage.setItem('selectedCountryId', String(c.id));
+                            setCountryId(c.id);
                             setShowCountryDropdown(false);
-                            window.location.reload();
+                            navigate('/');
                           }}
                         >
                           <span className="relative size-[22px] shrink-0 overflow-hidden rounded-full ring-1 ring-black/10">

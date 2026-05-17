@@ -3,7 +3,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getFavoriteList, resolveCountryId, toggleFavoriteProduct } from '../services/catalog.service';
+import { getFavoriteList, toggleFavoriteProduct } from '../services/catalog.service';
+import { useCountry } from '../context/CountryContext';
 import { useCart } from '../context/CartContext';
 
 // Import assets
@@ -18,7 +19,7 @@ const imgShoppingCart = shoppingCartIcon;
 
 export default function Favorites() {
   const { addToCart } = useCart();
-  const countryId = useMemo(() => resolveCountryId(1), []);
+  const { countryId } = useCountry();
   const [favoriteProducts, setFavoriteProducts] = useState([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
   const [favoritesError, setFavoritesError] = useState('');

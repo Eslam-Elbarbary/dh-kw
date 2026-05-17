@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getDigitalCategory } from '../services/digitalProducts.service';
-import { resolveCountryId } from '../services/catalog.service';
+import { useCountry } from '../context/CountryContext';
 import arrowDownIcon from '../assets/ArrowRight.svg';
 
 const imgArrow = arrowDownIcon;
@@ -51,7 +51,7 @@ function ProductTile({ item }) {
 
 export default function DigitalCategoryDetail() {
   const { id } = useParams();
-  const countryId = useMemo(() => resolveCountryId(1), []);
+  const { countryId } = useCountry();
   const [category, setCategory] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);

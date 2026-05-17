@@ -3,7 +3,8 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getCategories, getProducts, resolveCountryId, toggleFavoriteProduct } from '../services/catalog.service';
+import { getCategories, getProducts, toggleFavoriteProduct } from '../services/catalog.service';
+import { useCountry } from '../context/CountryContext';
 import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
 import { ProductCardQuickActions } from '../components/ProductCardQuickActions';
 import { ProductVariantPickModal } from '../components/ProductVariantPickModal';
@@ -42,7 +43,7 @@ const imgProduct5 = productImage5;
 export default function PCComponents() {
   const { addToCart } = useCart();
   const navigate = useNavigate();
-  const countryId = useMemo(() => resolveCountryId(1), []);
+  const { countryId } = useCountry();
   const [showFilter, setShowFilter] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('Most Popular');

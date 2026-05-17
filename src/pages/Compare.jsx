@@ -2,7 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getProduct, resolveCountryId } from '../services/catalog.service';
+import { getProduct } from '../services/catalog.service';
+import { useCountry } from '../context/CountryContext';
 import {
   clearCompareIds,
   getCompareIds,
@@ -86,7 +87,7 @@ const SPEC_ROWS = [
 ];
 
 export default function Compare() {
-  const countryId = useMemo(() => resolveCountryId(1), []);
+  const { countryId } = useCountry();
   const [searchParams, setSearchParams] = useSearchParams();
   const idsParam = searchParams.get('ids') || '';
 

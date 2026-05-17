@@ -105,7 +105,7 @@ export default function SignIn() {
       localStorage.setItem('token', token);
       const profile = response?.user || response?.data?.user || { email: identifier.trim().toLowerCase() };
       const profileCountryId = profile?.country_id ?? profile?.countryId;
-      if (profileCountryId) {
+      if (profileCountryId && localStorage.getItem('countryManuallySelected') !== '1') {
         localStorage.setItem('selectedCountryId', String(profileCountryId));
       }
       login(profile);

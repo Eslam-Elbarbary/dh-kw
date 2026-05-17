@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getDigitalProducts } from '../services/digitalProducts.service';
-import { resolveCountryId } from '../services/catalog.service';
+import { useCountry } from '../context/CountryContext';
 import arrowDownIcon from '../assets/ArrowRight.svg';
 
 const imgArrowDown = arrowDownIcon;
@@ -46,7 +46,7 @@ function DigitalProductCard({ item }) {
 }
 
 export default function DigitalProductsList() {
-  const countryId = useMemo(() => resolveCountryId(1), []);
+  const { countryId } = useCountry();
   const [searchParams, setSearchParams] = useSearchParams();
   const page = Math.max(1, Number(searchParams.get('page')) || 1);
 

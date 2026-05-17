@@ -8,7 +8,7 @@ import {
   parseSavedAddressLine,
   sanitizeStreetForForm,
 } from '../services/address.service';
-import { resolveCountryId } from '../services/catalog.service';
+import { useCountry } from '../context/CountryContext';
 import { getCountries } from '../services/meta.service';
 import { getShippingStates, getShippingCities } from '../services/shipping.service';
 
@@ -53,7 +53,7 @@ export default function AddressBookSection({ defaultPhone = '' }) {
   const [pendingCityMatch, setPendingCityMatch] = useState('');
   const [addressesLoading, setAddressesLoading] = useState(true);
 
-  const activeCountryId = resolveCountryId(1);
+  const { countryId: activeCountryId } = useCountry();
   const activeCountry = useMemo(
     () => countriesMeta.find((c) => String(c.id) === String(activeCountryId)),
     [countriesMeta, activeCountryId],

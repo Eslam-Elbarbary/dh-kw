@@ -3,13 +3,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getDigitalCategories } from '../services/digitalProducts.service';
-import { resolveCountryId } from '../services/catalog.service';
+import { useCountry } from '../context/CountryContext';
 import arrowDownIcon from '../assets/ArrowRight.svg';
 
 const imgArrow = arrowDownIcon;
 
 export default function DigitalCategoriesList() {
-  const countryId = useMemo(() => resolveCountryId(1), []);
+  const { countryId } = useCountry();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

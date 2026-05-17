@@ -3,13 +3,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useCountry } from '../context/CountryContext';
 import {
   getProduct,
   getProducts,
   getCategory,
   getVendor,
   toggleFavoriteProduct,
-  resolveCountryId,
 } from '../services/catalog.service';
 import {
   rateProduct,
@@ -134,7 +134,7 @@ export default function ProductDetail() {
   const [relatedCartBusyId, setRelatedCartBusyId] = useState(null);
   const [relatedVariantModal, setRelatedVariantModal] = useState(null);
   const [relatedVariantPickSubmitting, setRelatedVariantPickSubmitting] = useState(false);
-  const countryId = resolveCountryId(1);
+  const { countryId } = useCountry();
 
   useEffect(() => {
     const syncCompareIds = () => setCompareIds(getCompareIds());

@@ -3,7 +3,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { getCategories, getProducts, resolveCountryId, toggleFavoriteProduct } from '../services/catalog.service';
+import { getCategories, getProducts, toggleFavoriteProduct } from '../services/catalog.service';
+import { useCountry } from '../context/CountryContext';
 import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
 import { useCart } from '../context/CartContext';
 import { ProductCardQuickActions } from '../components/ProductCardQuickActions';
@@ -55,7 +56,11 @@ export default function SearchResults() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const params = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const countryId = Number(params.get('country_id')) || resolveCountryId(1);
+  const { countryId: selectedCountryId } = useCountry();
+  const urlCountryId = Number(params.get('country_id'));
+  const countryId = Number.isFinite(urlCountryId) && urlCountryId > 0
+    ? urlCountryId
+    : selectedCountryId;
   const preselectedCategoryId = params.get('category_id');
   const preselectedVendorId = params.get('vendor_id');
 

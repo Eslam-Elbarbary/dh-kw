@@ -97,6 +97,7 @@ export default function SignUp() {
         countryId: Number(countryId),
       });
       localStorage.setItem('selectedCountryId', String(countryId));
+      localStorage.setItem('countryManuallySelected', '1');
       const normalizedEmail = email.trim().toLowerCase();
       localStorage.setItem('pendingVerificationEmail', normalizedEmail);
       localStorage.removeItem('pendingVerificationPhone');

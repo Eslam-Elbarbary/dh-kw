@@ -45,7 +45,8 @@ export function AuthProvider({ children }) {
     localStorage.setItem('user', JSON.stringify(normalizedProfile));
     localStorage.setItem('isAuthenticated', 'true');
     const profileCountryId = normalizedProfile?.country_id ?? normalizedProfile?.countryId;
-    if (profileCountryId) {
+    const countryChosenManually = localStorage.getItem('countryManuallySelected') === '1';
+    if (profileCountryId && !countryChosenManually && !localStorage.getItem('selectedCountryId')) {
       localStorage.setItem('selectedCountryId', String(profileCountryId));
     }
     if (!normalizedProfile?.isEmailVerified && normalizedProfile?.email) {

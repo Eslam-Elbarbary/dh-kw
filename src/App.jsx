@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider, Outlet, useLocation, Navigate } fr
 import { useState, useEffect } from 'react';
 import './App.css';
 import { AuthProvider } from './context/AuthContext';
+import { CountryProvider } from './context/CountryContext';
 import { CartProvider } from './context/CartContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Header from './components/Header';
@@ -251,9 +252,11 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <CartProvider>
-          <RouterProvider router={router} />
-        </CartProvider>
+        <CountryProvider>
+          <CartProvider>
+            <RouterProvider router={router} />
+          </CartProvider>
+        </CountryProvider>
       </AuthProvider>
     </ThemeProvider>
   );

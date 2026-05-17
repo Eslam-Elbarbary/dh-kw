@@ -3,7 +3,8 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { getCategories, getProducts, getSliders, resolveCountryId } from '../services/catalog.service';
+import { getCategories, getProducts, getSliders } from '../services/catalog.service';
+import { useCountry } from '../context/CountryContext';
 import { getDigitalProducts } from '../services/digitalProducts.service';
 
 // Import assets
@@ -216,7 +217,7 @@ export default function Home() {
   const [loadingHomeData, setLoadingHomeData] = React.useState(true);
   const [digitalPreview, setDigitalPreview] = React.useState([]);
   const [digitalPreviewLoading, setDigitalPreviewLoading] = React.useState(true);
-  const countryId = React.useMemo(() => resolveCountryId(1), []);
+  const { countryId } = useCountry();
 
   React.useEffect(() => {
     const loadHomeData = async () => {

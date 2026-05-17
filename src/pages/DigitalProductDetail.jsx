@@ -8,7 +8,7 @@ import {
   getDigitalProduct,
   parseDigitalOrderProfileGate,
 } from '../services/digitalProducts.service';
-import { resolveCountryId } from '../services/catalog.service';
+import { useCountry } from '../context/CountryContext';
 import { useAuth } from '../context/AuthContext';
 import arrowDownIcon from '../assets/ArrowRight.svg';
 
@@ -30,7 +30,7 @@ export default function DigitalProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const countryId = useMemo(() => resolveCountryId(1), []);
+  const { countryId } = useCountry();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
