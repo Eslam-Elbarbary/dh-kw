@@ -57,6 +57,73 @@ export const getProfileRequest = async () => {
   return res.data;
 };
 
+/** Unwrap Laravel / nested profile payloads (same paths as AuthContext normalizeUser). */
+export const normalizeProfileFromResponse = (response) => {
+  if (!response || typeof response !== 'object' || Array.isArray(response)) {
+    return {};
+  }
+
+  const candidates = [
+    response?.user,
+    response?.profile,
+    response?.data?.user,
+    response?.data?.profile,
+    response?.data?.data,
+    response?.data,
+    response,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+      continue;
+    }
+    if (candidate.attributes && typeof candidate.attributes === 'object') {
+      return {
+        id: candidate.id,
+        ...candidate.attributes,
+      };
+    }
+    if (
+      candidate.email != null
+      || candidate.id != null
+      || candidate.name != null
+      || candidate.ip != null
+      || candidate.phone != null
+    ) {
+      return candidate;
+    }
+  }
+
+  return {};
+};
+
+/** Read IP from profile object or any common wrapper on the API response. */
+export const extractProfileIp = (response, profile) => {
+  const readIp = (obj) => {
+    if (!obj || typeof obj !== 'object') return '';
+    const attrs = obj.attributes && typeof obj.attributes === 'object' ? obj.attributes : null;
+    const raw = attrs?.ip ?? obj.ip ?? obj.last_ip ?? obj.client_ip ?? obj.ip_address;
+    return raw != null ? String(raw).trim() : '';
+  };
+
+  const sources = [
+    profile,
+    response,
+    response?.data,
+    response?.data?.data,
+    response?.data?.user,
+    response?.user,
+    response?.profile,
+  ];
+
+  for (const source of sources) {
+    const ip = readIp(source);
+    if (ip) return ip;
+  }
+
+  return '';
+};
+
 export const updateProfileRequest = async ({
   firstName,
   lastName,

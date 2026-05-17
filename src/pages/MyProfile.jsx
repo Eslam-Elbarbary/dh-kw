@@ -5,13 +5,16 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
+  extractProfileIp,
   getProfileRequest,
+  normalizeProfileFromResponse,
   updatePasswordRequest,
   updateProfileRequest,
   updateProfileDigitalVerificationRequest,
 } from '../services/auth.service';
 import { createAddress, deleteAddress, getAddresses } from '../services/address.service';
 import { getPointsHistory, getWalletHistory } from '../services/transactions.service';
+import ProfileSecurityCard from '../components/ProfileSecurityCard';
 
 // Icon Assets
 // Import assets
@@ -76,6 +79,8 @@ export default function MyProfile() {
   const [digitalError, setDigitalError] = useState('');
   const [digitalSuccess, setDigitalSuccess] = useState('');
   const [digitalFileInputsKey, setDigitalFileInputsKey] = useState(0);
+  const [profileIp, setProfileIp] = useState('');
+  const [ipCopied, setIpCopied] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -85,7 +90,7 @@ export default function MyProfile() {
         setIsLoadingProfile(true);
         setProfileError('');
         const response = await getProfileRequest();
-        const profile = response?.data ?? response ?? {};
+        const profile = normalizeProfileFromResponse(response);
         const fullName = String(profile?.name || '').trim();
         const firstName = profile?.first_name || user?.firstName || fullName.split(' ').slice(0, 1).join(' ') || '';
         const lastName = profile?.last_name || user?.lastName || fullName.split(' ').slice(1).join(' ') || '';
@@ -111,6 +116,7 @@ export default function MyProfile() {
         });
         setDigitalFrontFile(null);
         setDigitalBackFile(null);
+        setProfileIp(extractProfileIp(response, profile));
 
         try {
           const addresses = await getAddresses();
@@ -442,6 +448,17 @@ export default function MyProfile() {
     return date.toLocaleString();
   };
 
+  const handleCopyIp = async () => {
+    if (!profileIp) return;
+    try {
+      await navigator.clipboard.writeText(profileIp);
+      setIpCopied(true);
+      window.setTimeout(() => setIpCopied(false), 2000);
+    } catch {
+      setIpCopied(false);
+    }
+  };
+
   return (
     <div className="bg-white relative w-full min-h-screen">
       <div className="flex flex-col gap-[32px] sm:gap-[40px] md:gap-[48px] items-start relative w-full max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-[12px] sm:px-[16px] md:px-[24px] lg:px-[40px] xl:px-[100px] py-[24px] sm:py-[32px] md:py-[40px]">
@@ -480,9 +497,17 @@ export default function MyProfile() {
           <div className="w-full flex flex-col gap-[32px] sm:gap-[40px]">
             {/* Profile Form */}
             <div className="bg-white border border-[#e6e6e6] border-solid rounded-[4px] p-[24px] sm:p-[32px] md:p-[40px] shadow-sm">
-              <h2 className="font-['Poppins'] font-semibold text-[24px] sm:text-[28px] md:text-[32px] text-[#0e1c47] mb-[24px] sm:mb-[32px]">
+              <h2 className="font-['Poppins'] font-semibold text-[24px] sm:text-[28px] md:text-[32px] text-[#0e1c47] mb-[20px] sm:mb-[24px]">
                 Personal Information
               </h2>
+
+              <ProfileSecurityCard
+                profileIp={profileIp}
+                isLoading={isLoadingProfile}
+                ipCopied={ipCopied}
+                onCopyIp={handleCopyIp}
+              />
+
               {isLoadingProfile ? (
                 <p className="font-['Poppins'] font-normal text-[14px] text-[#666] mb-[16px]">Loading profile...</p>
               ) : null}
