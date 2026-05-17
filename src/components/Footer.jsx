@@ -56,6 +56,16 @@ function IconFacebook({ className }) {
   );
 }
 
+function IconWhatsapp({ className }) {
+  return (
+    <div className={className} aria-hidden>
+      <svg className="size-[16px]" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.3-1.39c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm0 18.08c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a7.86 7.86 0 0 1-1.21-4.31c0-4.35 3.54-7.89 7.89-7.89 4.35 0 7.89 3.54 7.89 7.89 0 4.35-3.54 7.89-7.89 7.89zm4.31-5.89c-.24-.12-1.41-.7-1.63-.78-.22-.08-.38-.12-.54.12-.16.24-.62.78-.76.94-.14.16-.28.18-.52.06-.24-.12-1.01-.37-1.92-1.18-.71-.63-1.19-1.41-1.33-1.65-.14-.24-.02-.37.11-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.48-.4-.42-.54-.43h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.69 2.58 4.1 3.62.57.25 1.02.4 1.37.51.58.18 1.11.15 1.53.09.47-.07 1.41-.58 1.61-1.14.2-.56.2-1.04.14-1.14-.06-.1-.22-.16-.46-.28z" />
+      </svg>
+    </div>
+  );
+}
+
 export default function Footer() {
   const [settings, setSettings] = useState(null);
 
@@ -108,6 +118,16 @@ export default function Footer() {
               <a href={settings?.contactLinkedin || '#'} target="_blank" rel="noreferrer" aria-label="LinkedIn">
                 <IconLinkedin className="overflow-clip relative shrink-0 text-white/90 hover:text-white size-[34px] sm:size-[36px] md:size-[38px] rounded-full border border-white/20 hover:border-[#eea137]/70 hover:bg-white/10 flex items-center justify-center transition-all" />
               </a>
+              {settings?.contactWhatsappUrl ? (
+                <a
+                  href={settings.contactWhatsappUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="WhatsApp"
+                >
+                  <IconWhatsapp className="overflow-clip relative shrink-0 text-white/90 hover:text-white size-[34px] sm:size-[36px] md:size-[38px] rounded-full border border-white/20 hover:border-[#eea137]/70 hover:bg-white/10 flex items-center justify-center transition-all" />
+                </a>
+              ) : null}
             </div>
           </div>
           <div className="content-stretch flex flex-col sm:flex-row md:flex-wrap lg:flex-nowrap gap-[20px] sm:gap-[24px] md:gap-[28px] lg:gap-[24px] xl:gap-[40px] 2xl:gap-[80px] items-start justify-start md:justify-start lg:justify-between xl:justify-center relative shrink-0 w-full md:w-auto md:flex-1 lg:flex-initial lg:flex-grow lg:max-w-[580px] xl:max-w-none" data-node-id="35:5034">
