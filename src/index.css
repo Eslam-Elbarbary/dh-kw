@@ -183,6 +183,14 @@
     background-color: var(--site-card-bg) !important;
   }
 
+  .dark .bg-\[#fafafa\] {
+    background-color: var(--site-card-bg) !important;
+  }
+
+  .dark .bg-\[#f5f6f8\] {
+    background-color: var(--site-bg) !important;
+  }
+
   /* Make all text white/light in dark mode for better readability */
   .dark p:not(.text-white):not(.text-\[#f2f2f2\]):not(.text-\[#eea137\]):not(.text-\[#d8902f\]),
   .dark h1:not(.text-white):not(.text-\[#f2f2f2\]):not(.text-\[#eea137\]),
