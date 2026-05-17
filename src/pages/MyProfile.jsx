@@ -1,4 +1,4 @@
-// My Profile page - professional design matching site's visual identity
+﻿// My Profile page - professional design matching site's visual identity
 // Maintains colors, fonts, styles, and icons from the site
 
 import { useEffect, useState } from 'react';
@@ -12,8 +12,8 @@ import {
   updateProfileRequest,
   updateProfileDigitalVerificationRequest,
 } from '../services/auth.service';
-import { createAddress, deleteAddress, getAddresses } from '../services/address.service';
 import { getPointsHistory, getWalletHistory } from '../services/transactions.service';
+import AddressBookSection from '../components/AddressBookSection';
 import ProfileSecurityCard from '../components/ProfileSecurityCard';
 
 // Icon Assets
@@ -31,20 +31,6 @@ export default function MyProfile() {
   const [profileError, setProfileError] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
   const [nextProfileSaveAt, setNextProfileSaveAt] = useState(0);
-  const [addressError, setAddressError] = useState('');
-  const [addressSuccess, setAddressSuccess] = useState('');
-  const [savedAddresses, setSavedAddresses] = useState([]);
-  const [selectedAddressId, setSelectedAddressId] = useState(null);
-  const [saveAddressLoading, setSaveAddressLoading] = useState(false);
-  const [nextAddressSaveAt, setNextAddressSaveAt] = useState(0);
-  const [deleteAddressLoadingId, setDeleteAddressLoadingId] = useState(null);
-  const [addressForm, setAddressForm] = useState({
-    name: 'Home',
-    phone: '',
-    address: '',
-    latitude: '',
-    longitude: '',
-  });
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [walletHistory, setWalletHistory] = useState([]);
@@ -117,24 +103,6 @@ export default function MyProfile() {
         setDigitalFrontFile(null);
         setDigitalBackFile(null);
         setProfileIp(extractProfileIp(response, profile));
-
-        try {
-          const addresses = await getAddresses();
-          setSavedAddresses(addresses);
-          if (addresses.length > 0) {
-            const primaryAddress = addresses[0];
-            setSelectedAddressId(primaryAddress.id);
-            setAddressForm({
-              name: primaryAddress.name || primaryAddress.title || 'Home',
-              phone: primaryAddress.phone || user?.phone || '',
-              address: primaryAddress.address || '',
-              latitude: primaryAddress.latitude ?? '',
-              longitude: primaryAddress.longitude ?? '',
-            });
-          }
-        } catch {
-          // Keep profile values if addresses fail to load.
-        }
       } catch (error) {
         setProfileError(error?.response?.data?.message || 'Failed to load profile.');
       } finally {
@@ -236,124 +204,6 @@ export default function MyProfile() {
       );
     } finally {
       setDigitalSaveLoading(false);
-    }
-  };
-
-  const handleAddressFormChange = (e) => {
-    setAddressForm((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  };
-
-  const preventProfileSubmitFromAddressInputs = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-    }
-  };
-
-  const handleSaveAddress = async () => {
-    if (Date.now() < nextAddressSaveAt) {
-      const waitSeconds = Math.max(1, Math.ceil((nextAddressSaveAt - Date.now()) / 1000));
-      setAddressError(`Too many attempts. Please wait ${waitSeconds}s before trying again.`);
-      setAddressSuccess('');
-      return;
-    }
-
-    const normalizedName = String(addressForm.name || '').trim();
-    const normalizedPhone = String(addressForm.phone || '').trim();
-    const normalizedAddress = String(addressForm.address || '').trim();
-    if (!normalizedName || !normalizedPhone || !normalizedAddress) {
-      setAddressError('Address name, phone and address are required.');
-      setAddressSuccess('');
-      return;
-    }
-
-    const rawLatitude = String(addressForm.latitude ?? '').trim();
-    const rawLongitude = String(addressForm.longitude ?? '').trim();
-    const parsedLat = rawLatitude ? Number(rawLatitude) : undefined;
-    const parsedLng = rawLongitude ? Number(rawLongitude) : undefined;
-    const latitude = Number.isFinite(parsedLat) ? parsedLat : undefined;
-    const longitude = Number.isFinite(parsedLng) ? parsedLng : undefined;
-
-    try {
-      setSaveAddressLoading(true);
-      setAddressError('');
-      setAddressSuccess('');
-
-      const created = await createAddress({
-        name: normalizedName,
-        phone: normalizedPhone,
-        address: normalizedAddress,
-        latitude,
-        longitude,
-      });
-
-      const createdAddressId = created?.data?.id || created?.id || created?.data?.address?.id || null;
-      const nextAddresses = await getAddresses();
-      setSavedAddresses(nextAddresses);
-      if (createdAddressId) {
-        setSelectedAddressId(createdAddressId);
-      }
-      setAddressSuccess('Address saved successfully.');
-    } catch (error) {
-      const responseData = error?.response?.data;
-      const validationErrors = responseData?.errors && typeof responseData.errors === 'object'
-        ? Object.values(responseData.errors).flat().filter(Boolean)
-        : [];
-      let message = validationErrors.length > 0
-        ? validationErrors.join(' ')
-        : (responseData?.message || 'Failed to save address.');
-      const status = error?.response?.status;
-      const lowerMessage = String(message).toLowerCase();
-      if (status === 429 || lowerMessage.includes('too many attempts')) {
-        setNextAddressSaveAt(Date.now() + 15000);
-        message = 'Too many attempts. Please wait 15 seconds and try again.';
-      }
-      if (lowerMessage.includes('name field is required') || lowerMessage.includes('phone field is required')) {
-        message = 'Address endpoint rejected the payload. Please enter name, phone and address, then try again.';
-      }
-      setAddressError(message);
-      setAddressSuccess('');
-    } finally {
-      setSaveAddressLoading(false);
-    }
-  };
-
-  const handleSelectAddress = (item) => {
-    setSelectedAddressId(item.id);
-    setAddressForm({
-      name: item.name || item.title || 'Home',
-      phone: item.phone || '',
-      address: item.address || '',
-      latitude: item.latitude ?? '',
-      longitude: item.longitude ?? '',
-    });
-  };
-
-  const handleDeleteAddress = async (addressId) => {
-    try {
-      setDeleteAddressLoadingId(addressId);
-      setAddressError('');
-      setAddressSuccess('');
-      await deleteAddress({ addressId });
-      const nextAddresses = await getAddresses();
-      setSavedAddresses(nextAddresses);
-      if (selectedAddressId === addressId) {
-        setSelectedAddressId(null);
-        setAddressForm({
-          name: 'Home',
-          phone: '',
-          address: '',
-          latitude: '',
-          longitude: '',
-        });
-      }
-      setAddressSuccess('Address deleted successfully.');
-    } catch (error) {
-      setAddressError(error?.response?.data?.message || 'Failed to delete address.');
-    } finally {
-      setDeleteAddressLoadingId(null);
     }
   };
 
@@ -572,141 +422,7 @@ export default function MyProfile() {
                     placeholder="Enter your phone number"
                   />
                 </div>
-                <div className="border border-[#e6e6e6] rounded-[4px] p-[16px] sm:p-[20px]">
-                  <p className="font-['Poppins'] font-semibold text-[16px] text-[#0e1c47] mb-[12px]">Address Book (API)</p>
-                  {addressError ? (
-                    <p className="font-['Poppins'] font-normal text-[13px] text-[#8e0909] mb-[10px]">{addressError}</p>
-                  ) : null}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
-                    <div>
-                      <label className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
-                        Name
-                      </label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={addressForm.name}
-                        onChange={handleAddressFormChange}
-                        onKeyDown={preventProfileSubmitFromAddressInputs}
-                        className="w-full border border-[#e6e6e6] border-solid rounded-[4px] px-[16px] py-[12px] font-['Poppins'] font-normal text-[14px] text-[#0e1c47] focus:outline-none focus:border-[#eea137] transition-colors"
-                        placeholder="Home / Office"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
-                        Phone
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={addressForm.phone}
-                        onChange={handleAddressFormChange}
-                        onKeyDown={preventProfileSubmitFromAddressInputs}
-                        className="w-full border border-[#e6e6e6] border-solid rounded-[4px] px-[16px] py-[12px] font-['Poppins'] font-normal text-[14px] text-[#0e1c47] focus:outline-none focus:border-[#eea137] transition-colors"
-                        placeholder="01xxxxxxxxx"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-1 gap-[16px] mt-[16px]">
-                    <div>
-                      <label className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
-                        Address
-                      </label>
-                      <input
-                        type="text"
-                        name="address"
-                        value={addressForm.address}
-                        onChange={handleAddressFormChange}
-                        onKeyDown={preventProfileSubmitFromAddressInputs}
-                        className="w-full border border-[#e6e6e6] border-solid rounded-[4px] px-[16px] py-[12px] font-['Poppins'] font-normal text-[14px] text-[#0e1c47] focus:outline-none focus:border-[#eea137] transition-colors"
-                        placeholder="Street, Area, Building"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px] mt-[16px]">
-                    <div>
-                      <label className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
-                        Latitude
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        name="latitude"
-                        value={addressForm.latitude}
-                        onChange={handleAddressFormChange}
-                        onKeyDown={preventProfileSubmitFromAddressInputs}
-                        className="w-full border border-[#e6e6e6] border-solid rounded-[4px] px-[16px] py-[12px] font-['Poppins'] font-normal text-[14px] text-[#0e1c47] focus:outline-none focus:border-[#eea137] transition-colors"
-                        placeholder="29.3"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
-                        Longitude
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        name="longitude"
-                        value={addressForm.longitude}
-                        onChange={handleAddressFormChange}
-                        onKeyDown={preventProfileSubmitFromAddressInputs}
-                        className="w-full border border-[#e6e6e6] border-solid rounded-[4px] px-[16px] py-[12px] font-['Poppins'] font-normal text-[14px] text-[#0e1c47] focus:outline-none focus:border-[#eea137] transition-colors"
-                        placeholder="47.9"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-[12px] justify-end mt-[16px]">
-                    <button
-                      type="button"
-                      onClick={handleSaveAddress}
-                      disabled={saveAddressLoading || Date.now() < nextAddressSaveAt}
-                      className="bg-[#0e1c47] text-white font-['Poppins'] font-semibold px-[22px] py-[10px] rounded-[4px] hover:bg-[#1a2d5a] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {saveAddressLoading ? 'Saving Address...' : 'Save Address'}
-                    </button>
-                  </div>
-                  {addressSuccess ? (
-                    <p className="font-['Poppins'] font-normal text-[13px] text-[#00a651] mt-[10px]">{addressSuccess}</p>
-                  ) : null}
-                  <div className="mt-[16px] space-y-[8px]">
-                    {savedAddresses.map((item) => (
-                      <div
-                        key={item.id}
-                        className={`border rounded-[4px] px-[12px] py-[10px] flex items-start justify-between gap-[10px] ${
-                          selectedAddressId === item.id ? 'border-[#0e1c47] bg-[#f8fbff]' : 'border-[#e6e6e6]'
-                        }`}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => handleSelectAddress(item)}
-                          className="text-left flex-1 min-w-0 cursor-pointer"
-                        >
-                          <p className="font-['Poppins'] font-semibold text-[13px] text-[#0e1c47]">{item.name || item.title}</p>
-                          {item.phone ? (
-                            <p className="font-['Poppins'] font-normal text-[12px] text-[#555] break-words">{item.phone}</p>
-                          ) : null}
-                          <p className="font-['Poppins'] font-normal text-[12px] text-[#555] break-words">{item.address}</p>
-                          {(item.latitude || item.longitude) ? (
-                            <p className="font-['Poppins'] font-normal text-[11px] text-[#888] mt-[3px]">
-                              {item.latitude ?? '-'}, {item.longitude ?? '-'}
-                            </p>
-                          ) : null}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteAddress(item.id)}
-                          disabled={deleteAddressLoadingId === item.id}
-                          className="text-[#dc2626] font-['Poppins'] font-semibold text-[12px] hover:underline disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          {deleteAddressLoadingId === item.id ? 'Deleting...' : 'Delete'}
-                        </button>
-                      </div>
-                    ))}
-                    {savedAddresses.length === 0 ? (
-                      <p className="font-['Poppins'] font-normal text-[12px] text-[#666]">No saved addresses yet.</p>
-                    ) : null}
-                  </div>
-                </div>
+                <AddressBookSection defaultPhone={formData.phone || user?.phone || ''} />
                 <div className="flex flex-col sm:flex-row gap-[12px] sm:gap-[16px] justify-end mt-[8px]">
                   <button
                     type="submit"
@@ -813,7 +529,7 @@ export default function MyProfile() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]" key={digitalFileInputsKey}>
                   <div>
                     <label htmlFor="digital-id-front" className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
-                      National ID — front
+                      National ID â€” front
                     </label>
                     <input
                       id="digital-id-front"
@@ -828,7 +544,7 @@ export default function MyProfile() {
                   </div>
                   <div>
                     <label htmlFor="digital-id-back" className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
-                      National ID — back
+                      National ID â€” back
                     </label>
                     <input
                       id="digital-id-back"
@@ -848,7 +564,7 @@ export default function MyProfile() {
                     disabled={digitalSaveLoading}
                     className="bg-[#0e1c47] text-white font-['Poppins'] font-semibold px-[28px] py-[12px] rounded-[4px] hover:bg-[#1a2d5a] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {digitalSaveLoading ? 'Saving…' : 'Save verification details'}
+                    {digitalSaveLoading ? 'Savingâ€¦' : 'Save verification details'}
                   </button>
                 </div>
               </form>

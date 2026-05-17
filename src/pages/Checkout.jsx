@@ -732,6 +732,7 @@ export default function Checkout() {
         address: concatenatedAddress,
         latitude: mapPosition?.[0] ?? null,
         longitude: mapPosition?.[1] ?? null,
+        countryCode: activeCountry?.code || shippingCountryCode,
       });
       await loadAddresses();
     } catch (error) {

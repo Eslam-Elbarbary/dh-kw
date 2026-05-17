@@ -9,6 +9,95 @@ const toOptionalCoordinate = (value) => {
   if (!Number.isFinite(parsed)) return undefined;
   return parsed;
 };
+
+/** Capital-area defaults when the user has no map pin (DB requires lat/lng). */
+const COUNTRY_DEFAULT_COORDINATES = {
+  EG: { latitude: 30.0444, longitude: 31.2357 },
+  KW: { latitude: 29.3759, longitude: 47.9774 },
+  AE: { latitude: 25.2048, longitude: 55.2708 },
+  SA: { latitude: 24.7136, longitude: 46.6753 },
+};
+
+const FALLBACK_COORDINATES = { latitude: 29.3759, longitude: 47.9774 };
+
+export const resolveAddressCoordinates = ({ latitude, longitude, countryCode } = {}) => {
+  const lat = toOptionalCoordinate(latitude);
+  const lng = toOptionalCoordinate(longitude);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return { latitude: lat, longitude: lng };
+  }
+  const code = String(countryCode || '').trim().toUpperCase();
+  return { ...(COUNTRY_DEFAULT_COORDINATES[code] || FALLBACK_COORDINATES) };
+};
+/** Parse stored address line: `[Label] street | Governorate: X | Area: Y` */
+export const parseSavedAddressLine = (raw) => {
+  const s = String(raw || '').trim();
+  const labelMatch = s.match(/^\[([^\]]+)\]\s*/);
+  const nameFromBracket = labelMatch?.[1]?.trim() || '';
+  const withoutLabel = labelMatch ? s.slice(labelMatch[0].length) : s;
+  const segments = withoutLabel.split('|').map((part) => part.trim());
+  let governorate = '';
+  let area = '';
+  for (let i = 1; i < segments.length; i += 1) {
+    const seg = segments[i];
+    if (/^Governorate:/i.test(seg)) {
+      governorate = seg.replace(/^Governorate:\s*/i, '').trim();
+    } else if (/^Area:/i.test(seg)) {
+      area = seg.replace(/^Area:\s*/i, '').trim();
+    }
+  }
+  const street = sanitizeStreetForForm(segments[0] || withoutLabel, governorate, area);
+  return { nameFromBracket, street, governorate, area };
+};
+
+/** Keep only the street/building line — drop region/country text often pasted into legacy rows. */
+export const sanitizeStreetForForm = (street, governorate = '', area = '') => {
+  let line = String(street || '').trim();
+  if (!line) return '';
+  line = line.split('|')[0].trim();
+
+  const chunks = line.split(',').map((chunk) => chunk.trim()).filter(Boolean);
+  if (chunks.length <= 1) return line;
+
+  const gov = String(governorate || '').trim().toLowerCase();
+  const city = String(area || '').trim().toLowerCase();
+  const filtered = chunks.filter((chunk) => {
+    const lower = chunk.toLowerCase();
+    if (gov && (lower === gov || lower.endsWith(gov) || lower.includes(`governorate: ${gov}`))) {
+      return false;
+    }
+    if (city && (lower === city || lower.endsWith(city))) return false;
+    if (/governorate$/i.test(lower)) return false;
+    if (/^(kuwait|egypt|uae|saudi arabia|saudi)$/i.test(lower)) return false;
+    return true;
+  });
+
+  return filtered.length > 0 ? filtered.join(', ') : chunks[0];
+};
+
+export const formatAddressPreview = ({ label, phone, street, stateName, cityName, countryName }) => {
+  const lines = [];
+  const title = String(label || 'Address').trim();
+  if (title) lines.push(title);
+  if (phone) lines.push(phone);
+  const streetLine = String(street || '').trim();
+  if (streetLine) lines.push(streetLine);
+  const region = [stateName, cityName, countryName].filter(Boolean).join(', ');
+  if (region) lines.push(region);
+  return lines;
+};
+
+export const buildSavedAddressLine = ({ name, street, stateName, cityName }) => {
+  const typeLabel = String(name || 'Home').trim() || 'Home';
+  const streetLine = String(street || '').trim();
+  if (!streetLine) return '';
+  const regionParts = [];
+  if (stateName) regionParts.push(`Governorate: ${stateName}`);
+  if (cityName) regionParts.push(`Area: ${cityName}`);
+  const regionSuffix = regionParts.length ? ` | ${regionParts.join(' | ')}` : '';
+  return `[${typeLabel}] ${streetLine}${regionSuffix}`;
+};
+
 const extractAddressList = (payload) => {
   const candidates = [
     payload?.data?.addresses,
@@ -34,38 +123,49 @@ export const getAddresses = async () => {
   const list = extractAddressList(payload);
   return toArray(list).map((item, index) => {
     const backendId = item?.id ?? item?.address_id ?? null;
+    const rawAddress = item?.address || '';
+    const parsed = parseSavedAddressLine(rawAddress);
     return {
-    id: backendId ?? item?.uuid ?? `address-${index}`,
-    backendId,
-    name: item?.name || item?.title || 'Address',
-    title: item?.name || item?.title || 'Address',
-    phone: toTrimmedString(item?.phone || item?.mobile || item?.phone_number || ''),
-    address: item?.address || '',
-    latitude: toOptionalCoordinate(item?.latitude ?? item?.lat) ?? null,
-    longitude: toOptionalCoordinate(item?.longitude ?? item?.lng) ?? null,
-  };
+      id: backendId ?? item?.uuid ?? `address-${index}`,
+      backendId,
+      name: item?.name || item?.title || parsed.nameFromBracket || 'Address',
+      title: item?.name || item?.title || parsed.nameFromBracket || 'Address',
+      phone: toTrimmedString(item?.phone || item?.mobile || item?.phone_number || ''),
+      address: rawAddress,
+      street: parsed.street,
+      governorateLabel: parsed.governorate,
+      areaLabel: parsed.area,
+      latitude: toOptionalCoordinate(item?.latitude ?? item?.lat) ?? null,
+      longitude: toOptionalCoordinate(item?.longitude ?? item?.lng) ?? null,
+    };
   });
 };
 
-export const createAddress = async ({ name, title, phone, address, latitude, longitude }) => {
+export const createAddress = async ({
+  name,
+  title,
+  phone,
+  address,
+  latitude,
+  longitude,
+  countryCode,
+} = {}) => {
   const normalizedName = toTrimmedString(name || title) || 'Home';
   const normalizedPhone = toTrimmedString(phone);
   const normalizedAddress = toTrimmedString(address);
-  const parsedLatitude = toOptionalCoordinate(latitude);
-  const parsedLongitude = toOptionalCoordinate(longitude);
+  const { latitude: resolvedLatitude, longitude: resolvedLongitude } = resolveAddressCoordinates({
+    latitude,
+    longitude,
+    countryCode,
+  });
 
   const payload = {
     name: normalizedName,
     phone: normalizedPhone,
     address: normalizedAddress,
+    latitude: resolvedLatitude,
+    longitude: resolvedLongitude,
   };
-
-  if (Number.isFinite(parsedLatitude)) {
-    payload.latitude = parsedLatitude;
-  }
-  if (Number.isFinite(parsedLongitude)) {
-    payload.longitude = parsedLongitude;
-  }
 
   try {
     const res = await api.post('/api/addresses', payload, {
@@ -88,16 +188,11 @@ export const createAddress = async ({ name, title, phone, address, latitude, lon
       mobile: normalizedPhone,
       phone_number: normalizedPhone,
       address: normalizedAddress,
+      latitude: resolvedLatitude,
+      longitude: resolvedLongitude,
+      lat: resolvedLatitude,
+      lng: resolvedLongitude,
     };
-
-    if (Number.isFinite(parsedLatitude)) {
-      fallbackPayload.latitude = parsedLatitude;
-      fallbackPayload.lat = parsedLatitude;
-    }
-    if (Number.isFinite(parsedLongitude)) {
-      fallbackPayload.longitude = parsedLongitude;
-      fallbackPayload.lng = parsedLongitude;
-    }
 
     const fallbackRes = await api.post('/api/addresses', fallbackPayload, {
       retryOnTooManyRequests: true,
