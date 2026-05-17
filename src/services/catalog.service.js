@@ -108,17 +108,47 @@ const normalizeProduct = (product) => {
   };
 };
 
+const normalizeCategoryChild = (item) => ({
+  id: item?.id,
+  name: item?.name || item?.title || `Category ${item?.id}`,
+  slug: item?.slug || '',
+  image: item?.image || item?.icon || '',
+  isActive: Boolean(item?.is_active ?? true),
+  isFeatured: Boolean(item?.is_featured ?? false),
+});
+
+const normalizeCategory = (item) => {
+  const parent = item?.parent;
+  const parentId = parent?.id ?? item?.parent_id ?? null;
+
+  return {
+    id: item?.id,
+    name: item?.name || item?.title || `Category ${item?.id}`,
+    slug: item?.slug || '',
+    image: item?.image || item?.icon || '',
+    isActive: Boolean(item?.is_active ?? true),
+    isFeatured: Boolean(item?.is_featured ?? false),
+    parentId: parentId != null ? Number(parentId) : null,
+    children: toArray(item?.children)
+      .map(normalizeCategoryChild)
+      .filter((child) => child.id != null && child.isActive),
+  };
+};
+
 export const getCategories = async () => {
   const res = await api.get('/api/categories');
   const payload = res.data;
   const list = payload?.data?.categories || payload?.data || payload?.categories || [];
 
-  return toArray(list).map((item) => ({
-    id: item?.id,
-    name: item?.name || item?.title || `Category ${item?.id}`,
-    slug: item?.slug || '',
-    image: item?.image || item?.icon || '',
-  }));
+  return toArray(list).map(normalizeCategory).filter((item) => item.id != null);
+};
+
+/** Top-level categories only (no parent), active, with optional featured-first sort. */
+export const getTopLevelCategories = async () => {
+  const all = await getCategories();
+  return all
+    .filter((item) => item.isActive && (item.parentId == null || item.parentId === 0))
+    .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured) || a.name.localeCompare(b.name));
 };
 
 export const getCategory = async ({ id }) => {
@@ -126,11 +156,9 @@ export const getCategory = async ({ id }) => {
   const payload = res.data;
   const item = payload?.data?.category || payload?.data || payload?.category || payload;
 
+  const normalized = normalizeCategory(item);
   return {
-    id: item?.id,
-    name: item?.name || item?.title || `Category ${id}`,
-    slug: item?.slug || '',
-    image: item?.image || item?.icon || '',
+    ...normalized,
     description: item?.description || '',
   };
 };

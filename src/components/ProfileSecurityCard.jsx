@@ -27,7 +27,7 @@ export default function ProfileSecurityCard({
               Account security
             </h3>
             <p className="font-['Poppins'] font-normal text-[13px] sm:text-[14px] text-[#64748b] dark:text-[#94a3b8] mt-[4px] leading-relaxed">
-              Details we use to help keep your account safe and detect unusual sign-in activity.
+              Details we use to verify your account and help keep digital orders secure.
             </p>
           </div>
         </div>
@@ -35,7 +35,7 @@ export default function ProfileSecurityCard({
 
       <div className="px-[20px] sm:px-[24px] py-[20px] sm:py-[24px]">
         <p className="font-['Poppins'] font-medium text-[13px] text-[#475569] dark:text-[#cbd5e1] mb-[10px]">
-          Last sign-in network address
+          Last verification network address
         </p>
 
         {isLoading ? (
@@ -45,7 +45,7 @@ export default function ProfileSecurityCard({
             <div
               className="flex-1 min-w-0 flex items-center gap-[12px] rounded-[6px] border border-[#e2e8f0] dark:border-[#475569] bg-[#f8fafc] dark:bg-[#0f172a] px-[14px] sm:px-[16px] py-[12px] sm:py-[14px]"
               role="group"
-              aria-label="Your registered IP address"
+              aria-label="Your verification network address"
             >
               <span
                 className="flex size-[8px] shrink-0 rounded-full bg-[#22c55e]"
@@ -81,7 +81,7 @@ export default function ProfileSecurityCard({
           </div>
         ) : (
           <p className="font-['Poppins'] text-[14px] text-[#64748b] dark:text-[#94a3b8] py-[8px]">
-            Your network address will appear here after you sign in again.
+            Your network address will appear here after your account is verified.
           </p>
         )}
 
@@ -100,7 +100,7 @@ export default function ProfileSecurityCard({
             <path d="M12 16v-4M12 8h.01" />
           </svg>
           <p className="font-['Poppins'] font-normal text-[12px] sm:text-[13px] text-[#475569] dark:text-[#cbd5e1] leading-relaxed">
-            This address is saved automatically when you use your account. You cannot edit it here.
+            This address is recorded automatically during account verification. You cannot edit it here.
             If you do not recognize it, change your password and contact our support team.
           </p>
         </div>
