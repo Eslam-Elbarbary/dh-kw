@@ -529,7 +529,7 @@ export default function MyProfile() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]" key={digitalFileInputsKey}>
                   <div>
                     <label htmlFor="digital-id-front" className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
-                      National ID â€” front
+                      National ID card (front)
                     </label>
                     <input
                       id="digital-id-front"
@@ -544,7 +544,7 @@ export default function MyProfile() {
                   </div>
                   <div>
                     <label htmlFor="digital-id-back" className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] mb-[8px] block">
-                      National ID â€” back
+                      National ID card (back)
                     </label>
                     <input
                       id="digital-id-back"
@@ -564,7 +564,7 @@ export default function MyProfile() {
                     disabled={digitalSaveLoading}
                     className="bg-[#0e1c47] text-white font-['Poppins'] font-semibold px-[28px] py-[12px] rounded-[4px] hover:bg-[#1a2d5a] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {digitalSaveLoading ? 'Savingâ€¦' : 'Save verification details'}
+                    {digitalSaveLoading ? 'Saving...' : 'Save verification details'}
                   </button>
                 </div>
               </form>
