@@ -1,8 +1,34 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { verifyEmailRequest, resendVerificationCodeRequest } from '../services/auth.service';
+import { verifyPhoneRequest, resendVerificationCodeRequest } from '../services/auth.service';
+import {
+  getApiErrorMessage,
+  isAlreadyVerifiedMessage,
+  isInvalidVerificationCodeMessage,
+} from '../utils/apiErrors';
+import { normalizePhoneForApi, PENDING_VERIFICATION_DIAL_KEY } from '../utils/phoneE164';
 
 const RESEND_SECONDS = 30;
+
+const fieldInput =
+  'border border-[#d7dbe0] dark:border-[#334155] bg-white dark:bg-[#0f172a] dark:text-white border-solid flex h-[52px] items-center p-[12px] rounded-[6px] font-[\'Poppins\'] font-normal text-[#111827] text-[16px] w-full placeholder:text-[#9ca3af] dark:placeholder:text-[#64748b] focus:outline-none focus:border-[#0e1c47] dark:focus:border-[#eea137] focus:ring-2 focus:ring-[#0e1c47]/10 dark:focus:ring-[#eea137]/20 transition-colors';
+
+function maskPhoneDisplay(phone) {
+  const normalized = normalizePhoneForApi(phone);
+  if (!normalized) return '';
+  if (normalized.length <= 6) {
+    return `${normalized.slice(0, 2)}•••${normalized.slice(-2)}`;
+  }
+  return `${normalized.slice(0, 4)} ••• •• ${normalized.slice(-3)}`;
+}
+
+function PhoneIcon({ className = '' }) {
+  return (
+    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
+    </svg>
+  );
+}
 
 export default function VerificationCode() {
   const navigate = useNavigate();
@@ -12,12 +38,19 @@ export default function VerificationCode() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
-  const pendingEmail = useMemo(() => {
-    const raw = localStorage.getItem('pendingVerificationEmail');
-    return raw ? String(raw).trim().toLowerCase() : '';
+  const pendingPhone = useMemo(() => {
+    const raw = localStorage.getItem('pendingVerificationPhone');
+    return raw ? normalizePhoneForApi(raw) : '';
   }, []);
-  const [email, setEmail] = useState(pendingEmail);
+  const [phone, setPhone] = useState(pendingPhone);
+  const verificationDialCode = useMemo(
+    () => localStorage.getItem(PENDING_VERIFICATION_DIAL_KEY) || '',
+    [],
+  );
   const inputRefs = useRef([]);
+  const alertRef = useRef(null);
+  const phoneHint = maskPhoneDisplay(phone);
+  const shouldAutofocusCode = Boolean(normalizePhoneForApi(phone));
 
   const handleCodeInput = (index, value) => {
     const cleanedValue = value.replace(/\D/g, '');
@@ -56,9 +89,9 @@ export default function VerificationCode() {
     setError('');
     setSuccess('');
 
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-    if (!normalizedEmail) {
-      setError('Please enter your email to verify.');
+    const normalizedPhone = normalizePhoneForApi(phone);
+    if (!normalizedPhone) {
+      setError('Please enter your phone number to verify.');
       return;
     }
 
@@ -70,62 +103,84 @@ export default function VerificationCode() {
 
     try {
       setLoading(true);
-      const storedUser = localStorage.getItem('user');
-      let userValue = normalizedEmail;
-      if (storedUser) {
-        try {
-          const parsed = JSON.parse(storedUser);
-          userValue = String(parsed?.name || parsed?.full_name || parsed?.firstName || parsed?.first_name || normalizedEmail).trim() || normalizedEmail;
-        } catch {
-          userValue = normalizedEmail;
-        }
-      }
-
-      await verifyEmailRequest({ email: normalizedEmail, code, user: userValue });
+      await verifyPhoneRequest({ phone: normalizedPhone, code, dialCode: verificationDialCode });
+      localStorage.removeItem('pendingVerificationPhone');
+      localStorage.removeItem(PENDING_VERIFICATION_DIAL_KEY);
       localStorage.removeItem('pendingVerificationEmail');
-      setSuccess('Email verified successfully. Please sign in.');
+      setSuccess('Phone verified successfully. Please sign in.');
       navigate('/sign-in');
     } catch (err) {
-      const message = err?.response?.data?.message || 'Verification failed. Please try again.';
-      if (message.toLowerCase().includes('already verified')) {
+      const message = getApiErrorMessage(err, 'Verification failed. Please try again.');
+
+      if (isInvalidVerificationCodeMessage(message)) {
+        setSuccess('');
+        setError('The verification code is incorrect. Please check the code and try again, or tap "Resend SMS code".');
+        setDigits(['', '', '', '', '', '']);
+        window.requestAnimationFrame(() => {
+          inputRefs.current[0]?.focus();
+          alertRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+        return;
+      }
+
+      if (isAlreadyVerifiedMessage(message)) {
+        localStorage.removeItem('pendingVerificationPhone');
+        localStorage.removeItem(PENDING_VERIFICATION_DIAL_KEY);
         localStorage.removeItem('pendingVerificationEmail');
-        setSuccess('Your account is already verified. Please sign in.');
-        navigate('/sign-in');
+        setError('');
+        setSuccess('This phone number is already verified. You can sign in now.');
+        window.setTimeout(() => navigate('/sign-in'), 2000);
         return;
       }
-      if (message.toLowerCase().includes('invalid verification code')) {
-        setError('Invalid verification code. Please tap "Resend code" and use the latest code only.');
-        return;
-      }
+
       setError(message);
+      window.requestAnimationFrame(() => {
+        alertRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResend = async () => {
-    setError('');
-    setSuccess('');
+  const handleResend = async (event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
 
-    if (resendCooldown > 0) {
+    if (resending) {
       return;
     }
 
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-    if (!normalizedEmail) {
-      setError('Please enter your email to resend the code.');
+    if (resendCooldown > 0) {
+      setError(`Please wait ${resendCooldown}s before requesting another SMS code.`);
+      setSuccess('');
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+
+    const normalizedPhone = normalizePhoneForApi(phone);
+    if (!normalizedPhone) {
+      setError('Please enter your phone number to resend the code.');
       return;
     }
 
     try {
       setResending(true);
-      await resendVerificationCodeRequest({ email: normalizedEmail });
-      localStorage.setItem('pendingVerificationEmail', normalizedEmail);
-      setSuccess('Verification code sent again.');
+      const response = await resendVerificationCodeRequest({
+        phone: normalizedPhone,
+        dialCode: verificationDialCode,
+      });
+      localStorage.setItem('pendingVerificationPhone', normalizedPhone);
+      const resendMessage = response?.message || 'Verification instructions sent successfully.';
+      setSuccess(resendMessage);
       setResendCooldown(RESEND_SECONDS);
     } catch (err) {
-      const message = err?.response?.data?.message || 'Failed to resend verification code.';
+      const message = getApiErrorMessage(err, 'Failed to resend verification code.');
       setError(message);
+      window.requestAnimationFrame(() => {
+        alertRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
       if (message.toLowerCase().includes('too many')) {
         setResendCooldown(RESEND_SECONDS);
       }
@@ -151,69 +206,123 @@ export default function VerificationCode() {
   }, [resendCooldown]);
 
   return (
-    <div className="bg-[#f5f6f8] flex flex-col items-center justify-center px-[16px] sm:px-[24px] md:px-[32px] py-[32px] sm:py-[40px] md:py-[48px] min-h-screen" data-name="Container" data-node-id="35:4793">
-      <div className="bg-[#fafafa] border border-[#e6e6e6] border-solid flex flex-col gap-[28px] sm:gap-[32px] w-full max-w-[620px] p-[20px] sm:p-[28px] md:p-[36px] rounded-[8px] shadow-[0px_0px_44px_0px_rgba(142,9,9,0.1)]" data-name="form" data-node-id="35:4794">
-        <div className="content-stretch flex flex-col gap-[8px] items-start leading-[0] not-italic relative shrink-0" data-node-id="35:4795">
-          <div className="capitalize flex flex-col font-['Poppins'] font-semibold justify-center min-w-full relative shrink-0 text-[#0e1c47] text-[32px] tracking-[-0.96px] w-[min-content]" data-node-id="35:4796">
-            <p className="leading-none whitespace-pre-wrap" dir="auto">
-              Email verification
+    <div className="bg-[#f5f6f8] dark:bg-[#0f172a] flex flex-col items-center justify-center px-[16px] sm:px-[24px] md:px-[32px] py-[32px] sm:py-[40px] md:py-[48px] min-h-screen transition-colors duration-300">
+      <div className="bg-[#fafafa] dark:bg-[#1e293b] border border-[#e6e6e6] dark:border-[#334155] border-solid flex flex-col gap-[28px] sm:gap-[32px] w-full max-w-[520px] p-[20px] sm:p-[28px] md:p-[36px] rounded-[8px] shadow-[0px_0px_44px_0px_rgba(142,9,9,0.1)] dark:shadow-[0px_0px_44px_0px_rgba(0,0,0,0.35)] transition-colors duration-300">
+        <div className="flex flex-col gap-[24px] w-full">
+          <div className="flex flex-col gap-[10px]">
+            <div className="flex items-center gap-[12px]">
+              <span className="flex size-[44px] shrink-0 items-center justify-center rounded-full bg-[#eef4ff] dark:bg-[#1e3a5f] text-[#0e1c47] dark:text-[#93c5fd]">
+                <PhoneIcon />
+              </span>
+              <h1 className="font-['Poppins'] font-semibold text-[#0e1c47] dark:text-white text-[28px] sm:text-[32px] tracking-[-0.96px] leading-none capitalize">
+                Phone Verification
+              </h1>
+            </div>
+            <p className="font-['Poppins'] font-normal text-[#121212] dark:text-[#cbd5e1] text-[15px] sm:text-[16px] leading-[1.45]">
+              Enter the 6-digit code we sent to your phone by SMS.
             </p>
           </div>
-          <div className="flex flex-col font-['Poppins'] font-normal justify-center relative shrink-0 text-[#121212] text-[16px] whitespace-nowrap" data-node-id="35:4797">
-            <p className="leading-[normal]" dir="auto">
-              Enter the verification code sent to your email
+
+          <div className="flex flex-col gap-[8px] w-full">
+            <label htmlFor="verification-phone" className="font-['Poppins'] font-semibold text-[#121212] dark:text-[#e5e7eb] text-[18px]">
+              Phone Number
+            </label>
+            <p className="font-['Poppins'] text-[12px] text-[#666] dark:text-[#94a3b8] -mt-[2px] leading-[1.4]">
+              Use the same number you registered with (e.g. 01554774574 or +96550123456).
             </p>
-          </div>
-          <div className="content-stretch flex items-start relative shrink-0 w-full">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value.toLowerCase())}
-              autoComplete="email"
-              className="border border-[#d7dbe0] border-solid flex h-[48px] items-start justify-center p-[12px] rounded-[6px] font-['Poppins'] font-normal text-[#111827] text-[15px] w-full placeholder:text-[#9ca3af] focus:outline-none focus:border-[#0e1c47] focus:ring-2 focus:ring-[#0e1c47]/10 transition-colors"
-              placeholder="Enter your email"
-            />
-          </div>
-        </div>
-        <div className="content-stretch flex flex-col gap-[8px] items-end relative shrink-0 w-full" data-node-id="35:4798">
-          <div className="flex flex-col font-['Poppins'] font-semibold h-[32px] justify-center leading-[0] not-italic relative shrink-0 text-[#121212] text-[18px] w-full" data-node-id="35:4799">
-            <p className="leading-[normal] whitespace-pre-wrap" dir="auto">
-              Code
-            </p>
-          </div>
-          <div className="content-stretch flex gap-[8px] sm:gap-[10px] items-start relative shrink-0 w-full" data-node-id="35:4800" onPaste={handlePaste}>
-            {digits.map((digit, index) => (
+            <div className="relative w-full">
+              <span className="pointer-events-none absolute left-[12px] top-1/2 -translate-y-1/2 text-[#9ca3af] dark:text-[#64748b]">
+                <PhoneIcon className="size-[18px]" />
+              </span>
               <input
-                key={index}
-                ref={(el) => {
-                  inputRefs.current[index] = el;
-                }}
+                id="verification-phone"
                 type="tel"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={1}
-                autoFocus={index === 0}
-                value={digit}
-                onChange={(e) => handleCodeInput(index, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(index, e)}
-                className="border border-[#d7dbe0] border-solid content-stretch flex flex-[1_0_0] flex-col items-center justify-center h-[68px] min-h-px min-w-px px-[8px] py-[8px] relative rounded-[14px] shrink-0 font-['Poppins'] font-semibold text-[#121212] text-[28px] text-center focus:outline-none focus:border-[#0e1c47] focus:ring-2 focus:ring-[#0e1c47]/10 transition-colors"
+                inputMode="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                autoComplete="tel"
+                autoFocus={!shouldAutofocusCode}
+                className={`${fieldInput} pl-[40px] tabular-nums`}
+                placeholder="01554774574"
               />
-            ))}
+            </div>
+            {phoneHint ? (
+              <p className="font-['Poppins'] text-[13px] text-[#0e1c47] dark:text-[#93c5fd]">
+                Code sent to <span className="font-semibold">{phoneHint}</span>
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex flex-col gap-[8px] w-full">
+            <p className="font-['Poppins'] font-semibold text-[#121212] dark:text-[#e5e7eb] text-[18px]">
+              SMS Code
+            </p>
+            <div className="flex gap-[8px] sm:gap-[10px] w-full" onPaste={handlePaste}>
+              {digits.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={(el) => {
+                    inputRefs.current[index] = el;
+                  }}
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={1}
+                  autoFocus={shouldAutofocusCode && index === 0}
+                  aria-label={`Digit ${index + 1} of 6`}
+                  value={digit}
+                  onChange={(e) => handleCodeInput(index, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  className="border border-[#d7dbe0] dark:border-[#334155] bg-white dark:bg-[#0f172a] dark:text-white border-solid flex flex-[1_0_0] items-center justify-center h-[68px] min-w-0 px-[8px] rounded-[14px] font-['Poppins'] font-semibold text-[#121212] dark:text-white text-[28px] text-center focus:outline-none focus:border-[#0e1c47] dark:focus:border-[#eea137] focus:ring-2 focus:ring-[#0e1c47]/10 dark:focus:ring-[#eea137]/20 transition-colors"
+                />
+              ))}
+            </div>
+          </div>
+
+          <div ref={alertRef} className="w-full" aria-live="polite">
+            {error ? (
+              <p
+                role="alert"
+                className="rounded-[6px] border border-[#fecaca] bg-[#fef2f2] dark:bg-[#450a0a]/30 dark:border-[#7f1d1d] px-[12px] py-[10px] text-[#8e0909] dark:text-[#fecaca] font-['Poppins'] text-[14px] leading-[1.45]"
+              >
+                {error}
+              </p>
+            ) : null}
+            {!error && success ? (
+              <p
+                role="status"
+                className="rounded-[6px] border border-[#bbf7d0] bg-[#f0fdf4] dark:bg-[#14532d]/30 dark:border-[#166534] px-[12px] py-[10px] text-[#00a651] dark:text-[#86efac] font-['Poppins'] text-[14px] leading-[1.45]"
+              >
+                {success}
+              </p>
+            ) : null}
           </div>
         </div>
-        {error ? <p className="text-[#8e0909] font-['Poppins'] text-[14px]">{error}</p> : null}
-        {success ? <p className="text-[#00a651] font-['Poppins'] text-[14px]">{success}</p> : null}
-        <button onClick={handleVerify} disabled={loading} className="bg-[#0e1c47] content-stretch cursor-pointer flex h-[56px] items-center justify-center p-[16px] relative rounded-[6px] shrink-0 w-full hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed" data-name="cta" data-node-id="35:4809">
-          <div className="capitalize flex flex-col font-['Poppins'] font-semibold justify-center leading-[0] not-italic relative shrink-0 text-[18px] text-left text-white tracking-[-0.18px] whitespace-nowrap" data-node-id="35:4811">
-            <p className="leading-[1.2]" dir="auto">{loading ? 'Verifying...' : 'Verify'}</p>
-          </div>
+
+        <button
+          type="button"
+          onClick={handleVerify}
+          disabled={loading}
+          className="bg-[#0e1c47] cursor-pointer flex h-[56px] items-center justify-center p-[16px] rounded-[6px] w-full hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <span className="font-['Poppins'] font-semibold text-[18px] text-white capitalize">
+            {loading ? 'Verifying...' : 'Verify phone'}
+          </span>
         </button>
-        <button onClick={handleResend} disabled={resending || resendCooldown > 0} className="text-[#0e1c47] font-['Poppins'] font-medium text-[14px] underline disabled:opacity-60 disabled:cursor-not-allowed">
-          {resending ? 'Resending...' : resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+
+        <button
+          type="button"
+          onClick={handleResend}
+          disabled={resending}
+          aria-label="Resend SMS verification code"
+          className="relative z-10 w-full min-h-[48px] py-[12px] px-[8px] text-[#0e1c47] dark:text-[#93c5fd] font-['Poppins'] font-medium text-[14px] underline text-center cursor-pointer bg-transparent border-0 rounded-[6px] hover:bg-[#eef4ff] dark:hover:bg-[#1e3a5f]/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0e1c47]/30 dark:focus-visible:ring-[#93c5fd]/40 transition-colors disabled:opacity-60 disabled:cursor-wait"
+        >
+          {resending ? 'Sending SMS...' : resendCooldown > 0 ? `Resend SMS in ${resendCooldown}s` : 'Resend SMS code'}
         </button>
+
         <Link
           to="/sign-in"
-          className="w-full text-center text-[#64748b] hover:text-[#0e1c47] font-['Poppins'] text-[14px] underline transition-colors"
+          className="w-full text-center text-[#64748b] dark:text-[#94a3b8] hover:text-[#0e1c47] dark:hover:text-[#93c5fd] font-['Poppins'] text-[14px] underline transition-colors"
         >
           Back to sign in
         </Link>
@@ -221,4 +330,3 @@ export default function VerificationCode() {
     </div>
   );
 }
-

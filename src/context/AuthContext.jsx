@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getCurrentUser, logoutRequest } from '../services/auth.service';
+import { normalizePhoneForApi } from '../utils/phoneE164';
 
 const AuthContext = createContext();
 
@@ -15,6 +16,15 @@ export function AuthProvider({ children }) {
     const directNumber = Number(directBoolean);
     if (Number.isFinite(directNumber)) return directNumber === 1;
     return Boolean(source?.email_verified_at || source?.verified_at);
+  };
+
+  const resolvePhoneVerified = (source) => {
+    if (!source || typeof source !== 'object') return false;
+    const directBoolean = source?.is_phone_verified ?? source?.phone_verified;
+    if (typeof directBoolean === 'boolean') return directBoolean;
+    const directNumber = Number(directBoolean);
+    if (Number.isFinite(directNumber)) return directNumber === 1;
+    return Boolean(source?.phone_verified_at);
   };
 
   const normalizeUser = (rawProfile) => {
@@ -35,7 +45,17 @@ export function AuthProvider({ children }) {
       phone: source?.phone || '',
       country_id: source?.country_id ?? source?.countryId ?? null,
       isEmailVerified: resolveEmailVerified(source),
+      isPhoneVerified: resolvePhoneVerified(source),
     };
+  };
+
+  const syncPendingPhoneVerification = (normalizedProfile) => {
+    if (!normalizedProfile?.isPhoneVerified && normalizedProfile?.phone) {
+      localStorage.setItem('pendingVerificationPhone', normalizePhoneForApi(normalizedProfile.phone));
+    } else {
+      localStorage.removeItem('pendingVerificationPhone');
+    }
+    localStorage.removeItem('pendingVerificationEmail');
   };
 
   const persistProfile = (profile) => {
@@ -49,11 +69,7 @@ export function AuthProvider({ children }) {
     if (profileCountryId && !countryChosenManually && !localStorage.getItem('selectedCountryId')) {
       localStorage.setItem('selectedCountryId', String(profileCountryId));
     }
-    if (!normalizedProfile?.isEmailVerified && normalizedProfile?.email) {
-      localStorage.setItem('pendingVerificationEmail', String(normalizedProfile.email).trim().toLowerCase());
-    } else {
-      localStorage.removeItem('pendingVerificationEmail');
-    }
+    syncPendingPhoneVerification(normalizedProfile);
   };
 
   const refreshUser = async () => {
@@ -104,11 +120,7 @@ export function AuthProvider({ children }) {
     setIsAuthenticated(true);
     localStorage.setItem('user', JSON.stringify(normalizedProfile));
     localStorage.setItem('isAuthenticated', 'true');
-    if (!normalizedProfile?.isEmailVerified && normalizedProfile?.email) {
-      localStorage.setItem('pendingVerificationEmail', String(normalizedProfile.email).trim().toLowerCase());
-    } else {
-      localStorage.removeItem('pendingVerificationEmail');
-    }
+    syncPendingPhoneVerification(normalizedProfile);
   };
 
   const logout = async () => {

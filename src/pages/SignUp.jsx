@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { registerRequest, resendVerificationCodeRequest } from '../services/auth.service';
 import { getCountries } from '../services/meta.service';
-import { combineDialAndNationalPhone } from '../utils/phoneE164';
+import { combineDialAndNationalPhone, PENDING_VERIFICATION_DIAL_KEY } from '../utils/phoneE164';
 
 // Import assets
 import flagIcon from '../assets/Layer 1.svg';
@@ -47,6 +47,8 @@ export default function SignUp() {
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
 
   useEffect(() => {
     const loadCountries = async () => {
@@ -85,12 +87,18 @@ export default function SignUp() {
       return;
     }
 
+    if (!agreedToTerms) {
+      setError('You must agree to the Terms & Conditions to create an account.');
+      return;
+    }
+
     try {
       setLoading(true);
+      const registeredPhone = combineDialAndNationalPhone(selectedCountry?.dialCode, phone);
       await registerRequest({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        phone: combineDialAndNationalPhone(selectedCountry?.dialCode, phone),
+        phone: registeredPhone,
         email: email.trim(),
         password,
         passwordConfirmation,
@@ -98,12 +106,17 @@ export default function SignUp() {
       });
       localStorage.setItem('selectedCountryId', String(countryId));
       localStorage.setItem('countryManuallySelected', '1');
-      const normalizedEmail = email.trim().toLowerCase();
-      localStorage.setItem('pendingVerificationEmail', normalizedEmail);
-      localStorage.removeItem('pendingVerificationPhone');
-      sessionStorage.setItem('postSignupPendingEmail', normalizedEmail);
-      await resendVerificationCodeRequest({ email: normalizedEmail });
-      setSuccess('Account created successfully. You can verify your email now or do it later from sign in.');
+      const dialCode = selectedCountry?.dialCode || '';
+      localStorage.setItem('pendingVerificationPhone', registeredPhone);
+      if (dialCode) {
+        localStorage.setItem(PENDING_VERIFICATION_DIAL_KEY, dialCode);
+      } else {
+        localStorage.removeItem(PENDING_VERIFICATION_DIAL_KEY);
+      }
+      localStorage.removeItem('pendingVerificationEmail');
+      sessionStorage.setItem('postSignupPendingPhone', registeredPhone);
+      await resendVerificationCodeRequest({ phone: registeredPhone, dialCode });
+      setSuccess('Account created successfully. You can verify your phone now or do it later from sign in.');
     } catch (err) {
       const message = err?.response?.data?.message || 'Sign up failed. Please try again.';
       setError(message);
@@ -128,7 +141,7 @@ export default function SignUp() {
             </div>
             <div className="flex flex-col font-['Poppins'] font-normal justify-center min-h-[32px] relative shrink-0 text-[#121212] dark:text-[#cbd5e1] text-[16px] w-full" data-node-id="35:4741">
               <p className="leading-[normal] whitespace-pre-wrap" dir="auto">
-                Create your account — we&apos;ll send a verification code to your email.
+                Create your account — we&apos;ll send a verification code to your phone.
               </p>
             </div>
           </div>
@@ -284,22 +297,43 @@ export default function SignUp() {
               />
             </div>
           </div>
-          <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0" data-node-id="35:4783">
-            <div className="content-stretch flex gap-[8px] items-start relative shrink-0" data-node-id="35:4784">
-              <input type="checkbox" className="border border-black dark:border-[#64748b] dark:bg-[#0f172a] border-solid rounded-[2px] shrink-0 size-[16px]" data-node-id="35:4785" />
-              <div className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#0e1c47] dark:text-[#cbd5e1] text-[12px] whitespace-nowrap" data-node-id="35:4786">
-                <p className="leading-[normal]">
-                  <span className="text-black dark:text-[#e5e7eb]">I agree to the</span> <span className="[text-underline-position:from-font] decoration-solid text-[#0e1c47] dark:text-[#93c5fd] underline">Terms</span>
-                  <span className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-solid underline">{` & `}</span>
-                  <span className="[text-underline-position:from-font] decoration-solid text-[#0e1c47] dark:text-[#93c5fd] underline">Conditions</span>
-                </p>
-              </div>
+          <div className="flex flex-col gap-[16px] items-start w-full" data-node-id="35:4783">
+            <div className="flex gap-[8px] items-start w-full" data-node-id="35:4784">
+              <input
+                id="signup-terms"
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                required
+                className="border border-black dark:border-[#64748b] dark:bg-[#0f172a] border-solid rounded-[2px] shrink-0 size-[16px] mt-[3px] cursor-pointer accent-[#0e1c47]"
+                data-node-id="35:4785"
+              />
+              <label
+                htmlFor="signup-terms"
+                className="flex-1 min-w-0 font-['Poppins'] font-normal leading-[1.5] text-[12px] text-[#0e1c47] dark:text-[#cbd5e1] cursor-pointer"
+                data-node-id="35:4786"
+              >
+                <span className="text-black dark:text-[#e5e7eb]">I agree to the </span>
+                <span className="text-[#0e1c47] dark:text-[#93c5fd] underline">Terms & Conditions</span>
+                <span className="text-[#8e0909]"> *</span>
+              </label>
             </div>
-            <div className="content-stretch flex gap-[8px] items-start relative shrink-0" data-node-id="35:4787">
-              <input type="checkbox" className="border border-black dark:border-[#64748b] dark:bg-[#0f172a] border-solid rounded-[2px] shrink-0 size-[16px]" data-node-id="35:4788" />
-              <div className="flex flex-col font-['Poppins'] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[12px] text-black dark:text-[#e5e7eb] whitespace-nowrap" data-node-id="35:4789">
-                <p className="leading-[normal]">I agree to receive marketing emails and newsletters.</p>
-              </div>
+            <div className="flex gap-[8px] items-start w-full" data-node-id="35:4787">
+              <input
+                id="signup-marketing"
+                type="checkbox"
+                checked={marketingOptIn}
+                onChange={(e) => setMarketingOptIn(e.target.checked)}
+                className="border border-black dark:border-[#64748b] dark:bg-[#0f172a] border-solid rounded-[2px] shrink-0 size-[16px] mt-[3px] cursor-pointer accent-[#0e1c47]"
+                data-node-id="35:4788"
+              />
+              <label
+                htmlFor="signup-marketing"
+                className="flex-1 min-w-0 font-['Poppins'] font-normal leading-[1.5] text-[12px] text-black dark:text-[#e5e7eb] cursor-pointer"
+                data-node-id="35:4789"
+              >
+                I agree to receive marketing emails and newsletters.
+              </label>
             </div>
           </div>
         </div>
@@ -310,7 +344,14 @@ export default function SignUp() {
           {success ? (
             <div className="text-[#00a651] text-[14px] font-['Poppins'] w-full">{success}</div>
           ) : null}
-          <button onClick={handleSignUp} disabled={loading} className="bg-[#0e1c47] content-stretch cursor-pointer flex h-[56px] items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed" data-name="btn-01" data-node-id="35:4791">
+          <button
+            type="button"
+            onClick={handleSignUp}
+            disabled={loading || !agreedToTerms}
+            className="bg-[#0e1c47] content-stretch cursor-pointer flex h-[56px] items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+            data-name="btn-01"
+            data-node-id="35:4791"
+          >
             <div className="capitalize flex flex-col font-['Poppins'] font-semibold justify-center leading-[0] not-italic relative shrink-0 text-[18px] text-left text-white tracking-[-0.18px] whitespace-nowrap" data-node-id="35:4792">
               <p className="leading-[1.2]" dir="auto">
                 {loading ? 'Signing up...' : 'Sign up'}
@@ -323,7 +364,7 @@ export default function SignUp() {
               onClick={() => navigate('/verification')}
               className="bg-white dark:bg-[#0f172a] border border-[#0e1c47] dark:border-[#334155] text-[#0e1c47] dark:text-[#93c5fd] content-stretch cursor-pointer flex h-[50px] items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:bg-[#f7f9fc] dark:hover:bg-[#334155] transition-colors"
             >
-              Verify email now
+              Verify phone now
             </button>
           ) : null}
           <Link to="/sign-in" className="content-stretch flex items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:opacity-80 transition-opacity">

@@ -11,23 +11,21 @@ export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
+  const [pendingVerificationPhone, setPendingVerificationPhone] = useState('');
   const [hidePendingNotice, setHidePendingNotice] = useState(false);
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
-    const pendingFromSignup = sessionStorage.getItem('postSignupPendingEmail');
+    const pendingFromSignup = sessionStorage.getItem('postSignupPendingPhone');
     if (pendingFromSignup) {
-      const normalized = String(pendingFromSignup).trim().toLowerCase();
-      setPendingVerificationEmail(normalized);
-      setIdentifier((prev) => prev || normalized);
-      sessionStorage.removeItem('postSignupPendingEmail');
+      const normalized = String(pendingFromSignup).trim();
+      setPendingVerificationPhone(normalized);
+      sessionStorage.removeItem('postSignupPendingPhone');
       return;
     }
-    const pendingStored = localStorage.getItem('pendingVerificationEmail');
+    const pendingStored = localStorage.getItem('pendingVerificationPhone');
     if (pendingStored) {
-      const normalized = String(pendingStored).trim().toLowerCase();
-      setPendingVerificationEmail(normalized);
+      setPendingVerificationPhone(String(pendingStored).trim());
     }
   }, []);
 
@@ -71,7 +69,18 @@ export default function SignIn() {
     return normalized.includes('not verified')
       || normalized.includes('verify your account')
       || normalized.includes('verify your email')
-      || normalized.includes('email is not verified');
+      || normalized.includes('verify your phone')
+      || normalized.includes('email is not verified')
+      || normalized.includes('phone is not verified')
+      || normalized.includes('phone not verified');
+  };
+
+  const goToPhoneVerification = () => {
+    const storedPhone = localStorage.getItem('pendingVerificationPhone');
+    if (storedPhone) {
+      localStorage.setItem('pendingVerificationPhone', String(storedPhone).trim());
+    }
+    navigate('/verification');
   };
 
   const handleSignIn = async (event) => {
@@ -120,10 +129,9 @@ export default function SignIn() {
       const message = getReadableError(err);
       setError(message);
       if (isUnverifiedAccountError(message)) {
-        const normalizedEmail = identifier.trim().toLowerCase();
-        if (normalizedEmail) {
-          localStorage.setItem('pendingVerificationEmail', normalizedEmail);
-          setPendingVerificationEmail(normalizedEmail);
+        const storedPhone = localStorage.getItem('pendingVerificationPhone');
+        if (storedPhone) {
+          setPendingVerificationPhone(String(storedPhone).trim());
         }
       }
     } finally {
@@ -216,18 +224,15 @@ export default function SignIn() {
           </div>
         </div>
         <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full" data-name="cta" data-node-id="35:4731">
-          {pendingVerificationEmail && !hidePendingNotice ? (
+          {pendingVerificationPhone && !hidePendingNotice ? (
             <div className="w-full bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#334155] rounded-[8px] px-[12px] py-[10px] font-['Poppins'] text-[13px] text-[#334155] dark:text-[#cbd5e1] leading-[1.45] flex items-start justify-between gap-[10px]">
               <div>
                 <p>
-                  Email verification pending for <span className="font-semibold text-[#0f172a] dark:text-white">{pendingVerificationEmail}</span>.
+                  Phone verification pending for <span className="font-semibold text-[#0f172a] dark:text-white">{pendingVerificationPhone}</span>.
                 </p>
                 <button
                   type="button"
-                  onClick={() => {
-                    localStorage.setItem('pendingVerificationEmail', pendingVerificationEmail);
-                    navigate('/verification');
-                  }}
+                  onClick={goToPhoneVerification}
                   className="mt-[4px] text-[#0e1c47] dark:text-[#93c5fd] font-semibold underline hover:opacity-80 transition-opacity"
                 >
                   Verify now
@@ -252,18 +257,19 @@ export default function SignIn() {
           {error && isUnverifiedAccountError(error) ? (
             <button
               type="button"
-              onClick={() => {
-                const normalizedEmail = identifier.trim().toLowerCase();
-                if (normalizedEmail) {
-                  localStorage.setItem('pendingVerificationEmail', normalizedEmail);
-                }
-                navigate('/verification');
-              }}
+              onClick={goToPhoneVerification}
               className="w-full bg-[#eef4ff] dark:bg-[#1e3a5f] border border-[#bfdbfe] dark:border-[#334155] text-[#0e1c47] dark:text-[#93c5fd] rounded-[6px] px-[12px] py-[10px] text-left font-['Poppins'] text-[13px] hover:bg-[#e6efff] dark:hover:bg-[#1e40af] transition-colors"
             >
-              Verify your email now
+              Verify your phone now
             </button>
           ) : null}
+          <button
+            type="button"
+            onClick={goToPhoneVerification}
+            className="w-full border border-[#e2e8f0] dark:border-[#334155] bg-white dark:bg-[#0f172a] text-[#0e1c47] dark:text-[#93c5fd] rounded-[6px] px-[12px] py-[12px] font-['Poppins'] text-[14px] font-medium hover:bg-[#f8fafc] dark:hover:bg-[#1e293b] transition-colors"
+          >
+            Verify your phone (SMS code)
+          </button>
           <button type="submit" disabled={loading} className="bg-[#0e1c47] content-stretch cursor-pointer flex h-[56px] items-center justify-center p-[16px] relative rounded-[6px] shrink-0 w-full hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed" data-name="btn-01" data-node-id="35:4732">
             <div className="capitalize flex flex-col font-['Poppins'] font-semibold justify-center leading-[0] not-italic relative shrink-0 text-[18px] text-left text-white tracking-[-0.18px] whitespace-nowrap" data-node-id="35:4733">
               <p className="leading-[1.2]" dir="auto">

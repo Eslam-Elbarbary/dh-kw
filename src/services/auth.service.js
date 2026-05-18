@@ -1,4 +1,5 @@
 import api from './api';
+import { formatPhoneForVerificationApi, normalizePhoneForApi } from '../utils/phoneE164';
 
 export const loginRequest = async ({ login, password }) => {
   const normalizedLogin = String(login || '').trim();
@@ -256,7 +257,6 @@ export const updatePasswordRequest = async ({
 
 /**
  * POST {baseURL}/api/auth/verify-email — JSON body: { "email": string, "code": string }
- * (same contract as API clients / Thunder / Postman).
  */
 export const verifyEmailRequest = async ({ email, code, user }) => {
   const normalizedEmail = String(email || '').trim().toLowerCase();
@@ -270,15 +270,40 @@ export const verifyEmailRequest = async ({ email, code, user }) => {
   return res.data;
 };
 
-export const resendVerificationCodeRequest = async ({ email } = {}) => {
-  const normalizedEmail = String(email || '').trim().toLowerCase();
-  if (!normalizedEmail) {
-    throw new Error('Missing email for verification resend.');
+/**
+ * POST {baseURL}/api/auth/verify-phone — JSON body: { "phone": string, "code": string }
+ */
+export const verifyPhoneRequest = async ({ phone, code, dialCode } = {}) => {
+  const apiPhone = formatPhoneForVerificationApi(phone, dialCode);
+  const normalizedCode = String(code || '').trim();
+  if (!apiPhone) {
+    throw new Error('Missing phone for verification.');
+  }
+  const res = await api.post('/api/auth/verify-phone', {
+    phone: apiPhone,
+    code: normalizedCode,
+  });
+  const data = res.data;
+  if (!data || typeof data !== 'object' || data.success !== true) {
+    const error = new Error(String(data?.message || 'Verification failed.'));
+    error.response = { data: data || {}, status: res.status };
+    throw error;
+  }
+  return data;
+};
+
+/**
+ * POST /api/auth/resend-verification-code — { "channel": "phone", "phone": string }
+ */
+export const resendVerificationCodeRequest = async ({ phone, dialCode } = {}) => {
+  const apiPhone = formatPhoneForVerificationApi(phone, dialCode);
+  if (!apiPhone) {
+    throw new Error('Missing phone for verification resend.');
   }
 
   const res = await api.post('/api/auth/resend-verification-code', {
-    channel: 'email',
-    email: normalizedEmail,
+    channel: 'phone',
+    phone: apiPhone,
   });
   return res.data;
 };

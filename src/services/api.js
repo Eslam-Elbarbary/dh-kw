@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { isPublicAuthApiRequest } from '../utils/apiErrors';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -60,7 +61,7 @@ api.interceptors.response.use(
       }
     }
 
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isPublicAuthApiRequest(originalRequest)) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('isAuthenticated');
