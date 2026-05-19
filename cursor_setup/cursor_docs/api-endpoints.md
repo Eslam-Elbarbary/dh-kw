@@ -131,7 +131,7 @@ All cart endpoints require authentication.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET`    | `/api/cart` | Retrieve current cart contents |
-| `POST`   | `/api/cart` | Add a product to the cart |
+| `POST`   | `/api/cart/{product_id}` | Add a product to the cart (optional `?variant_id=`) |
 | `PUT`    | `/api/cart/{product_id}` | Update item quantity |
 | `DELETE` | `/api/cart/{product_id}` | Remove a specific item |
 | `DELETE` | `/api/cart` | Clear entire cart |

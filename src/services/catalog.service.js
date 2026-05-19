@@ -1,4 +1,5 @@
 import api from './api';
+import { collectProductVariants, productHasVariantsFlag } from '../utils/productVariants';
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 
@@ -100,7 +101,8 @@ const normalizeProduct = (product) => {
     description: product?.description || '',
     sku: product?.sku || '',
     stock: Number(product?.stock ?? product?.quantity ?? 0),
-    variants: toArray(product?.variants),
+    variants: collectProductVariants(product),
+    hasVariants: productHasVariantsFlag(product),
     discount: Number(product?.discount ?? 0) || 0,
     discountType: product?.discount_type || '',
     isFavorite: Boolean(product?.is_favorite),

@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { getProduct } from '../services/catalog.service';
+import { useCountry } from '../context/CountryContext';
 import {
   buildVariantGroups,
   getSelectedVariantId,
+  productHasVariantsFlag,
 } from '../utils/productVariants';
 
 /**
@@ -15,39 +18,92 @@ export function ProductVariantPickModal({
   onConfirm,
   isSubmitting = false,
 }) {
+  const { countryId } = useCountry();
   const [selectedVariants, setSelectedVariants] = useState({});
   const [localError, setLocalError] = useState('');
+  const [resolvedProduct, setResolvedProduct] = useState(null);
+  const [loadingProduct, setLoadingProduct] = useState(false);
 
-  const variantGroups = useMemo(() => (product ? buildVariantGroups(product) : []), [product]);
+  const displayProduct = resolvedProduct || product;
+  const variantGroups = useMemo(
+    () => (displayProduct ? buildVariantGroups(displayProduct) : []),
+    [displayProduct],
+  );
 
   useEffect(() => {
-    if (!open || !product) return;
+    if (!open || !product) {
+      setResolvedProduct(null);
+      setLoadingProduct(false);
+      return undefined;
+    }
+
     setLocalError('');
-    const initial = {};
+    let cancelled = false;
+
+    const applyProduct = (nextProduct) => {
+      if (cancelled) return;
+      setResolvedProduct(nextProduct);
+      const initial = {};
+      buildVariantGroups(nextProduct).forEach((g) => {
+        if (g.values[0]?.value) initial[g.name] = g.values[0].value;
+      });
+      setSelectedVariants(initial);
+    };
+
     const groups = buildVariantGroups(product);
-    groups.forEach((g) => {
-      if (g.values[0]?.value) initial[g.name] = g.values[0].value;
-    });
-    setSelectedVariants(initial);
-  }, [open, product?.id]);
+    if (groups.length > 0) {
+      applyProduct(product);
+      return () => { cancelled = true; };
+    }
+
+    if (!productHasVariantsFlag(product)) {
+      applyProduct(product);
+      return () => { cancelled = true; };
+    }
+
+    setLoadingProduct(true);
+    setResolvedProduct(product);
+
+    (async () => {
+      try {
+        const full = await getProduct({ id: product.id, countryId });
+        if (!cancelled) applyProduct(full);
+      } catch {
+        if (!cancelled) applyProduct(product);
+      } finally {
+        if (!cancelled) setLoadingProduct(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [open, product?.id, countryId]);
 
   const resolvedVariantId = useMemo(
-    () => getSelectedVariantId(variantGroups, selectedVariants, product?.variants),
-    [variantGroups, selectedVariants, product?.variants],
+    () => getSelectedVariantId(variantGroups, selectedVariants, displayProduct?.variants),
+    [variantGroups, selectedVariants, displayProduct?.variants],
   );
 
   if (!open || !product) return null;
 
+  const requiresVariantId =
+    intent === 'cart'
+    && (variantGroups.length > 0 || productHasVariantsFlag(displayProduct));
+
   const handleConfirm = async () => {
     setLocalError('');
-    if (variantGroups.length > 0 && !resolvedVariantId) {
-      setLocalError('Please select an option for each variant.');
+    if (loadingProduct) return;
+    if (requiresVariantId && !resolvedVariantId) {
+      setLocalError(
+        variantGroups.length > 0
+          ? 'Please select an option before adding to cart.'
+          : 'Options could not be loaded. Open the product page to choose a variant.',
+      );
       return;
     }
     try {
       await onConfirm({
         intent,
-        productId: product.id,
+        productId: displayProduct?.id ?? product.id,
         variantId: resolvedVariantId,
       });
     } catch {
@@ -92,28 +148,28 @@ export function ProductVariantPickModal({
 
         <div className="max-h-[min(80vh,640px)] overflow-y-auto p-[20px] sm:p-[24px]">
           <div className="flex gap-[14px] mb-[16px]">
-            {product.image ? (
+            {displayProduct?.image ? (
               <div className="size-[72px] shrink-0 overflow-hidden rounded-[8px] border border-[#e4e7e9] bg-[#f9fafb] dark:border-[#334155]">
-                <img src={product.image} alt="" className="size-full object-cover" />
+                <img src={displayProduct.image} alt="" className="size-full object-cover" />
               </div>
             ) : null}
             <div className="min-w-0 flex-1 pr-[28px]">
               <h2 id="variant-pick-title" className="font-['Poppins'] font-semibold text-[15px] sm:text-[16px] text-[#0e1c47] dark:text-white leading-snug">
-                {product.name}
+                {displayProduct?.name || product.name}
               </h2>
-              {product.brand ? (
-                <p className="mt-[4px] font-['Poppins'] text-[12px] text-[#666] dark:text-[#9ca3af]">{product.brand}</p>
+              {displayProduct?.brand ? (
+                <p className="mt-[4px] font-['Poppins'] text-[12px] text-[#666] dark:text-[#9ca3af]">{displayProduct.brand}</p>
               ) : null}
-              {product.salePrice || product.price ? (
+              {displayProduct?.salePrice || displayProduct?.price ? (
                 <p className="mt-[6px] font-['Poppins'] font-semibold text-[14px] text-[#00a651]">
-                  {product.salePrice || product.price}
+                  {displayProduct.salePrice || displayProduct.price}
                 </p>
               ) : null}
             </div>
           </div>
 
           <p className="font-['Poppins'] text-[13px] text-[#666] dark:text-[#9ca3af] mb-[14px]">
-            {helperText}
+            {loadingProduct ? 'Loading product options…' : helperText}
           </p>
 
           {variantGroups.length > 0 ? (
@@ -160,15 +216,17 @@ export function ProductVariantPickModal({
                 </div>
               ))}
             </div>
-          ) : intent === 'cart' ? (
+          ) : intent === 'cart' && !loadingProduct ? (
             <p className="font-['Poppins'] text-[13px] text-[#666] dark:text-[#9ca3af] mb-[16px]">
-              No separate options are listed for this product. You can add it to your cart as shown.
+              {productHasVariantsFlag(displayProduct)
+                ? 'This product needs a variant. Open the full product page if options do not appear here.'
+                : 'No separate options are listed for this product. You can add it to your cart as shown.'}
             </p>
-          ) : (
+          ) : !loadingProduct ? (
             <p className="font-['Poppins'] text-[13px] text-[#666] dark:text-[#9ca3af] mb-[16px]">
               This is a simple product with no options to pick on the card.
             </p>
-          )}
+          ) : null}
 
           {localError ? (
             <div className="mb-[12px] rounded-[6px] border border-[#fecaca] bg-[#fff5f5] px-[10px] py-[8px]">
@@ -187,10 +245,10 @@ export function ProductVariantPickModal({
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={isSubmitting}
+              disabled={isSubmitting || loadingProduct}
               className="font-['Poppins'] font-semibold rounded-[6px] bg-[#0e1c47] px-[18px] py-[10px] text-[13px] text-white hover:bg-[#1a2f5c] disabled:opacity-60 dark:bg-[#eea137] dark:text-[#0f172a] dark:hover:bg-[#f5b02e]"
             >
-              {isSubmitting ? 'Please wait…' : primaryLabel}
+              {isSubmitting || loadingProduct ? 'Please wait…' : primaryLabel}
             </button>
           </div>
         </div>

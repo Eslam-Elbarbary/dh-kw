@@ -1,14 +1,65 @@
 const toArray = (value) => (Array.isArray(value) ? value : []);
 
+/** Collect variant rows from any common API field name. */
+export function collectProductVariants(product) {
+  const sources = [
+    product?.variants,
+    product?.product_variants,
+    product?.productVariants,
+    product?.variant_products,
+    product?.variantProducts,
+  ];
+  for (const source of sources) {
+    const list = toArray(source);
+    if (list.length > 0) return list;
+  }
+  return [];
+}
+
+export function productHasVariantsFlag(product) {
+  if (!product) return false;
+  if (product.hasVariants === true || product.has_variants === true) return true;
+  if (product.is_variable === true || product.isVariable === true) return true;
+  return collectProductVariants(product).length > 0;
+}
+
+function buildFlatVariantGroup(variants) {
+  const values = variants
+    .map((variant) => {
+      const variantId = variant?.id ?? variant?.variant_id ?? variant?.product_variant_id ?? null;
+      if (variantId == null || variantId === '') return null;
+      const label =
+        variant?.name
+        || variant?.title
+        || variant?.label
+        || variant?.sku
+        || variant?.size
+        || variant?.color
+        || `Option ${variantId}`;
+      return { value: String(label), variantId };
+    })
+    .filter(Boolean);
+
+  if (!values.length) return [];
+  return [{ name: 'Option', values }];
+}
+
 /**
  * Build variant option groups from API `product.variants` (same rules as Product detail page).
  * @param {object|null|undefined} product
  * @returns {Array<{ name: string, values: Array<{ value: string, variantId: * }> }>}
  */
 export function buildVariantGroups(product) {
-  const groups = {};
-  const variants = toArray(product?.variants);
-  variants.forEach((variant) => {
+  const variants = collectProductVariants(product);
+  const flatGroup = buildFlatVariantGroup(variants);
+  if (flatGroup.length > 0 && variants.every((v) => !toArray(v?.options).length && !toArray(v?.values).length)) {
+    const hasNestedOptions = variants.some(
+      (v) => toArray(v?.options).length > 0 || toArray(v?.values).length > 0 || (v?.value && !v?.name),
+    );
+    if (!hasNestedOptions) return flatGroup;
+  }
+
+  const groups = {};  variants.forEach((variant) => {
     const key = variant?.attribute || variant?.type || variant?.group || 'Option';
     const optionsSource = Array.isArray(variant?.options)
       ? variant.options
@@ -69,7 +120,7 @@ export function buildVariantGroups(product) {
  * Resolve the variant id to send to the cart API from current UI selection.
  */
 export function getSelectedVariantId(variantGroups, selectedVariants, productVariants) {
-  const variants = Array.isArray(productVariants) ? productVariants : [];
+  const variants = Array.isArray(productVariants) ? productVariants : toArray(productVariants);
   const selectedIds = variantGroups
     .map((group) => {
       const selectedValue = selectedVariants[group.name] || group.values[0]?.value;
@@ -86,5 +137,6 @@ export function getSelectedVariantId(variantGroups, selectedVariants, productVar
 }
 
 export function productNeedsVariantPick(product) {
-  return buildVariantGroups(product).length > 0;
+  if (buildVariantGroups(product).length > 0) return true;
+  return productHasVariantsFlag(product);
 }

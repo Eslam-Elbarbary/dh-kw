@@ -1,28 +1,64 @@
-// Favorites page component - exact Figma implementation
-// Based on Figma design - Favorites/Wishlist Page
-
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { getFavoriteList, toggleFavoriteProduct } from '../services/catalog.service';
 import { useCountry } from '../context/CountryContext';
 import { useCart } from '../context/CartContext';
+import { ProductCard } from '../components/ProductCard';
+import { ProductVariantPickModal } from '../components/ProductVariantPickModal';
+import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
+import { productNeedsVariantPick } from '../utils/productVariants';
 
-// Import assets
 import arrowDownIcon from '../assets/ArrowRight.svg';
 import heartIcon from '../assets/wishlist.svg';
-import shoppingCartIcon from '../assets/shopping-basket-01.svg';
 
-// Icon Assets
 const imgArrowDown = arrowDownIcon;
 const imgHeart = heartIcon;
-const imgShoppingCart = shoppingCartIcon;
+
+const FAVORITE_CARD_WIDTH =
+  'w-full sm:w-[calc(50%-10.183px)] md:w-[calc(33.333%-13.577px)] lg:w-[calc((100%-61.098px)/4)] xl:w-[calc((100%-81.464px)/5)]';
 
 export default function Favorites() {
+  const navigate = useNavigate();
   const { addToCart } = useCart();
   const { countryId } = useCountry();
   const [favoriteProducts, setFavoriteProducts] = useState([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
   const [favoritesError, setFavoritesError] = useState('');
+  const [favoriteBusyId, setFavoriteBusyId] = useState(null);
+  const [cartBusyId, setCartBusyId] = useState(null);
+  const [compareIds, setCompareIds] = useState(() => getCompareIds());
+  const [compareToast, setCompareToast] = useState('');
+  const compareToastTimerRef = useRef(null);
+  const [variantPickModal, setVariantPickModal] = useState(null);
+  const [variantPickSubmitting, setVariantPickSubmitting] = useState(false);
+
+  useEffect(() => {
+    const syncCompareIds = () => setCompareIds(getCompareIds());
+    const onStorage = (e) => {
+      if (e.key === 'dh_compare_product_ids' || e.key === null) syncCompareIds();
+    };
+    window.addEventListener('dh-compare-updated', syncCompareIds);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('dh-compare-updated', syncCompareIds);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
+  useEffect(() => () => {
+    if (compareToastTimerRef.current) window.clearTimeout(compareToastTimerRef.current);
+  }, []);
+
+  const showCompareToast = (text) => {
+    if (compareToastTimerRef.current) window.clearTimeout(compareToastTimerRef.current);
+    setCompareToast(text);
+    compareToastTimerRef.current = window.setTimeout(() => {
+      setCompareToast('');
+      compareToastTimerRef.current = null;
+    }, 4500);
+  };
+
+  const isProductInCompare = (productId) => compareIds.includes(Number(productId));
 
   useEffect(() => {
     const loadFavorites = async () => {
@@ -30,17 +66,7 @@ export default function Favorites() {
         setLoadingFavorites(true);
         setFavoritesError('');
         const productsList = await getFavoriteList({ countryId, perPage: 50, page: 1 });
-        setFavoriteProducts(
-          productsList.map((product) => ({
-            id: product.id,
-            name: product.name,
-            brand: product.brand,
-            originalPrice: product.originalPrice,
-            salePrice: product.salePrice,
-            image: product.image || '',
-            badges: Array.isArray(product.badges) ? product.badges : [],
-          })).filter((product) => Boolean(product.image))
-        );
+        setFavoriteProducts(productsList);
       } catch (error) {
         setFavoritesError(error?.response?.data?.message || 'Failed to load favorites.');
         setFavoriteProducts([]);
@@ -52,186 +78,188 @@ export default function Favorites() {
     loadFavorites();
   }, [countryId]);
 
-  const removeFavorite = async (productId) => {
-    const previous = favoriteProducts;
-    setFavoriteProducts((prev) => prev.filter((item) => item.id !== productId));
+  const handleToggleFavorite = async (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!productId || favoriteBusyId === productId) return;
+
+    setFavoriteBusyId(productId);
+    setFavoritesError('');
+
     try {
       await toggleFavoriteProduct({ productId });
+      setFavoriteProducts((prev) => prev.filter((item) => item.id !== productId));
     } catch (error) {
-      setFavoriteProducts(previous);
       setFavoritesError(error?.response?.data?.message || 'Failed to remove favorite.');
+    } finally {
+      setFavoriteBusyId(null);
     }
   };
 
-  const handleAddToCart = async (productId) => {
-    if (!productId) return;
+  const handleAddToCartCard = async (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!productId || cartBusyId) return;
+    const product = favoriteProducts.find((item) => item.id === productId);
+    if (product && productNeedsVariantPick(product)) {
+      setVariantPickModal({ product, intent: 'cart' });
+      return;
+    }
+    setCartBusyId(productId);
+    setFavoritesError('');
     try {
-      setFavoritesError('');
       await addToCart({ productId, quantity: 1 });
     } catch (error) {
-      setFavoritesError(error?.response?.data?.message || 'Failed to add item to cart.');
+      const message = String(error?.response?.data?.message || '').toLowerCase();
+      if (product && message.includes('variant')) {
+        setVariantPickModal({ product, intent: 'cart' });
+        return;
+      }
+      setFavoritesError(error?.response?.data?.message || 'Could not add to cart. You may need to sign in.');
+    } finally {
+      setCartBusyId(null);
+    }
+  };
+
+  const handleAddToCompare = (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!productId) return;
+    const result = addCompareProductId(productId);
+    setCompareIds(getCompareIds());
+    if (!result.ok && result.reason === 'full') {
+      showCompareToast(`You can compare up to ${MAX_COMPARE_ITEMS} products. Open Compare to remove one.`);
+      return;
+    }
+    if (result.added) showCompareToast('Added to your compare list.');
+    else showCompareToast('This product is already in your compare list.');
+  };
+
+  const extractErrorMessage = (error, fallback) => {
+    const responseData = error?.response?.data;
+    const validationErrors = responseData?.errors && typeof responseData.errors === 'object'
+      ? Object.values(responseData.errors).flat().filter(Boolean)
+      : [];
+    if (validationErrors.length > 0) return validationErrors.join(' ');
+    return responseData?.message || error?.message || fallback;
+  };
+
+  const handleVariantPickConfirm = async ({ intent, productId, variantId }) => {
+    setVariantPickSubmitting(true);
+    setFavoritesError('');
+    try {
+      if (intent === 'details') {
+        navigate(`/product/${productId}`);
+        setVariantPickModal(null);
+        return;
+      }
+      if (!productId || cartBusyId) return;
+      const modalProduct = variantPickModal?.product;
+      if (productNeedsVariantPick(modalProduct) && !variantId) {
+        setFavoritesError('Please select a product option before adding to cart.');
+        return;
+      }
+      setCartBusyId(productId);
+      try {
+        await addToCart({
+          productId,
+          quantity: 1,
+          ...(variantId ? { variantId } : {}),
+        });
+        setVariantPickModal(null);
+      } catch (error) {
+        setFavoritesError(extractErrorMessage(error, 'Could not add to cart. You may need to sign in.'));
+      } finally {
+        setCartBusyId(null);
+      }
+    } finally {
+      setVariantPickSubmitting(false);
     }
   };
 
   return (
     <div className="bg-white relative w-full min-h-screen">
-      {/* Breadcrumbs and Header */}
       <div className="bg-white px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] xl:px-[120px] 2xl:px-[140px] py-[24px] sm:py-[32px] md:py-[40px]">
         <div className="max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto">
-          {/* Breadcrumb - Exact Figma */}
-          <div className="flex gap-[8px] items-center mb-[20px] sm:mb-[24px] md:mb-[32px]" data-node-id="35:2531">
-            <Link to="/" className="font-['Poppins'] font-normal leading-[20px] text-[#666] text-[14px] hover:text-[#eea137] transition-colors" data-node-id="35:2532">
+          <div className="flex gap-[8px] items-center mb-[20px] sm:mb-[24px] md:mb-[32px]">
+            <Link to="/" className="font-['Poppins'] font-normal leading-[20px] text-[#666] text-[14px] hover:text-[#eea137] transition-colors">
               Home
             </Link>
             <div className="flex items-center justify-center relative size-[18px]">
               <div className="flex-none rotate-[270deg]">
-                <div className="relative size-[18px]" data-name="arrow-down" data-node-id="35:2533">
-                  <div className="absolute contents inset-0">
-                    <img alt="" className="block max-w-none size-full" src={imgArrowDown} onError={(e) => e.target.style.display = 'none'} />
-                  </div>
-                </div>
+                <img alt="" className="block max-w-none size-full" src={imgArrowDown} onError={(e) => { e.target.style.display = 'none'; }} />
               </div>
             </div>
-            <span className="font-['Poppins'] font-normal leading-[20px] text-[#eea137] text-[14px]" data-node-id="35:2534">
+            <span className="font-['Poppins'] font-normal leading-[20px] text-[#eea137] text-[14px]">
               Favorites
             </span>
           </div>
 
-          {/* Page Title */}
           <div className="mb-[24px] sm:mb-[32px] md:mb-[40px]">
             <h1 className="font-['Poppins'] font-semibold text-[#191c1f] text-[24px] sm:text-[28px] md:text-[32px]">
               My Favorites
             </h1>
             <p className="font-['Poppins'] font-normal text-[#666] text-[14px] sm:text-[16px] mt-[8px]">
-              {favoriteProducts.length} items in your favorites list
+              {favoriteProducts.length} {favoriteProducts.length === 1 ? 'item' : 'items'} in your favorites list
             </p>
           </div>
         </div>
       </div>
 
-      {/* Products Grid */}
       <div className="px-[12px] sm:px-[16px] md:px-[40px] lg:px-[100px] xl:px-[120px] 2xl:px-[140px] pb-[40px] sm:pb-[60px] md:pb-[80px]">
         <div className="max-w-[1240px] lg:max-w-[1400px] xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto">
+          {compareToast ? (
+            <p
+              className="font-['Poppins'] text-[13px] sm:text-[14px] text-[#92400e] bg-[#fffbeb] border border-[#fde68a] rounded-[6px] px-[14px] py-[10px] mb-[16px]"
+              role="status"
+            >
+              {compareToast}{' '}
+              <Link to="/compare" className="font-semibold text-[#0e1c47] underline underline-offset-2">
+                View compare
+              </Link>
+            </p>
+          ) : null}
+
           {loadingFavorites ? (
             <div className="flex flex-col items-center justify-center py-[60px] sm:py-[80px] md:py-[100px] w-full">
               <p className="font-['Poppins'] font-normal text-[#666] text-[14px] sm:text-[16px]">Loading favorites...</p>
             </div>
-          ) : favoritesError ? (
+          ) : favoritesError && favoriteProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-[60px] sm:py-[80px] md:py-[100px] w-full">
               <p className="font-['Poppins'] font-normal text-[#8e0909] text-[14px] sm:text-[16px]">{favoritesError}</p>
             </div>
-          ) : (
-          <div className="flex flex-wrap gap-[12px] sm:gap-[16px] md:gap-[20px] lg:gap-[24px]">
-            {favoriteProducts.map((product) => (
-              <div
-                key={product.id}
-                className="bg-white border-[#e4e7e9] border-[0.849px] border-solid flex flex-col gap-[6.789px] items-start overflow-hidden p-[13.578px] rounded-[3.394px] w-full sm:w-[calc(50%-8px)] md:w-[calc(33.333%-13.333px)] lg:w-[calc(25%-18px)] xl:w-[calc(20%-19.2px)] hover:shadow-lg transition-shadow cursor-pointer group"
-                data-name="Product"
-              >
-                {/* Product Image Container */}
-                <div className="relative w-full h-[180px] sm:h-[200px] md:h-[220px] lg:h-[240px] bg-[#f5f5f5] rounded-[4px] overflow-hidden mb-[8px]">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          ) : favoriteProducts.length > 0 ? (
+            <>
+              {favoritesError ? (
+                <p className="font-['Poppins'] text-[13px] text-[#8e0909] mb-[12px]">{favoritesError}</p>
+              ) : null}
+              <div className="flex flex-wrap gap-[20.366px] items-start justify-start w-full">
+                {favoriteProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    className={FAVORITE_CARD_WIDTH}
+                    isFavorite
+                    inCompare={isProductInCompare(product.id)}
+                    favoriteBusy={favoriteBusyId === product.id}
+                    cartBusy={cartBusyId === product.id || (variantPickSubmitting && variantPickModal?.product?.id === product.id)}
+                    onToggleFavorite={(e) => handleToggleFavorite(e, product.id)}
+                    onAddToCompare={(e) => handleAddToCompare(e, product.id)}
+                    onAddToCart={(e) => handleAddToCartCard(e, product.id)}
+                    onVariantChoiceView={() => setVariantPickModal({ product, intent: 'details' })}
+                    onVariantChoiceCart={() => setVariantPickModal({ product, intent: 'cart' })}
                   />
-                  
-                  {/* Badges */}
-                  {product.badges.length > 0 && (
-                    <div className="absolute top-[8px] left-[8px] flex flex-col gap-[4px] items-start">
-                      {product.badges.map((badge, badgeIdx) => (
-                        <span
-                          key={badgeIdx}
-                          className={`font-['Poppins'] font-semibold text-[10px] sm:text-[11px] px-[6px] sm:px-[8px] py-[2px] sm:py-[4px] rounded-[2px] ${
-                            badge === 'HOT'
-                              ? 'bg-[#ff4444] text-white'
-                              : badge === '32% OFF'
-                              ? 'bg-[#eea137] text-white'
-                              : 'bg-[#0e1c47] text-white'
-                          }`}
-                        >
-                          {badge}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="absolute top-[8px] right-[8px] flex flex-col gap-[8px] items-end opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    <button
-                      type="button"
-                      onClick={() => removeFavorite(product.id)}
-                      className="bg-white rounded-full p-[6px] sm:p-[8px] hover:bg-[#f0f0f0] transition-colors shadow-md"
-                      aria-label="Remove from favorites"
-                    >
-                      <svg className="size-[16px] sm:size-[18px] text-[#dc2626]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M12 21s-6.716-4.438-9.193-8.11C1.205 10.518 1 8.41 1 7.5 1 4.462 3.462 2 6.5 2c2.06 0 3.854 1.133 4.5 2.81C11.646 3.133 13.44 2 15.5 2 18.538 2 21 4.462 21 7.5c0 .91-.205 3.018-1.807 5.39C18.716 16.562 12 21 12 21z" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAddToCart(product.id)}
-                      className="bg-white rounded-full p-[6px] sm:p-[8px] hover:bg-[#f0f0f0] transition-colors shadow-md"
-                      aria-label="Add to cart"
-                    >
-                      <img
-                        src={imgShoppingCart}
-                        alt="Add to cart"
-                        className="size-[16px] sm:size-[18px] object-contain"
-                        style={{ filter: 'brightness(0) saturate(100%)' }}
-                      />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Product Info */}
-                <div className="flex flex-col gap-[4px] sm:gap-[6px] w-full">
-                  <p className="font-['Poppins'] font-normal text-[#666] text-[11px] sm:text-[12px] line-clamp-1">
-                    {product.brand}
-                  </p>
-                  <Link
-                    to={`/product/${product.id}`}
-                    className="font-['Poppins'] font-medium text-[#191c1f] text-[13px] sm:text-[14px] md:text-[15px] line-clamp-2 min-h-[36px] sm:min-h-[40px] hover:text-[#eea137] transition-colors"
-                  >
-                    {product.name}
-                  </Link>
-                  
-                  {/* Price */}
-                  <div className="flex gap-[6px] sm:gap-[8px] items-center flex-wrap mt-[4px]">
-                    {product.originalPrice && (
-                      <span className="font-['Poppins'] font-normal text-[#999] text-[12px] sm:text-[13px] line-through">
-                        {product.originalPrice}
-                      </span>
-                    )}
-                    <span className="font-['Poppins'] font-semibold text-[#10b981] text-[14px] sm:text-[15px] md:text-[16px]">
-                      {product.salePrice}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Add to Cart Button */}
-                <Link
-                  to={`/product/${product.id}`}
-                  className="bg-[#0e1c47] text-white font-['Poppins'] font-semibold py-[8px] sm:py-[10px] px-[12px] sm:px-[16px] rounded-[4px] hover:bg-[#1a2f5c] transition-colors text-[12px] sm:text-[13px] md:text-[14px] w-full text-center mt-auto"
-                >
-                  View Details
-                </Link>
+                ))}
               </div>
-            ))}
-          </div>
-          )}
-
-          {/* Empty State (if no favorites) */}
-          {!loadingFavorites && !favoritesError && favoriteProducts.length === 0 && (
+            </>
+          ) : (
             <div className="flex flex-col items-center justify-center py-[60px] sm:py-[80px] md:py-[100px]">
               <div className="relative size-[120px] sm:size-[150px] mb-[24px] sm:mb-[32px]">
                 <img
                   src={imgHeart}
-                  alt="Empty favorites"
+                  alt=""
                   className="w-full h-full object-contain opacity-30"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                  }}
+                  onError={(e) => { e.target.style.display = 'none'; }}
                 />
               </div>
               <h2 className="font-['Poppins'] font-semibold text-[#191c1f] text-[20px] sm:text-[24px] md:text-[28px] mb-[12px] sm:mb-[16px]">
@@ -250,7 +278,15 @@ export default function Favorites() {
           )}
         </div>
       </div>
+
+      <ProductVariantPickModal
+        open={Boolean(variantPickModal)}
+        intent={variantPickModal?.intent ?? 'cart'}
+        product={variantPickModal?.product}
+        onClose={() => !variantPickSubmitting && setVariantPickModal(null)}
+        onConfirm={handleVariantPickConfirm}
+        isSubmitting={variantPickSubmitting}
+      />
     </div>
   );
 }
-

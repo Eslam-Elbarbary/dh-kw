@@ -221,26 +221,19 @@ export const addToCart = async ({ productId, quantity = 1, variantId } = {}) => 
     : basePayload;
   const simplePayload = basePayload;
   const cartByProductUrl = `/api/cart/${encodeURIComponent(normalizedProductId)}`;
+  const cartByProductUrlWithVariant = buildCartProductUrl({
+    productId: normalizedProductId,
+    variantId: normalizedVariantId,
+  });
 
+  // Live API: POST /api/cart/{product_id} (optional ?variant_id=). POST /api/cart is not supported.
   const variantAttempts = normalizedVariantId
     ? [
-      // Variant products: follow documented form-data flow first.
+      () => api.post(cartByProductUrlWithVariant),
+      () => api.post(cartByProductUrlWithVariant, { quantity: normalizedQuantity }),
+      () => api.post(cartByProductUrlWithVariant, variantPayload),
       () => postCartFormData(
-        cartByProductUrl,
-        buildCartFormData({
-          quantity: null,
-          variantId: normalizedVariantId,
-        })
-      ),
-      () => postCartFormData(
-        cartByProductUrl,
-        buildCartFormData({
-          quantity: normalizedQuantity,
-          variantId: normalizedVariantId,
-        })
-      ),
-      () => postCartFormData(
-        cartByProductUrl,
+        cartByProductUrlWithVariant,
         buildCartFormData({
           quantity: normalizedQuantity,
           variantId: normalizedVariantId,
@@ -258,12 +251,12 @@ export const addToCart = async ({ productId, quantity = 1, variantId } = {}) => 
       ),
       () => api.post(cartByProductUrl, variantPayload),
       () => api.post('/api/cart/add-product', variantPayload),
-      () => api.post('/api/cart', variantPayload),
     ]
     : [];
 
   const simpleAttempts = [
-    // Simple products (no variants): never force variant_id.
+    () => api.post(cartByProductUrl),
+    () => api.post(cartByProductUrl, simplePayload),
     () => postCartFormData(
       cartByProductUrl,
       buildCartFormData({
@@ -272,9 +265,7 @@ export const addToCart = async ({ productId, quantity = 1, variantId } = {}) => 
         includeQtyAlias: true,
       })
     ),
-    () => api.post(cartByProductUrl, simplePayload),
     () => api.post('/api/cart/add-product', simplePayload),
-    () => api.post('/api/cart', simplePayload),
   ];
 
   const attempts = normalizedVariantId
@@ -282,14 +273,14 @@ export const addToCart = async ({ productId, quantity = 1, variantId } = {}) => 
     : simpleAttempts;
 
   let response;
-  let lastError;
+  const errors = [];
   for (const attempt of attempts) {
     try {
       // eslint-disable-next-line no-await-in-loop
       response = await attempt();
       break;
     } catch (error) {
-      lastError = error;
+      errors.push(error);
       const status = error?.response?.status;
       const message = String(error?.response?.data?.message || '').toLowerCase();
       const hasValidationErrors = Boolean(error?.response?.data?.errors);
@@ -308,7 +299,11 @@ export const addToCart = async ({ productId, quantity = 1, variantId } = {}) => 
     }
   }
   if (!response) {
-    throw lastError;
+    const preferred = errors.find((error) => {
+      const message = String(error?.response?.data?.message || '').toLowerCase();
+      return !message.includes('post method is not supported for route api/cart');
+    });
+    throw preferred || errors[errors.length - 1];
   }
 
   return normalizeCartResponse(response.data);
