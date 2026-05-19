@@ -30,10 +30,19 @@ function matchRegionId(list, label) {
 const emptyForm = (phoneFallback = '') => ({
   name: 'Home',
   phone: phoneFallback,
-  street: '',
   stateId: '',
   cityId: '',
+  town: '',
+  street: '',
+  flatNum: '',
 });
+
+const displayNameLabel = (name) => {
+  const raw = String(name || '').trim();
+  if (!raw) return 'Address';
+  if (LABEL_OPTIONS.includes(raw)) return raw;
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+};
 
 export default function AddressBookSection({ defaultPhone = '' }) {
   const [addressError, setAddressError] = useState('');
@@ -72,22 +81,48 @@ export default function AddressBookSection({ defaultPhone = '' }) {
     [shippingCities, addressForm.cityId],
   );
 
+  const countryCodeForApi = activeCountry?.code || shippingCountryCode;
+
+  const fullAddressPreview = useMemo(
+    () => buildSavedAddressLine({
+      name: displayNameLabel(addressForm.name),
+      street: addressForm.street,
+      stateName: selectedStateName,
+      cityName: selectedCityName || addressForm.town,
+    }),
+    [addressForm.name, addressForm.street, addressForm.town, selectedStateName, selectedCityName],
+  );
+
   const addressPreviewLines = useMemo(
     () => formatAddressPreview({
-      label: addressForm.name,
+      label: displayNameLabel(addressForm.name),
       phone: addressForm.phone,
+      town: addressForm.town,
       street: addressForm.street,
+      flatNum: addressForm.flatNum,
       stateName: selectedStateName,
       cityName: selectedCityName,
       countryName: activeCountry?.name || '',
+      fullAddress: fullAddressPreview,
     }),
-    [addressForm.name, addressForm.phone, addressForm.street, selectedStateName, selectedCityName, activeCountry?.name],
+    [
+      addressForm.name,
+      addressForm.phone,
+      addressForm.town,
+      addressForm.street,
+      addressForm.flatNum,
+      selectedStateName,
+      selectedCityName,
+      activeCountry?.name,
+      fullAddressPreview,
+    ],
   );
 
   const loadAddresses = useCallback(async () => {
+    if (!countryCodeForApi) return [];
     try {
       setAddressesLoading(true);
-      const list = await getAddresses();
+      const list = await getAddresses({ countryCode: countryCodeForApi });
       setSavedAddresses(list);
       return list;
     } catch {
@@ -96,7 +131,7 @@ export default function AddressBookSection({ defaultPhone = '' }) {
     } finally {
       setAddressesLoading(false);
     }
-  }, []);
+  }, [countryCodeForApi]);
 
   const applyParsedAddressToForm = useCallback((item) => {
     const parsed = item.governorateLabel != null
@@ -107,16 +142,23 @@ export default function AddressBookSection({ defaultPhone = '' }) {
           nameFromBracket: '',
         }
       : parseSavedAddressLine(item.address || '');
-    const stateId = matchRegionId(shippingStates, parsed.governorate);
-    const cleanStreet = sanitizeStreetForForm(parsed.street, parsed.governorate, parsed.area);
+    const stateId = item.stateId || matchRegionId(shippingStates, parsed.governorate);
+    const cleanStreet = sanitizeStreetForForm(
+      item.street || parsed.street,
+      parsed.governorate || item.governorateLabel,
+      parsed.area || item.areaLabel,
+    );
+    const townLabel = item.town || parsed.area || item.areaLabel || '';
     setAddressForm({
-      name: LABEL_OPTIONS.includes(item.name) ? item.name : (item.name || parsed.nameFromBracket || 'Home'),
+      name: LABEL_OPTIONS.includes(item.name) ? item.name : displayNameLabel(item.name || parsed.nameFromBracket || 'Home'),
       phone: item.phone || defaultPhone || '',
-      street: cleanStreet,
       stateId,
-      cityId: '',
+      cityId: item.cityId || '',
+      town: townLabel,
+      street: cleanStreet,
+      flatNum: item.flatNum || '',
     });
-    setPendingCityMatch(parsed.area || '');
+    setPendingCityMatch(item.cityId ? '' : townLabel);
   }, [shippingStates, defaultPhone]);
 
   useEffect(() => {
@@ -224,7 +266,13 @@ export default function AddressBookSection({ defaultPhone = '' }) {
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setAddressForm((prev) => {
-      if (name === 'stateId') return { ...prev, stateId: value, cityId: '' };
+      if (name === 'stateId') {
+        return { ...prev, stateId: value, cityId: '', town: '' };
+      }
+      if (name === 'cityId') {
+        const cityName = shippingCities.find((c) => String(c.id) === String(value))?.name || '';
+        return { ...prev, cityId: value, town: cityName };
+      }
       return { ...prev, [name]: value };
     });
     if (addressError) setAddressError('');
@@ -250,12 +298,19 @@ export default function AddressBookSection({ defaultPhone = '' }) {
       return;
     }
 
+    if (!countryCodeForApi) {
+      setAddressError('Please select your delivery country from the site header first.');
+      return;
+    }
+
     const name = String(addressForm.name || '').trim();
     const phone = String(addressForm.phone || '').trim();
+    const town = String(addressForm.town || selectedCityName || '').trim();
     const street = String(addressForm.street || '').trim();
+    const flatNum = String(addressForm.flatNum || '').trim();
 
     if (!name || !phone || !street) {
-      setAddressError('Please fill in address label, phone, and street details.');
+      setAddressError('Please fill in address type, phone, and street.');
       return;
     }
     if (shippingStates.length > 0 && !addressForm.stateId) {
@@ -268,13 +323,11 @@ export default function AddressBookSection({ defaultPhone = '' }) {
     }
 
     const fullAddress = buildSavedAddressLine({
-      name,
+      name: displayNameLabel(name),
       street,
       stateName: selectedStateName,
-      cityName: selectedCityName,
+      cityName: selectedCityName || town,
     });
-
-    const selectedItem = savedAddresses.find((a) => a.id === selectedAddressId);
 
     try {
       setSaveAddressLoading(true);
@@ -283,15 +336,20 @@ export default function AddressBookSection({ defaultPhone = '' }) {
       const created = await createAddress({
         name,
         phone,
+        street,
+        stateId: addressForm.stateId,
+        cityId: addressForm.cityId,
+        town,
+        flatNum,
         address: fullAddress,
-        latitude: selectedItem?.latitude,
-        longitude: selectedItem?.longitude,
-        countryCode: activeCountry?.code || shippingCountryCode,
+        countryCode: countryCodeForApi,
       });
       const list = await loadAddresses();
       const createdId = created?.data?.id || created?.id || created?.data?.address?.id;
       if (createdId) setSelectedAddressId(createdId);
       else if (list[0]) setSelectedAddressId(list[0].id);
+      setAddressForm(emptyForm(defaultPhone));
+      setPendingCityMatch('');
       setAddressSuccess('Address saved.');
     } catch (error) {
       const responseData = error?.response?.data;
@@ -318,13 +376,18 @@ export default function AddressBookSection({ defaultPhone = '' }) {
     setAddressSuccess('');
   };
 
-  const handleDeleteAddress = async (addressId) => {
+  const handleDeleteAddress = async (item) => {
+    const addressId = item?.backendId ?? item?.id;
+    if (!addressId || String(addressId).startsWith('address-')) {
+      setAddressError('This address cannot be removed.');
+      return;
+    }
     try {
-      setDeleteAddressLoadingId(addressId);
+      setDeleteAddressLoadingId(item.id);
       setAddressError('');
-      await deleteAddress({ addressId });
+      await deleteAddress({ addressId, countryCode: countryCodeForApi });
       const list = await loadAddresses();
-      if (selectedAddressId === addressId) {
+      if (selectedAddressId === item.id) {
         setSelectedAddressId(null);
         setAddressForm(emptyForm(defaultPhone));
         setPendingCityMatch('');
@@ -346,14 +409,14 @@ export default function AddressBookSection({ defaultPhone = '' }) {
         <div>
           <h3 className="font-['Poppins'] font-semibold text-[17px] text-[#0e1c47]">Delivery addresses</h3>
           <p className="font-['Poppins'] text-[13px] text-[#64748b] mt-[4px] max-w-[520px] leading-relaxed">
-            Add where we should deliver your orders
+            Save delivery locations for faster checkout
             {activeCountry?.name ? (
               <>
                 {' '}
                 in <span className="font-semibold text-[#0e1c47]">{activeCountry.name}</span>
               </>
             ) : null}
-            . Choose region first, then enter your street details.
+            . Choose your region, then add street and apartment details.
           </p>
         </div>
         {activeCountry?.flagUrl ? (
@@ -377,8 +440,8 @@ export default function AddressBookSection({ defaultPhone = '' }) {
       ) : null}
 
       <div className="bg-white border border-[#e6e6e6] rounded-[8px] p-[18px] sm:p-[20px]">
-        <p className="font-['Poppins'] font-medium text-[12px] uppercase tracking-wide text-[#94a3b8] mb-[14px]">
-          New address
+        <p className="font-['Poppins'] font-semibold text-[14px] text-[#0e1c47] mb-[14px]">
+          Add new address
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-[14px] mb-[14px]">
@@ -438,7 +501,7 @@ export default function AddressBookSection({ defaultPhone = '' }) {
           </div>
           <div>
             <label className="font-['Poppins'] font-medium text-[13px] text-[#334155] mb-[6px] block">
-              Area / district
+              City / area
             </label>
             <select
               name="cityId"
@@ -452,7 +515,7 @@ export default function AddressBookSection({ defaultPhone = '' }) {
                   ? 'Select governorate first'
                   : citiesLoading
                     ? 'Loading…'
-                    : 'Select area'}
+                    : 'Select city / area'}
               </option>
               {shippingCities.map((city) => (
                 <option key={String(city.id)} value={String(city.id)}>
@@ -466,9 +529,24 @@ export default function AddressBookSection({ defaultPhone = '' }) {
           <p className="font-['Poppins'] text-[12px] text-[#b45309] mb-[12px]">{shippingRegionsError}</p>
         ) : null}
 
-        <div className="mb-[16px]">
+        <div className="mb-[14px]">
           <label className="font-['Poppins'] font-medium text-[13px] text-[#334155] mb-[6px] block">
-            Street, building, and landmarks
+            District
+          </label>
+          <input
+            type="text"
+            name="town"
+            value={addressForm.town}
+            onChange={handleFormChange}
+            onKeyDown={preventEnterSubmit}
+            className={inputClass}
+            placeholder="Auto-filled from city — edit if needed"
+          />
+        </div>
+
+        <div className="mb-[14px]">
+          <label className="font-['Poppins'] font-medium text-[13px] text-[#334155] mb-[6px] block">
+            Street & building details
           </label>
           <textarea
             name="street"
@@ -477,20 +555,41 @@ export default function AddressBookSection({ defaultPhone = '' }) {
             onKeyDown={preventEnterSubmit}
             rows={2}
             className={`${inputClass} resize-y min-h-[72px]`}
-            placeholder="e.g. Building 12, Arabian Gulf Street, Block 8"
+            placeholder="e.g. Building 12, Block 8, landmark"
           />
           <p className="font-['Poppins'] text-[11px] text-[#94a3b8] mt-[6px]">
             Do not repeat governorate or country here — those are selected above.
           </p>
         </div>
 
-        {addressPreviewLines.length > 1 ? (
-          <div className="mb-[16px] rounded-[6px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-[14px] py-[12px]">
-            <p className="font-['Poppins'] font-medium text-[11px] uppercase tracking-wide text-[#64748b] mb-[6px]">
+        <div className="mb-[16px]">
+          <label className="font-['Poppins'] font-medium text-[13px] text-[#334155] mb-[6px] block">
+            Apartment / unit no.
+          </label>
+          <input
+            type="text"
+            name="flatNum"
+            value={addressForm.flatNum}
+            onChange={handleFormChange}
+            onKeyDown={preventEnterSubmit}
+            className={inputClass}
+            placeholder="e.g. 5"
+            inputMode="numeric"
+          />
+        </div>
+
+        {addressPreviewLines.length > 0 ? (
+          <div className="mb-[16px] rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-[14px] py-[12px]">
+            <p className="font-['Poppins'] font-medium text-[13px] text-[#0e1c47] mb-[8px]">
               Delivery preview
             </p>
-            {addressPreviewLines.map((line) => (
-              <p key={line} className="font-['Poppins'] text-[13px] text-[#0e1c47] leading-snug">
+            {fullAddressPreview ? (
+              <p className="font-['Poppins'] text-[13px] text-[#475569] mb-[8px] leading-relaxed break-words">
+                {fullAddressPreview}
+              </p>
+            ) : null}
+            {addressPreviewLines.map((line, index) => (
+              <p key={`${line}-${index}`} className="font-['Poppins'] text-[13px] text-[#0e1c47] leading-snug">
                 {line}
               </p>
             ))}
@@ -567,7 +666,7 @@ export default function AddressBookSection({ defaultPhone = '' }) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDeleteAddress(item.id)}
+                    onClick={() => handleDeleteAddress(item)}
                     disabled={deleteAddressLoadingId === item.id}
                     className="shrink-0 font-['Poppins'] font-medium text-[12px] text-[#dc2626] hover:underline disabled:opacity-50"
                   >

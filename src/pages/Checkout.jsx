@@ -5,7 +5,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { createAddress, deleteAddress, getAddresses } from '../services/address.service';
+import {
+  buildSavedAddressLine,
+  createAddress,
+  deleteAddress,
+  getAddresses,
+  parseSavedAddressLine,
+  sanitizeStreetForForm,
+} from '../services/address.service';
 import { useCountry } from '../context/CountryContext';
 import { getCountries } from '../services/meta.service';
 import { getShippingStates, getShippingCities, getShippingCityDetails } from '../services/shipping.service';
@@ -108,8 +115,11 @@ export default function Checkout() {
   const { user } = useAuth();
   const { cart, loadingCart, loadCart } = useCart();
   const [paymentMethod, setPaymentMethod] = useState('sadad');
-  const [address, setAddress] = useState('');
+  const [street, setStreet] = useState('');
+  const [town, setTown] = useState('');
+  const [flatNum, setFlatNum] = useState('');
   const [mapPosition, setMapPosition] = useState(null);
+  const [showMap, setShowMap] = useState(false);
   const [locating, setLocating] = useState(false);
   const [mapError, setMapError] = useState('');
   const [addressType, setAddressType] = useState('house');
@@ -165,32 +175,33 @@ export default function Checkout() {
     return normalizedType.charAt(0).toUpperCase() + normalizedType.slice(1);
   };
 
+  const selectedStateName = useMemo(
+    () => shippingStates.find((s) => String(s.id) === String(selectedShippingStateId))?.name || '',
+    [shippingStates, selectedShippingStateId],
+  );
+  const selectedCityName = useMemo(
+    () => shippingCities.find((c) => String(c.id) === String(selectedShippingCityId))?.name || '',
+    [shippingCities, selectedShippingCityId],
+  );
+
   const buildConcatenatedAddress = useCallback(() => {
-    const typeLabel = formatAddressTypeLabel(addressType);
-    const normalizedAddress = String(address || '').trim();
-    if (!normalizedAddress) return '';
-
-    const stateLabel = shippingStates.find((s) => String(s.id) === String(selectedShippingStateId))?.name || '';
-    const cityLabel = shippingCities.find((c) => String(c.id) === String(selectedShippingCityId))?.name || '';
-    const regionParts = [];
-    if (stateLabel) regionParts.push(`Governorate: ${stateLabel}`);
-    if (cityLabel) regionParts.push(`Area: ${cityLabel}`);
-    if (cityZoneShippingCost != null && Number.isFinite(Number(cityZoneShippingCost))) {
-      const z = Number(cityZoneShippingCost);
-      regionParts.push(z > 0 ? `Zone ship: $${z.toFixed(2)}` : 'Zone ship: Free');
-    }
-    const regionSuffix = regionParts.length ? ` | ${regionParts.join(' | ')}` : '';
-
-    return `[${typeLabel}] ${normalizedAddress}${regionSuffix}`;
+    const streetLine = String(street || '').trim();
+    if (!streetLine) return '';
+    return buildSavedAddressLine({
+      name: formatAddressTypeLabel(addressType),
+      street: streetLine,
+      stateName: selectedStateName,
+      cityName: selectedCityName || town,
+    });
   }, [
     addressType,
-    address,
-    shippingStates,
-    shippingCities,
-    selectedShippingStateId,
-    selectedShippingCityId,
-    cityZoneShippingCost,
+    street,
+    town,
+    selectedStateName,
+    selectedCityName,
   ]);
+
+  const countryCodeForApi = activeCountry?.code || shippingCountryCode;
 
   const toProfessionalAddressError = (error, fallbackMessage) => {
     const status = error?.response?.status;
@@ -217,7 +228,7 @@ export default function Checkout() {
     try {
       setLoadingAddresses(true);
       setAddressesError('');
-      const list = await getAddresses();
+      const list = await getAddresses({ countryCode: countryCodeForApi });
       setSavedAddresses(list);
     } catch (error) {
       setSavedAddresses([]);
@@ -234,11 +245,12 @@ export default function Checkout() {
     } finally {
       setLoadingAddresses(false);
     }
-  }, []);
+  }, [countryCodeForApi]);
 
   useEffect(() => {
+    if (!countryCodeForApi) return;
     loadAddresses();
-  }, [loadAddresses]);
+  }, [loadAddresses, countryCodeForApi]);
 
   useEffect(() => {
     let cancelled = false;
@@ -511,9 +523,10 @@ export default function Checkout() {
     setMapError('');
     try {
       const addr = await reverseGeocode(lat, lng);
-      setAddress(addr.addressLine);
+      const geoStreet = [addr.area, addr.city].filter(Boolean).join(', ') || addr.addressLine;
+      if (geoStreet) setStreet(geoStreet);
     } catch {
-      setAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      /* Map pin only — street stays as entered */
     }
   }, []);
 
@@ -531,9 +544,10 @@ export default function Checkout() {
         setMapPosition([latitude, longitude]);
         try {
           const addr = await reverseGeocode(latitude, longitude);
-          setAddress(addr.addressLine);
+          const geoStreet = [addr.area, addr.city].filter(Boolean).join(', ') || addr.addressLine;
+          if (geoStreet) setStreet(geoStreet);
         } catch {
-          setAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+          /* optional map — keep manual street */
         }
         setLocating(false);
       },
@@ -547,17 +561,43 @@ export default function Checkout() {
 
   const applySavedAddress = (item) => {
     if (!item) return;
+    const parsed = parseSavedAddressLine(item.address || '');
     setSelectedSavedAddressId(item.backendId ?? item.id ?? null);
-    setAddress(item.address || '');
     setAddressType(normalizeAddressType(item.name || item.title || 'house'));
     setContactPhone(item.phone || '');
-    setSelectedShippingStateId('');
-    setSelectedShippingCityId('');
+    setSelectedShippingStateId(item.stateId ? String(item.stateId) : '');
+    setSelectedShippingCityId(item.cityId ? String(item.cityId) : '');
+    setTown(item.town || item.areaLabel || parsed.area || '');
+    setStreet(
+      sanitizeStreetForForm(
+        item.street || parsed.street,
+        item.governorateLabel || parsed.governorate,
+        item.areaLabel || parsed.area,
+      ),
+    );
+    setFlatNum(item.flatNum || '');
     setCityZoneShippingCost(null);
     setCityDetailsError('');
     if (item.latitude && item.longitude) {
       setMapPosition([item.latitude, item.longitude]);
+      setShowMap(true);
+    } else {
+      setMapPosition(null);
     }
+  };
+
+  const handleShippingStateChange = (e) => {
+    setSelectedShippingStateId(e.target.value);
+    setSelectedShippingCityId('');
+    setTown('');
+    setCityZoneShippingCost(null);
+  };
+
+  const handleShippingCityChange = (e) => {
+    const value = e.target.value;
+    setSelectedShippingCityId(value);
+    const cityName = shippingCities.find((c) => String(c.id) === String(value))?.name || '';
+    setTown(cityName);
   };
 
   const mapPaymentMethodToApi = (method) => {
@@ -704,9 +744,14 @@ export default function Checkout() {
       return;
     }
 
-    const concatenatedAddress = buildConcatenatedAddress();
-    if (!concatenatedAddress) {
-      setAddressesError('Please enter address before saving.');
+    if (!countryCodeForApi) {
+      setAddressesError('Please select your delivery country from the site header first.');
+      return;
+    }
+    const streetLine = String(street || '').trim();
+    const townLine = String(town || selectedCityName || '').trim();
+    if (!streetLine) {
+      setAddressesError('Please enter your street details before saving.');
       return;
     }
     if (!String(contactPhone || '').trim()) {
@@ -723,16 +768,23 @@ export default function Checkout() {
         return;
       }
     }
+    const concatenatedAddress = buildConcatenatedAddress();
     try {
       setAddressActionLoading(true);
       setAddressesError('');
       await createAddress({
         name: formatAddressTypeLabel(addressType),
         phone: contactPhone,
+        street: streetLine,
+        stateId: selectedShippingStateId,
+        cityId: selectedShippingCityId,
+        town: townLine,
+        flatNum,
         address: concatenatedAddress,
-        latitude: mapPosition?.[0] ?? null,
-        longitude: mapPosition?.[1] ?? null,
-        countryCode: activeCountry?.code || shippingCountryCode,
+        ...(mapPosition
+          ? { latitude: mapPosition[0], longitude: mapPosition[1] }
+          : {}),
+        countryCode: countryCodeForApi,
       });
       await loadAddresses();
     } catch (error) {
@@ -759,7 +811,10 @@ export default function Checkout() {
     try {
       setAddressActionLoading(true);
       setAddressesError('');
-      await deleteAddress({ addressId });
+      await deleteAddress({
+        addressId,
+        countryCode: countryCodeForApi,
+      });
       if (selectedSavedAddressId === addressId) {
         setSelectedSavedAddressId(null);
       }
@@ -837,21 +892,50 @@ export default function Checkout() {
               {/* Region from account / store country — drives shipping API */}
               <div className="flex flex-col gap-[10px] w-full rounded-[6px] border border-[#e8ecf4] bg-[#f8fafc] px-[12px] py-[12px]">
                 <div className="flex flex-col gap-[4px]">
-                  <p className="font-['Poppins'] font-medium text-[13px] text-[#0e1c47]">Governorate &amp; area</p>
+                  <p className="font-['Poppins'] font-semibold text-[15px] text-[#0e1c47]">Where should we deliver?</p>
                   <p className="font-['Poppins'] text-[12px] text-[#666] leading-snug">
-                    Lists follow your current store country
+                    Enter your details, save to your address book, then select one for this order.
                     {activeCountry?.name ? (
-                      <span className="font-medium text-[#333]"> ({activeCountry.name})</span>
+                      <span className="font-medium text-[#333]"> Delivering to {activeCountry.name}.</span>
                     ) : null}
-                    . Change country from sign-up selection or your profile, then refresh this page if needed.
                   </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-[10px] sm:gap-[12px] w-full">
+                  <div className="flex flex-col gap-[6px] w-full sm:w-1/2">
+                    <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">
+                      Address label
+                    </label>
+                    <select
+                      value={addressType}
+                      onChange={(e) => setAddressType(e.target.value)}
+                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] py-[10px] font-['Poppins'] font-normal text-[13px] text-[#333] bg-white outline-none focus:border-[#0e1c47] transition-colors w-full"
+                    >
+                      <option value="house">House</option>
+                      <option value="apartment">Apartment</option>
+                      <option value="office">Office</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-[6px] w-full sm:w-1/2">
+                    <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">
+                      Contact phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] py-[10px] font-['Poppins'] font-normal text-[13px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                      placeholder="01xxxxxxxxx"
+                    />
+                  </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-[12px] w-full">
                   <div className="flex flex-col gap-[6px] flex-1 min-w-0">
-                    <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">Governorate / State</label>
+                    <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">
+                      Governorate
+                    </label>
                     <select
                       value={selectedShippingStateId}
-                      onChange={(e) => setSelectedShippingStateId(e.target.value)}
+                      onChange={handleShippingStateChange}
                       disabled={statesLoading || !shippingStates.length}
                       className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] py-[10px] font-['Poppins'] font-normal text-[13px] text-[#333] bg-white outline-none focus:border-[#0e1c47] transition-colors w-full disabled:opacity-60 disabled:cursor-not-allowed"
                     >
@@ -861,7 +945,7 @@ export default function Checkout() {
                           : shippingStates.length
                             ? 'Select governorate'
                             : shippingCountryCode
-                              ? 'No list for this country — use address field'
+                              ? 'No list for this country'
                               : 'Loading country…'}
                       </option>
                       {shippingStates.map((s) => (
@@ -872,10 +956,12 @@ export default function Checkout() {
                     </select>
                   </div>
                   <div className="flex flex-col gap-[6px] flex-1 min-w-0">
-                    <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">Area / City</label>
+                    <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">
+                      City / area
+                    </label>
                     <select
                       value={selectedShippingCityId}
-                      onChange={(e) => setSelectedShippingCityId(e.target.value)}
+                      onChange={handleShippingCityChange}
                       disabled={citiesLoading || !selectedShippingStateId || !shippingCities.length}
                       className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] py-[10px] font-['Poppins'] font-normal text-[13px] text-[#333] bg-white outline-none focus:border-[#0e1c47] transition-colors w-full disabled:opacity-60 disabled:cursor-not-allowed"
                     >
@@ -922,48 +1008,51 @@ export default function Checkout() {
                     ) : null}
                   </div>
                 ) : null}
-              </div>
 
-              {/* Address with map */}
-              <div className="flex flex-col gap-[12px] w-full">
-                <label className="font-['Poppins'] font-normal text-[14px] text-[#333]">Address</label>
-                <p className="font-['Poppins'] text-[12px] text-[#666]">
-                  Add your delivery address details below. We will save it securely to your address book.
-                </p>
-                <input 
-                  type="text" 
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] sm:px-[16px] py-[10px] sm:py-[12px] font-['Poppins'] font-normal text-[14px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                  placeholder="Enter address or pick on map below"
-                />
-                <div className="flex flex-col sm:flex-row gap-[10px] sm:gap-[12px]">
-                  <div className="flex flex-col gap-[6px] w-full sm:w-1/2">
-                    <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">Address Name</label>
-                    <select
-                      value={addressType}
-                      onChange={(e) => setAddressType(e.target.value)}
-                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] py-[10px] font-['Poppins'] font-normal text-[13px] text-[#333] bg-white outline-none focus:border-[#0e1c47] transition-colors w-full"
-                    >
-                      <option value="house">House</option>
-                      <option value="apartment">Apartment</option>
-                      <option value="office">Office</option>
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-[6px] w-full sm:w-1/2">
-                    <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">Contact Phone Number</label>
-                    <input
-                      type="tel"
-                      value={contactPhone}
-                      onChange={(e) => setContactPhone(e.target.value)}
-                      className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] py-[10px] font-['Poppins'] font-normal text-[13px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
-                      placeholder="01xxxxxxxxx"
-                    />
-                  </div>
+                <div className="flex flex-col gap-[6px] w-full">
+                  <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">
+                    District
+                  </label>
+                  <input
+                    type="text"
+                    value={town}
+                    onChange={(e) => setTown(e.target.value)}
+                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] py-[10px] font-['Poppins'] font-normal text-[13px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                    placeholder="Auto-filled from city — edit if needed"
+                  />
                 </div>
+                <div className="flex flex-col gap-[6px] w-full">
+                  <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">
+                    Street & building details
+                  </label>
+                  <textarea
+                    value={street}
+                    onChange={(e) => setStreet(e.target.value)}
+                    rows={2}
+                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] py-[10px] font-['Poppins'] font-normal text-[13px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full resize-y min-h-[72px]"
+                    placeholder="Building, block, street, landmark"
+                  />
+                  <p className="font-['Poppins'] text-[11px] text-[#94a3b8]">
+                    Building and street only — governorate and country are selected above.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-[6px] w-full">
+                  <label className="font-['Poppins'] font-normal text-[13px] text-[#333]">
+                    Apartment / unit no.
+                  </label>
+                  <input
+                    type="text"
+                    value={flatNum}
+                    onChange={(e) => setFlatNum(e.target.value)}
+                    className="border border-[#e4e7e9] border-solid rounded-[4px] px-[12px] py-[10px] font-['Poppins'] font-normal text-[13px] text-[#333] outline-none focus:border-[#0e1c47] transition-colors w-full"
+                    placeholder="e.g. 5"
+                    inputMode="numeric"
+                  />
+                </div>
+
                 <div className="flex flex-col gap-[10px] w-full">
                   <div className="flex items-center justify-between gap-[12px]">
-                    <p className="font-['Poppins'] font-medium text-[13px] text-[#0e1c47]">Saved Addresses</p>
+                    <p className="font-['Poppins'] font-medium text-[13px] text-[#0e1c47]">Your saved addresses</p>
                     <button
                       type="button"
                       onClick={handleSaveCurrentAddress}
@@ -981,7 +1070,7 @@ export default function Checkout() {
                         <div
                           key={item.id}
                           className={`border rounded-[6px] p-[10px] flex items-center justify-between gap-[10px] ${
-                            selectedSavedAddressId === item.id ? 'border-[#0e1c47] bg-[#f8fbff]' : 'border-[#e4e7e9] bg-white'
+                            selectedSavedAddressId === (item.backendId ?? item.id) ? 'border-[#0e1c47] bg-[#f8fbff]' : 'border-[#e4e7e9] bg-white'
                           }`}
                         >
                           <button
@@ -1016,6 +1105,14 @@ export default function Checkout() {
                   ) : null}
                   <button
                     type="button"
+                    onClick={() => setShowMap((v) => !v)}
+                    className="inline-flex items-center justify-center gap-[8px] px-[14px] py-[10px] rounded-[4px] border border-[#e4e7e9] bg-white text-[#0e1c47] font-['Poppins'] font-medium text-[13px] hover:bg-[#f8fafc] transition-colors"
+                  >
+                    {showMap ? 'Hide map (optional)' : 'Pin on map (optional)'}
+                  </button>
+                  {showMap ? (
+                  <button
+                    type="button"
                     onClick={handleLocateMe}
                     disabled={locating}
                     className="inline-flex items-center justify-center gap-[8px] px-[14px] py-[10px] rounded-[4px] bg-[#0e1c47] text-white font-['Poppins'] font-medium text-[13px] sm:text-[14px] hover:bg-[#1a2f5c] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
@@ -1035,9 +1132,12 @@ export default function Checkout() {
                       </>
                     )}
                   </button>
-                  {mapError && (
+                  ) : null}
+                  {showMap && mapError ? (
                     <p className="font-['Poppins'] text-[13px] text-amber-600">{mapError}</p>
-                  )}
+                  ) : null}
+                  {showMap ? (
+                  <>
                   <div className="rounded-[8px] overflow-hidden border border-[#e4e7e9] bg-[#f9fafb] h-[240px] sm:h-[280px] w-full">
                     <MapContainer
                       center={mapPosition || DEFAULT_CENTER}
@@ -1059,11 +1159,16 @@ export default function Checkout() {
                     </MapContainer>
                   </div>
                   <p className="font-['Poppins'] text-[12px] text-[#666]">
-                    Click on the map to set your delivery address, or use &quot;Locate my position&quot; to use your current location.
+                    Optional: click the map or use locate to help fill street details. Not required for checkout.
                   </p>
-                  <p className="font-['Poppins'] text-[12px] text-[#0e1c47] bg-[#f6f8fc] border border-[#e4e7e9] rounded-[4px] px-[10px] py-[8px]">
-                    Delivery address summary: {buildConcatenatedAddress() || '-'}
-                  </p>
+                  </>
+                  ) : null}
+                  <div className="rounded-[6px] border border-[#e2e8f0] bg-[#f8fafc] px-[12px] py-[10px]">
+                    <p className="font-['Poppins'] font-medium text-[13px] text-[#0e1c47] mb-[6px]">Delivery preview</p>
+                    <p className="font-['Poppins'] text-[13px] text-[#475569] leading-relaxed break-words">
+                      {buildConcatenatedAddress() || 'Add street and area details above to see your full address.'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

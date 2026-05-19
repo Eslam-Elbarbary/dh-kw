@@ -75,15 +75,32 @@ export const sanitizeStreetForForm = (street, governorate = '', area = '') => {
   return filtered.length > 0 ? filtered.join(', ') : chunks[0];
 };
 
-export const formatAddressPreview = ({ label, phone, street, stateName, cityName, countryName }) => {
+export const formatAddressPreview = ({
+  label,
+  phone,
+  town,
+  street,
+  flatNum,
+  stateName,
+  cityName,
+  countryName,
+  fullAddress,
+}) => {
   const lines = [];
   const title = String(label || 'Address').trim();
   if (title) lines.push(title);
   if (phone) lines.push(phone);
+  const regionLine = [stateName, cityName || town, countryName].filter(Boolean).join(', ');
   const streetLine = String(street || '').trim();
-  if (streetLine) lines.push(streetLine);
-  const region = [stateName, cityName, countryName].filter(Boolean).join(', ');
-  if (region) lines.push(region);
+  const flatLine = String(flatNum || '').trim();
+  if (streetLine) {
+    lines.push(flatLine ? `${streetLine} (Flat ${flatLine})` : streetLine);
+  } else if (flatLine) {
+    lines.push(`Flat ${flatLine}`);
+  }
+  if (regionLine) lines.push(regionLine);
+  const summary = String(fullAddress || '').trim();
+  if (summary && !lines.length) lines.push(summary);
   return lines;
 };
 
@@ -117,14 +134,93 @@ const extractAddressList = (payload) => {
   return [];
 };
 
-export const getAddresses = async () => {
-  const res = await api.get('/api/addresses');
+const appendFormField = (form, key, value) => {
+  const raw = value == null ? '' : String(value).trim();
+  if (!raw) return;
+  form.append(key, raw);
+};
+
+/** ISO2 for `X-Country` header (e.g. eg, kw) — required by /api/addresses. */
+export const normalizeCountryHeader = (countryCode) => {
+  const raw = String(countryCode || '').trim();
+  if (!raw) return '';
+  return raw.length === 2 ? raw.toLowerCase() : raw.toLowerCase();
+};
+
+const withCountryHeader = (countryCode, config = {}) => {
+  const xCountry = normalizeCountryHeader(countryCode);
+  if (!xCountry) return config;
+  return {
+    ...config,
+    headers: {
+      ...(config.headers || {}),
+      'X-Country': xCountry,
+    },
+  };
+};
+
+/** POST /api/addresses — multipart form-data per backend contract. */
+export const buildAddressFormData = ({
+  name,
+  title,
+  phone,
+  stateId,
+  cityId,
+  town,
+  street,
+  flatNum,
+  address,
+  latitude,
+  longitude,
+  countryCode,
+} = {}) => {
+  const normalizedName = toTrimmedString(name || title).toLowerCase() || 'home';
+  const normalizedPhone = toTrimmedString(phone);
+  const normalizedStreet = toTrimmedString(street);
+  const normalizedTown = toTrimmedString(town);
+  const normalizedFlat = toTrimmedString(flatNum);
+  const normalizedAddress = toTrimmedString(address)
+    || buildSavedAddressLine({
+      name: normalizedName,
+      street: normalizedStreet,
+      stateName: '',
+      cityName: normalizedTown,
+    })
+    || normalizedStreet;
+  const { latitude: resolvedLatitude, longitude: resolvedLongitude } = resolveAddressCoordinates({
+    latitude,
+    longitude,
+    countryCode,
+  });
+
+  const form = new FormData();
+  form.append('name', normalizedName);
+  form.append('phone', normalizedPhone);
+  appendFormField(form, 'state_id', stateId);
+  appendFormField(form, 'city_id', cityId);
+  appendFormField(form, 'town', normalizedTown);
+  appendFormField(form, 'street', normalizedStreet);
+  appendFormField(form, 'flat_num', normalizedFlat);
+  form.append('address', normalizedAddress);
+  form.append('latitude', String(resolvedLatitude));
+  form.append('longitude', String(resolvedLongitude));
+  return form;
+};
+
+export const getAddresses = async ({ countryCode } = {}) => {
+  const res = await api.get('/api/addresses', withCountryHeader(countryCode));
   const payload = res.data;
   const list = extractAddressList(payload);
   return toArray(list).map((item, index) => {
     const backendId = item?.id ?? item?.address_id ?? null;
     const rawAddress = item?.address || '';
     const parsed = parseSavedAddressLine(rawAddress);
+    const stateName = toTrimmedString(
+      item?.state?.name || item?.governorate?.name || item?.state_name || parsed.governorate,
+    );
+    const cityName = toTrimmedString(
+      item?.city?.name || item?.town || item?.city_name || parsed.area,
+    );
     return {
       id: backendId ?? item?.uuid ?? `address-${index}`,
       backendId,
@@ -132,77 +228,37 @@ export const getAddresses = async () => {
       title: item?.name || item?.title || parsed.nameFromBracket || 'Address',
       phone: toTrimmedString(item?.phone || item?.mobile || item?.phone_number || ''),
       address: rawAddress,
-      street: parsed.street,
-      governorateLabel: parsed.governorate,
-      areaLabel: parsed.area,
+      street: toTrimmedString(item?.street) || parsed.street,
+      town: toTrimmedString(item?.town) || cityName,
+      flatNum: toTrimmedString(item?.flat_num ?? item?.flatNum ?? ''),
+      stateId: item?.state_id != null ? String(item.state_id) : '',
+      cityId: item?.city_id != null ? String(item.city_id) : '',
+      governorateLabel: stateName,
+      areaLabel: cityName,
       latitude: toOptionalCoordinate(item?.latitude ?? item?.lat) ?? null,
       longitude: toOptionalCoordinate(item?.longitude ?? item?.lng) ?? null,
     };
   });
 };
 
-export const createAddress = async ({
-  name,
-  title,
-  phone,
-  address,
-  latitude,
-  longitude,
-  countryCode,
-} = {}) => {
-  const normalizedName = toTrimmedString(name || title) || 'Home';
-  const normalizedPhone = toTrimmedString(phone);
-  const normalizedAddress = toTrimmedString(address);
-  const { latitude: resolvedLatitude, longitude: resolvedLongitude } = resolveAddressCoordinates({
-    latitude,
-    longitude,
-    countryCode,
-  });
-
-  const payload = {
-    name: normalizedName,
-    phone: normalizedPhone,
-    address: normalizedAddress,
-    latitude: resolvedLatitude,
-    longitude: resolvedLongitude,
-  };
-
-  try {
-    const res = await api.post('/api/addresses', payload, {
+export const createAddress = async (params = {}) => {
+  const { countryCode, ...rest } = params;
+  const form = buildAddressFormData({ ...rest, countryCode });
+  const res = await api.post(
+    '/api/addresses',
+    form,
+    withCountryHeader(countryCode, {
       retryOnTooManyRequests: true,
       maxRetries: 2,
-    });
-    return res.data;
-  } catch (error) {
-    const status = error?.response?.status;
-    if (status !== 422) {
-      throw error;
-    }
-
-    // Backend compatibility fallback:
-    // some API deployments validate different key names for the same endpoint.
-    const fallbackPayload = {
-      name: normalizedName,
-      title: normalizedName,
-      phone: normalizedPhone,
-      mobile: normalizedPhone,
-      phone_number: normalizedPhone,
-      address: normalizedAddress,
-      latitude: resolvedLatitude,
-      longitude: resolvedLongitude,
-      lat: resolvedLatitude,
-      lng: resolvedLongitude,
-    };
-
-    const fallbackRes = await api.post('/api/addresses', fallbackPayload, {
-      retryOnTooManyRequests: true,
-      maxRetries: 2,
-    });
-    return fallbackRes.data;
-  }
+    }),
+  );
+  return res.data;
 };
 
-export const deleteAddress = async ({ addressId }) => {
-  const res = await api.delete(`/api/addresses/${addressId}`);
+export const deleteAddress = async ({ addressId, countryCode }) => {
+  const res = await api.delete(
+    `/api/addresses/${addressId}`,
+    withCountryHeader(countryCode),
+  );
   return res.data;
 };
