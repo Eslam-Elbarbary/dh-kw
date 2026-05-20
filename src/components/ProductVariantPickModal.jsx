@@ -56,7 +56,7 @@ export function ProductVariantPickModal({
       return () => { cancelled = true; };
     }
 
-    if (!productHasVariantsFlag(product)) {
+    if (!productHasVariantsFlag(product) && intent !== 'cart') {
       applyProduct(product);
       return () => { cancelled = true; };
     }
@@ -76,7 +76,7 @@ export function ProductVariantPickModal({
     })();
 
     return () => { cancelled = true; };
-  }, [open, product?.id, countryId]);
+  }, [open, product?.id, countryId, intent]);
 
   const resolvedVariantId = useMemo(
     () => getSelectedVariantId(variantGroups, selectedVariants, displayProduct?.variants),
