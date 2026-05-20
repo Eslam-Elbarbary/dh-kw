@@ -8,6 +8,7 @@ import {
   getDigitalProduct,
   parseDigitalOrderProfileGate,
 } from '../services/digitalProducts.service';
+import { getCountries } from '../services/meta.service';
 import { useCountry } from '../context/CountryContext';
 import { useAuth } from '../context/AuthContext';
 import arrowDownIcon from '../assets/ArrowRight.svg';
@@ -31,6 +32,7 @@ export default function DigitalProductDetail() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { countryId } = useCountry();
+  const [countries, setCountries] = useState([]);
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -41,6 +43,25 @@ export default function DigitalProductDetail() {
 
   const closeProfileGate = useCallback(() => setProfileGate(null), []);
   const closeSuccess = useCallback(() => setSuccessInfo(null), []);
+  const selectedCountryCode = useMemo(
+    () => countries.find((c) => String(c.id) === String(countryId))?.code || '',
+    [countries, countryId],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await getCountries();
+        if (!cancelled) setCountries(Array.isArray(list) ? list : []);
+      } catch {
+        if (!cancelled) setCountries([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,7 +123,11 @@ export default function DigitalProductDetail() {
     }
     try {
       setOrderSubmitting(true);
-      const data = await createDigitalOrder({ digitalProductId: product.id });
+      const data = await createDigitalOrder({
+        digitalProductId: product.id,
+        countryId,
+        countryCode: selectedCountryCode,
+      });
       const orderId = extractCreatedDigitalOrderId(data);
       setSuccessInfo({
         orderId,

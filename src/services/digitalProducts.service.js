@@ -349,11 +349,32 @@ export const formatDigitalOrderErrorMessage = (raw) => {
 /**
  * @param {{ digitalProductId: number|string }} params
  */
-export const createDigitalOrder = async ({ digitalProductId } = {}) => {
+export const createDigitalOrder = async ({ digitalProductId, countryCode, countryId } = {}) => {
   const id = Number(digitalProductId);
   if (!Number.isFinite(id) || id < 1) {
     throw new Error('Invalid digital product.');
   }
-  const res = await api.post('/api/digital-orders', { digital_product_id: id });
+  const normalizeCountryHeader = (countryCode) => {
+    const raw = String(countryCode || '').trim();
+    if (!raw) return '';
+    return raw.toLowerCase();
+  };
+
+  const resolvedCountryId = Number(countryId);
+  const resolvedCountryCode = normalizeCountryHeader(countryCode);
+  const headers = {};
+  if (resolvedCountryCode) headers['X-Country'] = resolvedCountryCode;
+  if (Number.isFinite(resolvedCountryId) && resolvedCountryId > 0) headers['X-Country-Id'] = String(resolvedCountryId);
+
+  const res = await api.post(
+    '/api/digital-orders',
+    {
+      digital_product_id: id,
+      ...(Number.isFinite(resolvedCountryId) && resolvedCountryId > 0 ? { country_id: resolvedCountryId } : {}),
+    },
+    {
+      ...(Object.keys(headers).length ? { headers } : {}),
+    },
+  );
   return res.data;
 };

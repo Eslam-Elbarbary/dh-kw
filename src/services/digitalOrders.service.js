@@ -1,5 +1,6 @@
 import api from './api';
 import { navigateToPaymentGateway, openPaymentGatewayPlaceholderTab } from './orders.service';
+import { resolveCountryId } from './catalog.service';
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 
@@ -318,22 +319,47 @@ export const payDigitalOrder = async ({ orderId, paymentMethod = 'sadad' } = {})
   const id = String(orderId ?? '').trim();
   if (!id) throw new Error('Digital order id is required.');
   const method = String(paymentMethod || '').trim() || 'sadad';
+  const storedUserRaw = localStorage.getItem('user');
+  let userCountryCode = '';
+  try {
+    const user = storedUserRaw ? JSON.parse(storedUserRaw) : null;
+    userCountryCode = String(
+      user?.country_code
+      ?? user?.countryCode
+      ?? user?.country?.code
+      ?? '',
+    ).trim().toLowerCase();
+  } catch {
+    userCountryCode = '';
+  }
+  const countryId = resolveCountryId(1);
   const returnBase = `${window.location.origin}/payment`;
   const qs = `orderId=${encodeURIComponent(id)}&scope=digital&paymentMethod=${encodeURIComponent(method)}`;
   const successUrl = `${returnBase}/success?${qs}`;
   const failedUrl = `${returnBase}/failed?${qs}`;
   const logicUrl = `${returnBase}/logic?${qs}`;
-  const res = await api.post(`/api/digital-orders/${encodeURIComponent(id)}/pay`, {
-    payment_method: method,
-    success_url: successUrl,
-    failed_url: failedUrl,
-    return_url: logicUrl,
-    callback_url: logicUrl,
-    successUrl,
-    failedUrl,
-    returnUrl: logicUrl,
-    callbackUrl: logicUrl,
-  });
+  const headers = {
+    ...(userCountryCode ? { 'X-Country': userCountryCode } : {}),
+    ...(countryId ? { 'X-Country-Id': String(countryId) } : {}),
+  };
+  const res = await api.post(
+    `/api/digital-orders/${encodeURIComponent(id)}/pay`,
+    {
+      payment_method: method,
+      country_id: countryId,
+      success_url: successUrl,
+      failed_url: failedUrl,
+      return_url: logicUrl,
+      callback_url: logicUrl,
+      successUrl,
+      failedUrl,
+      returnUrl: logicUrl,
+      callbackUrl: logicUrl,
+    },
+    {
+      ...(Object.keys(headers).length ? { headers } : {}),
+    },
+  );
   return res.data;
 };
 
