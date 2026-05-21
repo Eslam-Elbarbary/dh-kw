@@ -11,6 +11,10 @@ import {
 import { getCountries } from '../services/meta.service';
 import { useCountry } from '../context/CountryContext';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/useCart';
+import { CART_ITEM_TYPE } from '../services/cart.service';
+import { shouldShowInlineCartError } from '../utils/cartErrors';
+import { isCartAddConflict } from '../utils/cartAdd';
 import arrowDownIcon from '../assets/ArrowRight.svg';
 
 const imgArrowDown = arrowDownIcon;
@@ -32,10 +36,14 @@ export default function DigitalProductDetail() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { countryId } = useCountry();
+  const { addToCart, cartItemsCount } = useCart();
   const [countries, setCountries] = useState([]);
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [cartBusy, setCartBusy] = useState(false);
+  const [cartSuccess, setCartSuccess] = useState('');
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderError, setOrderError] = useState('');
   const [profileGate, setProfileGate] = useState(null);
@@ -112,6 +120,40 @@ export default function DigitalProductDetail() {
       window.removeEventListener('keydown', onKey);
     };
   }, [profileGate, successInfo, closeProfileGate, closeSuccess]);
+
+  const handleAddToCart = async () => {
+    if (!product?.id || !product.isAvailable || cartBusy) return;
+    setOrderError('');
+    setCartSuccess('');
+    if (!isAuthenticated) {
+      sessionStorage.setItem('signInRedirect', `/digital-product/${id}`);
+      navigate('/sign-in');
+      return;
+    }
+    try {
+      setCartBusy(true);
+      const result = await addToCart({
+        productId: product.id,
+        quantity,
+        itemType: CART_ITEM_TYPE.DIGITAL,
+      });
+      if (isCartAddConflict(result)) return;
+      if (!result?.ok) {
+        setOrderError('Could not add to cart. Please refresh and try again.');
+        return;
+      }
+      setCartSuccess(
+        quantity > 1
+          ? `Added ${quantity} units to your digital cart. Each unit gets its own code after purchase.`
+          : 'Added to your digital cart.',
+      );
+    } catch (e) {
+      if (!shouldShowInlineCartError(e)) return;
+      setOrderError(e?.response?.data?.message || e?.message || 'Could not add to cart.');
+    } finally {
+      setCartBusy(false);
+    }
+  };
 
   const handleOrderNow = async () => {
     if (!product?.id || !product.isAvailable) return;
@@ -337,10 +379,10 @@ export default function DigitalProductDetail() {
 
               <div className="rounded-[8px] border border-[#bfdbfe] dark:border-[#1e3a5f] bg-[#eff6ff] dark:bg-[#172554]/50 px-[16px] py-[14px]">
                 <p className="font-['Poppins'] font-semibold text-[14px] text-[#1e3a8a] dark:text-[#93c5fd] mb-[6px]">
-                  Digital checkout
+                  Digital cart
                 </p>
                 <p className="font-['Poppins'] text-[13px] sm:text-[14px] text-[#1e40af] dark:text-[#bfdbfe] leading-relaxed">
-                  Orders are placed directly (not via cart). Your account must include verification details: gender, date of birth, national ID, ID photos, expiry, and home address. If anything is missing, you’ll see a clear list and can complete it on your profile.
+                  Add one or more digital products to your cart, then check out together. Digital and physical items cannot be mixed — complete one cart type before starting the other. Profile verification (national ID, address, etc.) is required at checkout.
                 </p>
                 <Link
                   to="/my-profile?focus=digital-order"
@@ -350,11 +392,38 @@ export default function DigitalProductDetail() {
                 </Link>
               </div>
 
+              {cartSuccess ? (
+                <div className="rounded-[6px] border border-[#a7f3d0] bg-[#ecfdf5] px-[14px] py-[10px]" role="status">
+                  <p className="font-['Poppins'] text-[13px] text-[#047857]">{cartSuccess}</p>
+                </div>
+              ) : null}
+
               {orderError ? (
                 <div className="rounded-[6px] border border-[#fecaca] dark:border-[#7f1d1d] bg-[#fef2f2] dark:bg-[#450a0a]/30 px-[14px] py-[10px]" role="alert">
                   <p className="font-['Poppins'] text-[13px] text-[#991b1b] dark:text-[#fecaca]">{orderError}</p>
                 </div>
               ) : null}
+
+              <div className="flex items-center gap-[12px]">
+                <span className="font-['Poppins'] font-medium text-[14px] text-[#0e1c47] dark:text-white">Quantity</span>
+                <button
+                  type="button"
+                  disabled={quantity <= 1 || cartBusy}
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  className="w-[32px] h-[32px] border rounded-[4px] disabled:opacity-50"
+                >
+                  −
+                </button>
+                <span className="font-['Poppins'] text-[15px] w-[32px] text-center">{quantity}</span>
+                <button
+                  type="button"
+                  disabled={cartBusy}
+                  onClick={() => setQuantity((q) => q + 1)}
+                  className="w-[32px] h-[32px] border rounded-[4px] disabled:opacity-50"
+                >
+                  +
+                </button>
+              </div>
 
               {product.description ? (
                 <div>
@@ -372,11 +441,27 @@ export default function DigitalProductDetail() {
               <div className="flex flex-wrap gap-[12px] pt-[8px]">
                 <button
                   type="button"
-                  onClick={handleOrderNow}
-                  disabled={!product.isAvailable || orderSubmitting}
+                  onClick={handleAddToCart}
+                  disabled={!product.isAvailable || cartBusy || orderSubmitting}
                   className="font-['Poppins'] font-semibold text-[14px] px-[24px] py-[12px] rounded-[4px] bg-[#eea137] text-white hover:bg-[#d8902f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {orderSubmitting ? 'Placing order…' : 'Order now'}
+                  {cartBusy ? 'Adding…' : 'Add to cart'}
+                </button>
+                {cartItemsCount > 0 ? (
+                  <Link
+                    to="/shopping-cart"
+                    className="font-['Poppins'] font-semibold text-[14px] px-[24px] py-[12px] rounded-[4px] bg-[#0e1c47] text-white hover:opacity-90 transition-opacity inline-flex items-center justify-center"
+                  >
+                    View cart ({cartItemsCount})
+                  </Link>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleOrderNow}
+                  disabled={!product.isAvailable || orderSubmitting || cartBusy}
+                  className="font-['Poppins'] font-semibold text-[14px] px-[24px] py-[12px] rounded-[4px] border border-[#e4e7e9] dark:border-[#334155] text-[#0e1c47] dark:text-white hover:border-[#eea137] disabled:opacity-50 transition-colors"
+                >
+                  {orderSubmitting ? 'Placing order…' : 'Buy this item only'}
                 </button>
                 <Link
                   to="/digital-products"

@@ -208,9 +208,17 @@ export default function Footer() {
           <p className="font-['Alexandria'] font-normal leading-[normal] relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[14px] md:text-[16px] lg:text-[17px] xl:text-[18px] text-center" data-node-id="I35:5063;1:246">
             Copyright © {new Date().getFullYear()}
           </p>
-          <div className="relative shrink-0 h-[16px] sm:h-[20px] md:h-[22px] w-auto" data-name="Layer 1" data-node-id="I35:5063;1:279">
-            <img alt="Payment methods" className="block h-full w-auto object-contain" src={layer1Image} />
-          </div>
+          <a
+            href="https://www.qeematech.net/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="relative shrink-0 h-[16px] sm:h-[20px] md:h-[22px] w-auto hover:opacity-85 transition-opacity"
+            data-name="Layer 1"
+            data-node-id="I35:5063;1:279"
+            aria-label="QeemaTech — visit website"
+          >
+            <img alt="QeemaTech" className="block h-full w-auto object-contain" src={layer1Image} />
+          </a>
           <p className="font-['Alexandria'] font-normal leading-[normal] relative shrink-0 text-[#f2f2f2] text-[12px] sm:text-[14px] md:text-[16px] lg:text-[17px] xl:text-[18px] text-center" data-node-id="I35:5063;1:278">
             | All Rights Reserved
           </p>

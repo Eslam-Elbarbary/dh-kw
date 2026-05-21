@@ -24,7 +24,7 @@ import {
   navigateToPaymentGateway,
   openPaymentGatewayPlaceholderTab,
 } from '../services/orders.service';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/useCart';
 import { useAuth } from '../context/AuthContext';
 
 // Fix default marker icon in Leaflet with Vite
@@ -113,7 +113,7 @@ function ChangeView({ center, zoom }) {
 export default function Checkout() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { cart, loadingCart, loadCart } = useCart();
+  const { cart, loadingCart, loadCart, isDigitalCart } = useCart();
   const [paymentMethod, setPaymentMethod] = useState('sadad');
   const [street, setStreet] = useState('');
   const [town, setTown] = useState('');
@@ -153,6 +153,12 @@ export default function Checkout() {
   const [cityDetailsError, setCityDetailsError] = useState('');
   /** Zone rate from GET /api/shipping/cities/:id; null = none / not loaded */
   const [cityZoneShippingCost, setCityZoneShippingCost] = useState(null);
+
+  useEffect(() => {
+    if (!loadingCart && isDigitalCart && cart.items.length > 0) {
+      navigate('/digital-checkout', { replace: true });
+    }
+  }, [loadingCart, isDigitalCart, cart.items.length, navigate]);
 
   const { countryId: activeCountryId } = useCountry();
   const activeCountry = useMemo(

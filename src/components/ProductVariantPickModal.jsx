@@ -101,11 +101,12 @@ export function ProductVariantPickModal({
       return;
     }
     try {
-      await onConfirm({
+      const outcome = await onConfirm({
         intent,
         productId: displayProduct?.id ?? product.id,
         variantId: resolvedVariantId,
       });
+      if (outcome?.conflict) return;
     } catch {
       setLocalError('Something went wrong. Please try again.');
     }

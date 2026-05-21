@@ -349,6 +349,33 @@ export const formatDigitalOrderErrorMessage = (raw) => {
 /**
  * @param {{ digitalProductId: number|string }} params
  */
+/**
+ * Create a digital order from the current digital cart (POST /api/digital-orders/checkout).
+ */
+export const createDigitalOrderFromCart = async ({ countryCode, countryId } = {}) => {
+  const normalizeCountryHeader = (code) => {
+    const raw = String(code || '').trim();
+    return raw ? raw.toLowerCase() : '';
+  };
+
+  const resolvedCountryId = Number(countryId);
+  const resolvedCountryCode = normalizeCountryHeader(countryCode);
+  const headers = {};
+  if (resolvedCountryCode) headers['X-Country'] = resolvedCountryCode;
+  if (Number.isFinite(resolvedCountryId) && resolvedCountryId > 0) {
+    headers['X-Country-Id'] = String(resolvedCountryId);
+  }
+
+  const res = await api.post(
+    '/api/digital-orders/checkout',
+    Number.isFinite(resolvedCountryId) && resolvedCountryId > 0
+      ? { country_id: resolvedCountryId }
+      : {},
+    Object.keys(headers).length ? { headers } : undefined,
+  );
+  return res.data;
+};
+
 export const createDigitalOrder = async ({ digitalProductId, countryCode, countryId } = {}) => {
   const id = Number(digitalProductId);
   if (!Number.isFinite(id) || id < 1) {

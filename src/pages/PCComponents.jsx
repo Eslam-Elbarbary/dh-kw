@@ -9,7 +9,10 @@ import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/
 import { ProductCardQuickActions } from '../components/ProductCardQuickActions';
 import { ProductVariantPickModal } from '../components/ProductVariantPickModal';
 import { productNeedsVariantPick } from '../utils/productVariants';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/useCart';
+import { shouldShowInlineCartError } from '../utils/cartErrors';
+import { isCartAddConflict } from '../utils/cartAdd';
+import { CART_ITEM_TYPE } from '../services/cart.service';
 
 // Import assets
 import arrowDownIcon from '../assets/ArrowRight.svg';
@@ -178,11 +181,13 @@ export default function PCComponents() {
     if (!productId || cartBusyId) return;
     setCartBusyId(productId);
     try {
-      await addToCart({ productId, quantity: 1 });
+      const result = await addToCart({ productId, quantity: 1, itemType: CART_ITEM_TYPE.PHYSICAL });
+      if (isCartAddConflict(result)) return;
       setNotificationMessage('Added to cart.');
       setShowNotification(true);
       setTimeout(() => setShowNotification(false), 3000);
     } catch (error) {
+      if (!shouldShowInlineCartError(error)) return;
       setNotificationMessage(error?.response?.data?.message || 'Could not add to cart.');
       setShowNotification(true);
       setTimeout(() => setShowNotification(false), 5000);
@@ -202,12 +207,20 @@ export default function PCComponents() {
       if (!productId || cartBusyId) return;
       setCartBusyId(productId);
       try {
-        await addToCart({ productId, quantity: 1, ...(variantId ? { variantId } : {}) });
+        const result = await addToCart({
+          productId,
+          quantity: 1,
+          ...(variantId ? { variantId } : {}),
+          itemType: CART_ITEM_TYPE.PHYSICAL,
+        });
+        if (isCartAddConflict(result)) return result;
         setVariantPickModal(null);
         setNotificationMessage('Added to cart.');
+        return result;
         setShowNotification(true);
         setTimeout(() => setShowNotification(false), 3000);
       } catch (error) {
+        if (!shouldShowInlineCartError(error)) return;
         setNotificationMessage(error?.response?.data?.message || 'Could not add to cart.');
         setShowNotification(true);
         setTimeout(() => setShowNotification(false), 5000);
@@ -351,7 +364,11 @@ export default function PCComponents() {
         if (component?.id) {
           // Sequential requests keep backend cart updates predictable.
           // eslint-disable-next-line no-await-in-loop
-          await addToCart({ productId: component.id, quantity: 1 });
+          const result = await addToCart({ productId: component.id, quantity: 1, itemType: CART_ITEM_TYPE.PHYSICAL });
+          if (isCartAddConflict(result)) {
+            setIsLoading(false);
+            return;
+          }
         }
       }
 
@@ -365,6 +382,10 @@ export default function PCComponents() {
       setTimeout(() => setShowNotification(false), 5000);
       setTimeout(() => navigate('/shopping-cart'), 1200);
     } catch (error) {
+      if (!shouldShowInlineCartError(error)) {
+        setIsLoading(false);
+        return;
+      }
       setNotificationMessage(error?.response?.data?.message || 'Failed to add components to cart.');
       setShowNotification(true);
       setTimeout(() => setShowNotification(false), 5000);

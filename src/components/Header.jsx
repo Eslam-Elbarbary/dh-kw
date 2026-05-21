@@ -4,7 +4,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCountry } from '../context/CountryContext';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/useCart';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ThemeToggle from './ThemeToggle';
 import { getCategories } from '../services/catalog.service';

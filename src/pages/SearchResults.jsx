@@ -6,10 +6,13 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getCategories, getProducts, toggleFavoriteProduct } from '../services/catalog.service';
 import { useCountry } from '../context/CountryContext';
 import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/useCart';
 import { ProductCardQuickActions } from '../components/ProductCardQuickActions';
 import { ProductVariantPickModal } from '../components/ProductVariantPickModal';
 import { productNeedsVariantPick } from '../utils/productVariants';
+import { shouldShowInlineCartError } from '../utils/cartErrors';
+import { isCartAddConflict } from '../utils/cartAdd';
+import { CART_ITEM_TYPE } from '../services/cart.service';
 
 // Import assets
 import productImage1 from '../assets/2c2703028e858e93057b03391653381259c5700c.png';
@@ -138,8 +141,10 @@ export default function SearchResults() {
     setCartBusyId(productId);
     setProductsError('');
     try {
-      await addToCart({ productId, quantity: 1 });
+      const result = await addToCart({ productId, quantity: 1, itemType: CART_ITEM_TYPE.PHYSICAL });
+      if (isCartAddConflict(result)) return;
     } catch (error) {
+      if (!shouldShowInlineCartError(error)) return;
       setProductsError(error?.response?.data?.message || 'Could not add to cart. You may need to sign in.');
     } finally {
       setCartBusyId(null);
@@ -158,9 +163,17 @@ export default function SearchResults() {
       if (!productId || cartBusyId) return;
       setCartBusyId(productId);
       try {
-        await addToCart({ productId, quantity: 1, ...(variantId ? { variantId } : {}) });
+        const result = await addToCart({
+          productId,
+          quantity: 1,
+          ...(variantId ? { variantId } : {}),
+          itemType: CART_ITEM_TYPE.PHYSICAL,
+        });
+        if (isCartAddConflict(result)) return result;
         setVariantPickModal(null);
+        return result;
       } catch (error) {
+        if (!shouldShowInlineCartError(error)) return { conflict: true };
         setProductsError(error?.response?.data?.message || 'Could not add to cart. You may need to sign in.');
       } finally {
         setCartBusyId(null);

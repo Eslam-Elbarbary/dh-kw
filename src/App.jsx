@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import { AuthProvider } from './context/AuthContext';
 import { CountryProvider } from './context/CountryContext';
-import { CartProvider } from './context/CartContext';
+import CartRootLayout from './layouts/CartRootLayout';
+import RouteErrorBoundary, { RouteErrorFallback } from './components/RouteErrorBoundary';
 import { ThemeProvider } from './context/ThemeContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -19,6 +20,7 @@ import DigitalCategoriesList from './pages/DigitalCategoriesList';
 import DigitalCategoryDetail from './pages/DigitalCategoryDetail';
 import Home from './pages/Home';
 import Checkout from './pages/Checkout';
+import DigitalCheckout from './pages/DigitalCheckout';
 import SearchResults from './pages/SearchResults';
 import ProductDetail from './pages/ProductDetail';
 import PCComponents from './pages/PCComponents';
@@ -76,7 +78,9 @@ function AppLayout() {
     <>
       {loading && <PageLoader />}
       <Header />
-      <Outlet />
+      <RouteErrorBoundary>
+        <Outlet />
+      </RouteErrorBoundary>
       <Footer />
       <ScrollToTop />
     </>
@@ -86,8 +90,12 @@ function AppLayout() {
 // Define routes using createBrowserRouter (React Router v7 recommended approach)
 const router = createBrowserRouter([
   {
-    element: <AppLayout />,
+    element: <CartRootLayout />,
     children: [
+      {
+        element: <AppLayout />,
+        errorElement: <RouteErrorFallback />,
+        children: [
       {
         path: '/',
         element: <Home />,
@@ -123,6 +131,10 @@ const router = createBrowserRouter([
       {
         path: '/checkout',
         element: <Checkout />,
+      },
+      {
+        path: '/digital-checkout',
+        element: <DigitalCheckout />,
       },
       {
         path: '/search',
@@ -228,12 +240,12 @@ const router = createBrowserRouter([
         path: '*',
         element: <ErrorPage />,
       },
-    ],
-  },
-  {
-    path: '/sign-up',
-    element: <SignUp />,
-  },
+        ],
+      },
+      {
+        path: '/sign-up',
+        element: <SignUp />,
+      },
   {
     path: '/sign-in',
     element: <SignIn />,
@@ -246,6 +258,8 @@ const router = createBrowserRouter([
     path: '/forgot-password',
     element: <ForgotPassword />,
   },
+    ],
+  },
 ]);
 
 function App() {
@@ -253,9 +267,7 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <CountryProvider>
-          <CartProvider>
-            <RouterProvider router={router} />
-          </CartProvider>
+          <RouterProvider router={router} />
         </CountryProvider>
       </AuthProvider>
     </ThemeProvider>

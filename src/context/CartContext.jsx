@@ -1,16 +1,28 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { useLocation } from 'react-router-dom';
+import CartTypeConflictModal from '../components/CartTypeConflictModal';
+import { CART_ITEM_TYPE } from '../constants/cart';
 import {
-  addToCart as addToCartRequest,
+  addToCartSafe,
   applyCartCoupon as applyCartCouponRequest,
+  clearAllCarts as clearAllCartsRequest,
   clearCart as clearCartRequest,
   getCart,
   removeCartItem as removeCartItemRequest,
   updateCartItemQuantity as updateCartItemQuantityRequest,
 } from '../services/cart.service';
+import { isCartTypeConflictError, resolveCartTypeConflict } from '../utils/cartErrors';
+import { CartContext } from './cartContextState';
 
-const CartContext = createContext(null);
 const EMPTY_CART = {
   id: null,
+  itemType: CART_ITEM_TYPE.PHYSICAL,
   items: [],
   summary: { subtotal: 0, shipping: 0, discount: 0, tax: 0, total: 0 },
   coupon: null,
@@ -23,6 +35,24 @@ const hasAuthSession = () => {
 };
 
 const hasUsableItemsPayload = (payload) => Array.isArray(payload?.items) && payload.items.length > 0;
+
+const ensureCartShape = (payload) => {
+  if (!payload || typeof payload !== 'object') return { ...EMPTY_CART };
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  return {
+    ...EMPTY_CART,
+    ...payload,
+    itemType: payload.itemType === CART_ITEM_TYPE.DIGITAL
+      ? CART_ITEM_TYPE.DIGITAL
+      : CART_ITEM_TYPE.PHYSICAL,
+    items,
+    summary: {
+      ...EMPTY_CART.summary,
+      ...(payload.summary && typeof payload.summary === 'object' ? payload.summary : {}),
+    },
+    coupon: payload.coupon ?? null,
+  };
+};
 
 const withRecalculatedSummary = (cartState) => {
   const items = Array.isArray(cartState?.items) ? cartState.items : [];
@@ -43,9 +73,43 @@ const withRecalculatedSummary = (cartState) => {
 };
 
 export function CartProvider({ children }) {
+  const location = useLocation();
   const [cart, setCart] = useState(EMPTY_CART);
   const [loadingCart, setLoadingCart] = useState(false);
   const [cartError, setCartError] = useState('');
+  const [cartTypeConflict, setCartTypeConflict] = useState(null);
+  const [clearingConflictCart, setClearingConflictCart] = useState(false);
+  const cartTypeConflictRef = useRef(null);
+
+  useEffect(() => {
+    cartTypeConflictRef.current = cartTypeConflict;
+  }, [cartTypeConflict]);
+
+  const dismissCartTypeConflict = useCallback(() => {
+    setCartTypeConflict(null);
+  }, []);
+
+  const buildConflictState = useCallback((error, pendingAdd) => {
+    const resolved = resolveCartTypeConflict(error, {
+      cartItemType: cart.itemType,
+      cartHasItems: (Array.isArray(cart.items) ? cart.items : []).length > 0,
+      pendingAdd,
+    });
+    return {
+      message: resolved?.message || 'Your cart cannot mix digital and physical products.',
+      cartHasType: resolved?.cartHasType || CART_ITEM_TYPE.PHYSICAL,
+      attemptedType: resolved?.attemptedType || CART_ITEM_TYPE.DIGITAL,
+      pendingAdd,
+      returnPath: `${location.pathname}${location.search}`,
+    };
+  }, [cart.itemType, cart.items, location.pathname, location.search]);
+
+  const scheduleCartTypeConflict = useCallback((error, pendingAdd) => {
+    const next = buildConflictState(error, pendingAdd);
+    queueMicrotask(() => {
+      setCartTypeConflict(next);
+    });
+  }, [buildConflictState]);
 
   const loadCart = useCallback(async ({ force = false } = {}) => {
     if (!force && !hasAuthSession()) {
@@ -58,8 +122,9 @@ export function CartProvider({ children }) {
       setLoadingCart(true);
       setCartError('');
       const payload = await getCart();
-      setCart(payload);
-      return payload;
+      const nextCart = ensureCartShape(payload);
+      setCart(nextCart.items.length ? nextCart : EMPTY_CART);
+      return nextCart;
     } catch (error) {
       const status = error?.response?.status;
       if (status === 401) {
@@ -80,35 +145,129 @@ export function CartProvider({ children }) {
     });
   }, [loadCart]);
 
-  const addToCart = useCallback(async ({ productId, quantity = 1, variantId } = {}) => {
-    const addedPayload = await addToCartRequest({ productId, quantity, variantId });
-    if (hasUsableItemsPayload(addedPayload)) {
-      setCart(addedPayload);
-      return addedPayload;
+  useEffect(() => {
+    if (!cartTypeConflict) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [cartTypeConflict]);
+
+  const runAddToCart = useCallback(async (params) => {
+    const safeResult = await addToCartSafe(params);
+    if (safeResult.conflict) {
+      return { ok: false, conflict: true, error: safeResult.error };
     }
 
-    // Some backend responses acknowledge add-to-cart without returning full items.
-    // Force a refresh so cart UI updates immediately without full page reload.
-    const refreshedCart = await loadCart({ force: true });
-    if (hasUsableItemsPayload(refreshedCart)) {
-      setCart(refreshedCart);
-      return refreshedCart;
+    const normalizedAdd = ensureCartShape(safeResult.cart);
+    if (hasUsableItemsPayload(normalizedAdd)) {
+      setCart(normalizedAdd);
+      return { ok: true, cart: normalizedAdd };
     }
 
-    return refreshedCart;
+    const refreshedCart = ensureCartShape(await loadCart({ force: true }));
+    return { ok: Boolean(refreshedCart.items.length), cart: refreshedCart };
   }, [loadCart]);
 
-  const updateCartItemQuantity = useCallback(async ({ cartItemId, productId, quantity, variantId }) => {
+  const addToCart = useCallback(async (params = {}) => {
+    try {
+      const result = await runAddToCart(params);
+      if (result.conflict) {
+        scheduleCartTypeConflict(result.error, params);
+        return { ok: false, conflict: true };
+      }
+      return result;
+    } catch (error) {
+      if (isCartTypeConflictError(error)) {
+        scheduleCartTypeConflict(error, params);
+        return { ok: false, conflict: true };
+      }
+      throw error;
+    }
+  }, [runAddToCart, scheduleCartTypeConflict]);
+
+  const handleClearConflictAndContinue = useCallback(async () => {
+    const conflict = cartTypeConflictRef.current;
+    const pendingAdd = conflict?.pendingAdd;
+    const productId = pendingAdd?.productId;
+
+    if (!productId) {
+      setCartTypeConflict((prev) => prev ? {
+        ...prev,
+        actionError: 'Product details were lost. Close this dialog and tap Add to cart again.',
+      } : prev);
+      return;
+    }
+
+    const addParams = {
+      ...pendingAdd,
+      productId,
+      itemType: pendingAdd.itemType || conflict.attemptedType || CART_ITEM_TYPE.PHYSICAL,
+    };
+
+    try {
+      setClearingConflictCart(true);
+      setCartError('');
+      setCartTypeConflict((prev) => (prev ? { ...prev, actionError: '' } : prev));
+
+      await clearAllCartsRequest();
+      setCart(EMPTY_CART);
+
+      const result = await runAddToCart(addParams);
+      if (result?.conflict) {
+        scheduleCartTypeConflict(result.error, addParams);
+        return;
+      }
+      if (!result?.ok) {
+        setCartTypeConflict((prev) => (prev ? {
+          ...prev,
+          actionError: 'Could not add the product after clearing the cart. Please try again.',
+        } : prev));
+        return;
+      }
+
+      setCartTypeConflict(null);
+    } catch (error) {
+      if (isCartTypeConflictError(error)) {
+        scheduleCartTypeConflict(error, addParams);
+        return;
+      }
+      const message = error?.response?.data?.message
+        || error?.message
+        || 'Could not update your cart.';
+      setCartTypeConflict((prev) => (prev ? { ...prev, actionError: message } : prev));
+      setCartError(message);
+    } finally {
+      setClearingConflictCart(false);
+    }
+  }, [runAddToCart, scheduleCartTypeConflict]);
+
+  const updateCartItemQuantity = useCallback(async ({
+    cartItemId,
+    productId,
+    quantity,
+    variantId,
+    itemType,
+  }) => {
     const previousCart = cart;
-    const updatedPayload = await updateCartItemQuantityRequest({ cartItemId, productId, quantity, variantId });
-    if (hasUsableItemsPayload(updatedPayload)) {
-      setCart(updatedPayload);
-      return updatedPayload;
+    const resolvedItemType = itemType || cart.itemType || CART_ITEM_TYPE.PHYSICAL;
+    const updatedPayload = await updateCartItemQuantityRequest({
+      cartItemId,
+      productId,
+      quantity,
+      variantId,
+      itemType: resolvedItemType,
+    });
+    const normalizedUpdate = ensureCartShape(updatedPayload);
+    if (hasUsableItemsPayload(normalizedUpdate)) {
+      setCart(normalizedUpdate);
+      return normalizedUpdate;
     }
     const targetId = String(cartItemId || productId || '');
     const optimistic = withRecalculatedSummary({
       ...previousCart,
-      items: previousCart.items.map((item) => (
+      items: (Array.isArray(previousCart.items) ? previousCart.items : []).map((item) => (
         String(item.id) === targetId || String(item.productId) === targetId
           ? {
             ...item,
@@ -122,79 +281,107 @@ export function CartProvider({ children }) {
     return optimistic;
   }, [cart]);
 
-  const removeCartItem = useCallback(async ({ cartItemId, productId, variantId }) => {
+  const removeCartItem = useCallback(async ({
+    cartItemId,
+    productId,
+    variantId,
+    itemType,
+  }) => {
     const previousCart = cart;
-    const removedPayload = await removeCartItemRequest({ cartItemId, productId, variantId });
-    if (hasUsableItemsPayload(removedPayload)) {
-      setCart(removedPayload);
-      return removedPayload;
+    const resolvedItemType = itemType || cart.itemType || CART_ITEM_TYPE.PHYSICAL;
+    const removedPayload = await removeCartItemRequest({
+      cartItemId,
+      productId,
+      variantId,
+      itemType: resolvedItemType,
+    });
+    const normalizedRemove = ensureCartShape(removedPayload);
+    if (hasUsableItemsPayload(normalizedRemove)) {
+      setCart(normalizedRemove);
+      return normalizedRemove;
     }
     const removeKey = String(cartItemId || productId || '');
     const normalizedVariantId = variantId === undefined || variantId === null ? null : String(variantId);
     const optimistic = withRecalculatedSummary({
       ...previousCart,
-      items: previousCart.items.filter((item) => {
+      items: (Array.isArray(previousCart.items) ? previousCart.items : []).filter((item) => {
         const idMatch = String(item.id) === removeKey || String(item.productId) === removeKey;
         if (!idMatch) return true;
         if (!normalizedVariantId) return false;
         return String(item.variantId || '') !== normalizedVariantId;
       }),
     });
-    setCart(optimistic);
+    setCart(optimistic.items.length ? optimistic : EMPTY_CART);
     return optimistic;
   }, [cart]);
 
   const clearCart = useCallback(async () => {
-    const payload = await clearCartRequest();
-    setCart(payload);
-    return payload;
-  }, []);
+    const payload = await clearCartRequest({ itemType: cart.itemType });
+    const nextCart = ensureCartShape(payload);
+    setCart(nextCart.items.length ? nextCart : EMPTY_CART);
+    return nextCart;
+  }, [cart.itemType]);
 
   const applyCartCoupon = useCallback(async ({ code }) => {
     const payload = await applyCartCouponRequest({ code });
-    setCart(payload);
-    return payload;
+    const nextCart = ensureCartShape(payload);
+    setCart(nextCart);
+    return nextCart;
   }, []);
 
   const cartItemsCount = useMemo(
-    () => cart.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
-    [cart.items]
+    () => (Array.isArray(cart.items) ? cart.items : []).reduce(
+      (sum, item) => sum + Number(item.quantity || 0),
+      0,
+    ),
+    [cart.items],
   );
+
+  const isDigitalCart = cart.itemType === CART_ITEM_TYPE.DIGITAL;
 
   const value = useMemo(
     () => ({
       cart,
       cartItemsCount,
+      isDigitalCart,
       loadingCart,
       cartError,
+      cartTypeConflict,
       loadCart,
       addToCart,
       updateCartItemQuantity,
       removeCartItem,
       clearCart,
       applyCartCoupon,
+      dismissCartTypeConflict,
     }),
     [
       cart,
       cartItemsCount,
+      isDigitalCart,
       loadingCart,
       cartError,
+      cartTypeConflict,
       loadCart,
       addToCart,
       updateCartItemQuantity,
       removeCartItem,
       clearCart,
       applyCartCoupon,
-    ]
+      dismissCartTypeConflict,
+    ],
   );
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider value={value}>
+      {children}
+      <CartTypeConflictModal
+        open={Boolean(cartTypeConflict)}
+        conflict={cartTypeConflict}
+        clearing={clearingConflictCart}
+        onClose={dismissCartTypeConflict}
+        onClearAndContinue={handleClearConflictAndContinue}
+      />
+    </CartContext.Provider>
+  );
 }
-
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context) {
-    throw new Error('useCart must be used within CartProvider');
-  }
-  return context;
-};

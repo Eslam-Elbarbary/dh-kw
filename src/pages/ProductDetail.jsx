@@ -2,7 +2,7 @@
 // Based on Figma design - Product Detail Page
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/useCart';
 import { useCountry } from '../context/CountryContext';
 import {
   getProduct,
@@ -21,6 +21,9 @@ import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/
 import { buildVariantGroups, getSelectedVariantId, productNeedsVariantPick } from '../utils/productVariants';
 import { ProductCardQuickActions } from '../components/ProductCardQuickActions';
 import { ProductVariantPickModal } from '../components/ProductVariantPickModal';
+import { shouldShowInlineCartError } from '../utils/cartErrors';
+import { isCartAddConflict } from '../utils/cartAdd';
+import { CART_ITEM_TYPE } from '../services/cart.service';
 
 // Import assets
 import productImage1 from '../assets/4290b5299d7820aab27a24eef721fc6a3de6f994.png';
@@ -375,8 +378,10 @@ export default function ProductDetail() {
     setRelatedCartBusyId(productId);
     setProductError('');
     try {
-      await addToCart({ productId, quantity: 1 });
+      const result = await addToCart({ productId, quantity: 1, itemType: CART_ITEM_TYPE.PHYSICAL });
+      if (isCartAddConflict(result)) return;
     } catch (error) {
+      if (!shouldShowInlineCartError(error)) return;
       const responseData = error?.response?.data;
       const validationErrors = responseData?.errors && typeof responseData.errors === 'object'
         ? Object.values(responseData.errors).flat().filter(Boolean)
@@ -402,9 +407,17 @@ export default function ProductDetail() {
       if (!productId || relatedCartBusyId) return;
       setRelatedCartBusyId(productId);
       try {
-        await addToCart({ productId, quantity: 1, ...(variantId ? { variantId } : {}) });
+        const result = await addToCart({
+          productId,
+          quantity: 1,
+          ...(variantId ? { variantId } : {}),
+          itemType: CART_ITEM_TYPE.PHYSICAL,
+        });
+        if (isCartAddConflict(result)) return result;
         setRelatedVariantModal(null);
+        return result;
       } catch (error) {
+        if (!shouldShowInlineCartError(error)) return { conflict: true };
         const responseData = error?.response?.data;
         const validationErrors = responseData?.errors && typeof responseData.errors === 'object'
           ? Object.values(responseData.errors).flat().filter(Boolean)
@@ -434,8 +447,15 @@ export default function ProductDetail() {
     try {
       setCartBusy(true);
       setProductError('');
-      await addToCart({ productId: productData.id, quantity, variantId: selectedVariantId });
+      const result = await addToCart({
+        productId: productData.id,
+        quantity,
+        variantId: selectedVariantId,
+        itemType: CART_ITEM_TYPE.PHYSICAL,
+      });
+      if (isCartAddConflict(result)) return;
     } catch (error) {
+      if (!shouldShowInlineCartError(error)) return;
       const responseData = error?.response?.data;
       const validationErrors = responseData?.errors && typeof responseData.errors === 'object'
         ? Object.values(responseData.errors).flat().filter(Boolean)

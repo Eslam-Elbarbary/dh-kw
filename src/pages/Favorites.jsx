@@ -2,11 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getFavoriteList, toggleFavoriteProduct } from '../services/catalog.service';
 import { useCountry } from '../context/CountryContext';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/useCart';
 import { ProductCard } from '../components/ProductCard';
 import { ProductVariantPickModal } from '../components/ProductVariantPickModal';
 import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
 import { productNeedsVariantPick } from '../utils/productVariants';
+import { shouldShowInlineCartError } from '../utils/cartErrors';
+import { isCartAddConflict } from '../utils/cartAdd';
+import { CART_ITEM_TYPE } from '../services/cart.service';
 
 import arrowDownIcon from '../assets/ArrowRight.svg';
 import heartIcon from '../assets/wishlist.svg';
@@ -108,8 +111,10 @@ export default function Favorites() {
     setCartBusyId(productId);
     setFavoritesError('');
     try {
-      await addToCart({ productId, quantity: 1 });
+      const result = await addToCart({ productId, quantity: 1, itemType: CART_ITEM_TYPE.PHYSICAL });
+      if (isCartAddConflict(result)) return;
     } catch (error) {
+      if (!shouldShowInlineCartError(error)) return;
       const message = String(error?.response?.data?.message || '').toLowerCase();
       if (product && message.includes('variant')) {
         setVariantPickModal({ product, intent: 'cart' });
@@ -161,13 +166,17 @@ export default function Favorites() {
       }
       setCartBusyId(productId);
       try {
-        await addToCart({
+        const result = await addToCart({
           productId,
           quantity: 1,
           ...(variantId ? { variantId } : {}),
+          itemType: CART_ITEM_TYPE.PHYSICAL,
         });
+        if (isCartAddConflict(result)) return result;
         setVariantPickModal(null);
+        return result;
       } catch (error) {
+        if (!shouldShowInlineCartError(error)) return { conflict: true };
         setFavoritesError(extractErrorMessage(error, 'Could not add to cart. You may need to sign in.'));
       } finally {
         setCartBusyId(null);

@@ -1,64 +1,152 @@
 import api from './api';
+import { CART_ITEM_TYPE } from '../constants/cart';
+import { isCartTypeConflictError, markCartTypeConflictError } from '../utils/cartErrors';
+
+export { CART_ITEM_TYPE };
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
+
+const isCartLineObject = (node) => {
+  if (!node || typeof node !== 'object' || Array.isArray(node)) return false;
+  return Boolean(
+    node.item_type
+    || node.itemType
+    || node.digital_product
+    || node.digitalProduct
+    || node.product
+    || node.cart_item_id
+    || (node.id != null && (node.quantity != null || node.qty != null)),
+  );
+};
+
+/** Turn API payloads into a list of cart line objects. */
+const coerceCartItems = (raw) => {
+  if (Array.isArray(raw)) return raw;
+  if (!raw || typeof raw !== 'object') return [];
+  if (isCartLineObject(raw)) return [raw];
+  const values = Object.values(raw);
+  if (values.length > 0 && values.every((entry) => entry && typeof entry === 'object')) {
+    return values;
+  }
+  return [];
+};
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const normalizeCartItem = (item) => {
-  const product = item?.product || item?.item || item?.variant?.product || {};
+const normalizeItemType = (value, fallback = CART_ITEM_TYPE.PHYSICAL) => {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === CART_ITEM_TYPE.DIGITAL) return CART_ITEM_TYPE.DIGITAL;
+  if (raw === CART_ITEM_TYPE.PHYSICAL || raw === 'normal') return CART_ITEM_TYPE.PHYSICAL;
+  return fallback;
+};
+
+const extractSerials = (item) => {
+  const candidates = [
+    item?.serials,
+    item?.serial_numbers,
+    item?.serialNumbers,
+    item?.pins,
+    item?.codes,
+    item?.delivery_credentials,
+    item?.credentials,
+  ];
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate)) continue;
+    const list = candidate
+      .map((entry) => {
+        if (entry == null) return '';
+        if (typeof entry === 'string' || typeof entry === 'number') return String(entry).trim();
+        return String(
+          entry?.serial
+          ?? entry?.serial_number
+          ?? entry?.pin
+          ?? entry?.code
+          ?? entry?.value
+          ?? '',
+        ).trim();
+      })
+      .filter(Boolean);
+    if (list.length) return list;
+  }
+  return [];
+};
+
+const normalizeCartItem = (item, fallbackItemType = CART_ITEM_TYPE.PHYSICAL) => {
+  const itemType = normalizeItemType(item?.item_type ?? item?.itemType, fallbackItemType);
+  const isDigital = itemType === CART_ITEM_TYPE.DIGITAL;
+  const digitalProduct = item?.digital_product || item?.digitalProduct || {};
+  const product = isDigital
+    ? digitalProduct
+    : (item?.product || item?.item || item?.variant?.product || {});
+
   const unitPrice = toNumber(
     item?.price
       ?? item?.unit_price
       ?? item?.unitPrice
       ?? item?.sale_price
       ?? item?.final_price
-      ?? product?.sale_price
       ?? product?.price
+      ?? product?.cost_after_vat
+      ?? product?.sale_price
       ?? product?.final_price
-      ?? 0
+      ?? 0,
   );
   const quantity = Math.max(1, toNumber(item?.quantity ?? item?.qty ?? 1, 1));
   const subtotal = toNumber(item?.subtotal ?? item?.total ?? unitPrice * quantity);
   const image = product?.thumb_image || product?.image || product?.thumbnail || item?.image || '';
 
   return {
-    id: item?.id ?? item?.cart_item_id ?? product?.id ?? null,
-    productId: item?.product_id ?? product?.id ?? null,
-    variantId:
-      item?.variant_id
-      ?? item?.variant?.id
-      ?? item?.variant?.variant_id
-      ?? item?.product_variant_id
-      ?? product?.variant_id
-      ?? product?.selected_variant_id
-      ?? product?.selectedVariantId
-      ?? product?.variant?.id
-      ?? product?.variant?.variant_id
-      ?? product?.variants?.[0]?.id
-      ?? product?.variants?.[0]?.variant_id
+    id: item?.id ?? item?.cart_item_id ?? null,
+    productId:
+      item?.digital_product_id
+      ?? digitalProduct?.id
+      ?? item?.product_id
+      ?? product?.id
       ?? null,
-    name: product?.name || item?.name || 'Product',
+    variantId: isDigital
+      ? null
+      : (
+        item?.variant_id
+        ?? item?.variant?.id
+        ?? item?.variant?.variant_id
+        ?? item?.product_variant_id
+        ?? product?.variant_id
+        ?? product?.selected_variant_id
+        ?? product?.selectedVariantId
+        ?? product?.variant?.id
+        ?? product?.variant?.variant_id
+        ?? product?.variants?.[0]?.id
+        ?? product?.variants?.[0]?.variant_id
+        ?? null
+      ),
+    itemType,
+    name: product?.name || item?.name || (isDigital ? 'Digital product' : 'Product'),
     image,
     quantity,
     unitPrice,
     subtotal,
-    currency: item?.currency || 'USD',
+    currency: item?.currency || product?.currency || 'USD',
+    companyName: isDigital ? (product?.company_name || product?.companyName || '') : '',
+    serials: isDigital ? extractSerials(item) : [],
   };
 };
 
-const normalizeCartResponse = (payload) => {
+const normalizeCartResponse = (payload, { defaultItemType = CART_ITEM_TYPE.PHYSICAL } = {}) => {
   const payloadData = payload?.data;
   const isDataArray = Array.isArray(payloadData);
   const cartNode = payloadData?.cart || payload?.cart || (isDataArray ? {} : (payloadData || payload || {}));
-  const rawItems =
+  let rawItems = coerceCartItems(
     (isDataArray ? payloadData : null)
+    || payloadData?.items
+    || payloadData?.cart_items
+    || payloadData?.cartItems
     || payloadData?.cart?.items
     || payloadData?.cart?.products
     || payloadData?.cart?.cart_items
     || payloadData?.cart?.cartItems
-    cartNode?.items
+    || cartNode?.items
     || cartNode?.products
     || cartNode?.cart_items
     || cartNode?.cartItems
@@ -68,9 +156,32 @@ const normalizeCartResponse = (payload) => {
     || payload?.data?.cart_items
     || payload?.items
     || payload?.products
-    || payload?.cart_items
-    || [];
-  const items = toArray(rawItems).map(normalizeCartItem).filter((item) => item.productId || item.id);
+    || payload?.cart_items,
+  );
+
+  if (!rawItems.length && isCartLineObject(cartNode)) {
+    rawItems = [cartNode];
+  }
+  if (!rawItems.length && isCartLineObject(payloadData) && !payloadData?.cart) {
+    rawItems = [payloadData];
+  }
+
+  const cartLevelType = normalizeItemType(
+    cartNode?.item_type
+    ?? cartNode?.itemType
+    ?? payload?.item_type
+    ?? payload?.order_type
+    ?? payloadData?.item_type,
+    defaultItemType,
+  );
+
+  const items = rawItems
+    .map((item) => normalizeCartItem(item, cartLevelType))
+    .filter((item) => item.productId != null || item.id != null);
+
+  const resolvedItemType = items.length
+    ? normalizeItemType(items[0]?.itemType, cartLevelType)
+    : cartLevelType;
 
   const subtotal = toNumber(
     cartNode?.subtotal
@@ -80,7 +191,7 @@ const normalizeCartResponse = (payload) => {
       ?? cartNode?.totalBeforeDiscount
       ?? payload?.data?.subtotal
       ?? payload?.data?.sub_total
-      ?? items.reduce((sum, item) => sum + item.subtotal, 0)
+      ?? items.reduce((sum, item) => sum + item.subtotal, 0),
   );
   const shipping = toNumber(
     cartNode?.shipping
@@ -88,7 +199,7 @@ const normalizeCartResponse = (payload) => {
     ?? cartNode?.shippingCost
     ?? payload?.data?.shipping
     ?? payload?.data?.shipping_cost
-    ?? 0
+    ?? 0,
   );
   const discount = toNumber(
     cartNode?.discount
@@ -96,26 +207,29 @@ const normalizeCartResponse = (payload) => {
     ?? cartNode?.discountAmount
     ?? payload?.data?.discount
     ?? payload?.data?.discount_amount
-    ?? 0
+    ?? 0,
   );
   const tax = toNumber(
     cartNode?.tax
     ?? cartNode?.vat
     ?? payload?.data?.tax
     ?? payload?.data?.vat
-    ?? 0
+    ?? 0,
   );
   const total = toNumber(
     cartNode?.total
       ?? cartNode?.grand_total
       ?? cartNode?.grandTotal
+      ?? cartNode?.total_cost
       ?? payload?.data?.total
       ?? payload?.data?.grand_total
-      ?? subtotal + shipping + tax - discount
+      ?? payload?.data?.total_cost
+      ?? subtotal + shipping + tax - discount,
   );
 
   return {
     id: cartNode?.id ?? null,
+    itemType: resolvedItemType,
     items,
     summary: {
       subtotal,
@@ -148,6 +262,7 @@ const tryRequestsSequentially = async (attempts) => {
       return await attempt();
     } catch (error) {
       lastError = error;
+      if (isCartTypeConflictError(error)) throw markCartTypeConflictError(error);
       if (!shouldTryAnotherEndpoint(error)) {
         throw error;
       }
@@ -164,7 +279,6 @@ const buildCartFormData = ({
 }) => {
   const formData = new FormData();
   if (variantId !== null && variantId !== undefined && variantId !== '') {
-    // Strict key from API docs and provided screenshot.
     formData.append('variant_id', String(variantId));
     if (includeCompatibilityVariantKeys) {
       formData.append('variant.id', String(variantId));
@@ -182,7 +296,8 @@ const buildCartFormData = ({
 };
 
 const postCartFormData = (url, formDataPayload) => api.post(url, formDataPayload);
-const buildCartProductUrl = ({ productId, variantId } = {}) => {
+
+const buildPhysicalCartProductUrl = ({ productId, variantId } = {}) => {
   const baseUrl = `/api/cart/${encodeURIComponent(productId)}`;
   if (variantId === null || variantId === undefined || variantId === '') {
     return baseUrl;
@@ -190,17 +305,51 @@ const buildCartProductUrl = ({ productId, variantId } = {}) => {
   return `${baseUrl}?variant_id=${encodeURIComponent(String(variantId))}`;
 };
 
-export const getCart = async () => {
+const buildDigitalCartProductUrl = (digitalProductId) => (
+  `/api/cart/digital/${encodeURIComponent(digitalProductId)}`
+);
+
+const resolveItemType = (itemType) => normalizeItemType(itemType, CART_ITEM_TYPE.PHYSICAL);
+
+const fetchPhysicalCart = async () => {
   const res = await tryRequestsSequentially([
     () => api.get('/api/cart'),
     () => api.get('/api/cart/index'),
     () => api.get('/api/cart/list'),
   ]);
-  return normalizeCartResponse(res.data);
+  return normalizeCartResponse(res.data, { defaultItemType: CART_ITEM_TYPE.PHYSICAL });
 };
 
-export const addToCart = async ({ productId, quantity = 1, variantId } = {}) => {
+const fetchDigitalCart = async () => {
+  const res = await tryRequestsSequentially([
+    () => api.get('/api/cart/digital'),
+    () => api.get('/api/cart/digital/index'),
+    () => api.get('/api/cart/digital/list'),
+  ]);
+  return normalizeCartResponse(res.data, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
+};
+
+export const getCart = async () => {
+  const [physicalResult, digitalResult] = await Promise.allSettled([
+    fetchPhysicalCart(),
+    fetchDigitalCart(),
+  ]);
+
+  const physical = physicalResult.status === 'fulfilled' ? physicalResult.value : null;
+  const digital = digitalResult.status === 'fulfilled' ? digitalResult.value : null;
+
+  if (digital?.items?.length) return digital;
+  if (physical?.items?.length) return physical;
+  return digital || physical || normalizeCartResponse({});
+};
+
+export const addToCart = async ({ productId, quantity = 1, variantId, itemType } = {}) => {
   if (!productId) throw new Error('Product id is required.');
+
+  const normalizedItemType = resolveItemType(itemType);
+  if (normalizedItemType === CART_ITEM_TYPE.DIGITAL) {
+    return addDigitalToCart({ digitalProductId: productId, quantity });
+  }
 
   const normalizedProductId = String(productId).trim();
   const normalizedQuantity = Math.max(1, toNumber(quantity, 1));
@@ -221,12 +370,11 @@ export const addToCart = async ({ productId, quantity = 1, variantId } = {}) => 
     : basePayload;
   const simplePayload = basePayload;
   const cartByProductUrl = `/api/cart/${encodeURIComponent(normalizedProductId)}`;
-  const cartByProductUrlWithVariant = buildCartProductUrl({
+  const cartByProductUrlWithVariant = buildPhysicalCartProductUrl({
     productId: normalizedProductId,
     variantId: normalizedVariantId,
   });
 
-  // Live API: POST /api/cart/{product_id} (optional ?variant_id=). POST /api/cart is not supported.
   const variantAttempts = normalizedVariantId
     ? [
       () => api.post(cartByProductUrlWithVariant),
@@ -238,7 +386,7 @@ export const addToCart = async ({ productId, quantity = 1, variantId } = {}) => 
           quantity: normalizedQuantity,
           variantId: normalizedVariantId,
           includeQtyAlias: true,
-        })
+        }),
       ),
       () => postCartFormData(
         cartByProductUrl,
@@ -247,7 +395,7 @@ export const addToCart = async ({ productId, quantity = 1, variantId } = {}) => 
           variantId: normalizedVariantId,
           includeQtyAlias: true,
           includeCompatibilityVariantKeys: true,
-        })
+        }),
       ),
       () => api.post(cartByProductUrl, variantPayload),
       () => api.post('/api/cart/add-product', variantPayload),
@@ -263,7 +411,7 @@ export const addToCart = async ({ productId, quantity = 1, variantId } = {}) => 
         quantity: normalizedQuantity,
         variantId: null,
         includeQtyAlias: true,
-      })
+      }),
     ),
     () => api.post('/api/cart/add-product', simplePayload),
   ];
@@ -281,24 +429,29 @@ export const addToCart = async ({ productId, quantity = 1, variantId } = {}) => 
       break;
     } catch (error) {
       errors.push(error);
+      if (isCartTypeConflictError(error)) {
+        throw markCartTypeConflictError(error);
+      }
       const status = error?.response?.status;
       const message = String(error?.response?.data?.message || '').toLowerCase();
       const hasValidationErrors = Boolean(error?.response?.data?.errors);
       const isRecoverable =
-        status === 422 ||
-        status === 404 ||
-        status === 405 ||
-        hasValidationErrors ||
-        message.includes('variant') ||
-        message.includes('quantity') ||
-        message.includes('method not allowed') ||
-        message.includes('route');
+        (status === 422 && !isCartTypeConflictError(error))
+        || status === 404
+        || status === 405
+        || (hasValidationErrors && !isCartTypeConflictError(error))
+        || message.includes('variant')
+        || message.includes('quantity')
+        || message.includes('method not allowed')
+        || message.includes('route');
       if (!isRecoverable) {
         throw error;
       }
     }
   }
   if (!response) {
+    const conflictErr = errors.find((error) => isCartTypeConflictError(error));
+    if (conflictErr) throw conflictErr;
     const preferred = errors.find((error) => {
       const message = String(error?.response?.data?.message || '').toLowerCase();
       return !message.includes('post method is not supported for route api/cart');
@@ -309,7 +462,34 @@ export const addToCart = async ({ productId, quantity = 1, variantId } = {}) => 
   return normalizeCartResponse(response.data);
 };
 
-export const updateCartItemQuantity = async ({ cartItemId, productId, quantity, variantId } = {}) => {
+export const addDigitalToCart = async ({ digitalProductId, quantity = 1 } = {}) => {
+  const id = String(digitalProductId || '').trim();
+  if (!id) throw new Error('Digital product id is required.');
+  const normalizedQuantity = Math.max(1, toNumber(quantity, 1));
+  const url = buildDigitalCartProductUrl(id);
+
+  const response = await tryRequestsSequentially([
+    () => api.post(url),
+    () => api.post(url, { quantity: normalizedQuantity }),
+    () => api.post(url, { qty: normalizedQuantity }),
+    () => postCartFormData(url, buildCartFormData({ quantity: normalizedQuantity, variantId: null, includeQtyAlias: true })),
+  ]);
+
+  return normalizeCartResponse(response.data, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
+};
+
+export const updateCartItemQuantity = async ({
+  cartItemId,
+  productId,
+  quantity,
+  variantId,
+  itemType,
+} = {}) => {
+  const normalizedItemType = resolveItemType(itemType);
+  if (normalizedItemType === CART_ITEM_TYPE.DIGITAL) {
+    return updateDigitalCartItemQuantity({ digitalProductId: productId || cartItemId, quantity });
+  }
+
   const nextQuantity = Math.max(1, toNumber(quantity, 1));
   const itemId = productId || cartItemId;
   if (!itemId) throw new Error('Cart item id is required.');
@@ -339,30 +519,24 @@ export const updateCartItemQuantity = async ({ cartItemId, productId, quantity, 
       ...(resolvedVariantId ? { variant: resolvedVariantId } : {}),
     },
   };
-  const updateUrl = buildCartProductUrl({ productId: resolvedProductId, variantId: resolvedVariantId });
-  const updateUrlWithoutVariant = buildCartProductUrl({ productId: resolvedProductId, variantId: null });
+  const updateUrl = buildPhysicalCartProductUrl({ productId: resolvedProductId, variantId: resolvedVariantId });
+  const updateUrlWithoutVariant = buildPhysicalCartProductUrl({ productId: resolvedProductId, variantId: null });
 
   const attempts = [
-    // Exact API contract from screenshots: PUT /api/cart/{product_id}?variant_id={id}
     () => api.put(updateUrl, { quantity: nextQuantity }, requestConfig),
     () => api.put(updateUrl, { qty: nextQuantity }, requestConfig),
-    // Compatibility payload variants for mixed backends.
     () => api.put(updateUrl, updatePayload, requestConfig),
     () => api.put(updateUrl, updatePayloadQtyAlias, requestConfig),
-    // Simple product fallback (no variant in query).
     () => api.put(updateUrlWithoutVariant, { quantity: nextQuantity }, requestConfig),
     () => api.put(updateUrlWithoutVariant, { qty: nextQuantity }, requestConfig),
-    // Most common API variants for quantity updates.
     () => api.put('/api/cart/update-quantity', { cart_item_id: itemId, quantity: nextQuantity }),
     () => api.put('/api/cart/update-quantity', { cart_item_id: itemId, qty: nextQuantity }),
     () => api.put('/api/cart/update-quantity', { item_id: itemId, quantity: nextQuantity }),
     () => api.put('/api/cart/update-quantity', { id: itemId, quantity: nextQuantity }),
     () => api.put('/api/cart/update-quantity', { product_id: resolvedProductId, quantity: nextQuantity }),
     () => api.put('/api/cart/update-quantity', { product_id: resolvedProductId, qty: nextQuantity }),
-    // Some backends use POST for this action.
     () => api.post('/api/cart/update-quantity', { cart_item_id: itemId, quantity: nextQuantity }),
     () => api.post('/api/cart/update-quantity', { product_id: resolvedProductId, quantity: nextQuantity }),
-    // Resource-style fallback.
     () => api.put(`/api/cart/${itemId}`, { quantity: nextQuantity }, requestConfig),
     () => api.put(`/api/cart/${itemId}`, { qty: nextQuantity }, requestConfig),
   ];
@@ -376,6 +550,7 @@ export const updateCartItemQuantity = async ({ cartItemId, productId, quantity, 
       break;
     } catch (error) {
       lastError = error;
+      if (isCartTypeConflictError(error)) throw markCartTypeConflictError(error);
       const status = error?.response?.status;
       const message = String(error?.response?.data?.message || '').toLowerCase();
       const hasValidationErrors = Boolean(error?.response?.data?.errors);
@@ -401,7 +576,28 @@ export const updateCartItemQuantity = async ({ cartItemId, productId, quantity, 
   return normalizeCartResponse(response.data);
 };
 
-export const removeCartItem = async ({ cartItemId, productId, variantId } = {}) => {
+export const updateDigitalCartItemQuantity = async ({ digitalProductId, quantity } = {}) => {
+  const id = String(digitalProductId || '').trim();
+  if (!id) throw new Error('Digital product id is required.');
+  const nextQuantity = Math.max(1, toNumber(quantity, 1));
+  const url = buildDigitalCartProductUrl(id);
+
+  const response = await tryRequestsSequentially([
+    () => api.put(url, { quantity: nextQuantity }),
+    () => api.put(url, { qty: nextQuantity }),
+    () => api.post(url, { quantity: nextQuantity }),
+    () => api.post(url, { qty: nextQuantity }),
+  ]);
+
+  return normalizeCartResponse(response.data, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
+};
+
+export const removeCartItem = async ({ cartItemId, productId, variantId, itemType } = {}) => {
+  const normalizedItemType = resolveItemType(itemType);
+  if (normalizedItemType === CART_ITEM_TYPE.DIGITAL) {
+    return removeDigitalCartItem({ digitalProductId: productId || cartItemId });
+  }
+
   const itemId = cartItemId || productId;
   if (!itemId) throw new Error('Cart item id is required.');
   const resolvedProductId = productId || itemId;
@@ -411,17 +607,13 @@ export const removeCartItem = async ({ cartItemId, productId, variantId } = {}) 
   const deleteConfig = resolvedVariantId
     ? { headers: { variant: resolvedVariantId } }
     : undefined;
-  const deleteUrl = buildCartProductUrl({ productId: resolvedProductId, variantId: resolvedVariantId });
-  const deleteUrlWithoutVariant = buildCartProductUrl({ productId: resolvedProductId, variantId: null });
+  const deleteUrl = buildPhysicalCartProductUrl({ productId: resolvedProductId, variantId: resolvedVariantId });
+  const deleteUrlWithoutVariant = buildPhysicalCartProductUrl({ productId: resolvedProductId, variantId: null });
   const attempts = [
-    // Exact API contract from screenshots: DELETE /api/cart/{product_id}?variant_id={id}
     () => api.delete(deleteUrl, deleteConfig),
-    // Simple product fallback (no variant in query).
     () => api.delete(deleteUrlWithoutVariant, deleteConfig),
-    // Compatibility routes.
     () => api.delete(`/api/cart/remove-product/${encodeURIComponent(resolvedProductId)}`, deleteConfig),
     () => api.delete('/api/cart/remove-product', { data: { product_id: resolvedProductId } }),
-    // Compatibility fallbacks for cart-item-id based backends.
     () => api.delete(`/api/cart/remove-product/${encodeURIComponent(itemId)}`),
     () => api.delete(`/api/cart/${encodeURIComponent(itemId)}`),
     () => api.delete('/api/cart/remove-product', { data: { cart_item_id: itemId } }),
@@ -430,20 +622,119 @@ export const removeCartItem = async ({ cartItemId, productId, variantId } = {}) 
     attempts.unshift(
       () => api.delete(deleteUrl),
       () => api.delete(`/api/cart/${encodeURIComponent(resolvedProductId)}?variant_id=${encodeURIComponent(resolvedVariantId)}`),
-      () => api.delete(`/api/cart/remove-product/${encodeURIComponent(resolvedProductId)}?variant=${encodeURIComponent(resolvedVariantId)}`)
+      () => api.delete(`/api/cart/remove-product/${encodeURIComponent(resolvedProductId)}?variant=${encodeURIComponent(resolvedVariantId)}`),
     );
   }
   const response = await tryRequestsSequentially(attempts);
   return normalizeCartResponse(response.data);
 };
 
-export const clearCart = async () => {
+export const removeDigitalCartItem = async ({ digitalProductId } = {}) => {
+  const id = String(digitalProductId || '').trim();
+  if (!id) throw new Error('Digital product id is required.');
+  const url = buildDigitalCartProductUrl(id);
   const response = await tryRequestsSequentially([
-    () => api.delete('/api/cart/clear'),
-    () => api.delete('/api/cart'),
+    () => api.delete(url),
+    () => api.delete('/api/cart/digital/remove-product', { data: { digital_product_id: id } }),
   ]);
-  return normalizeCartResponse(response.data);
+  return normalizeCartResponse(response.data, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
 };
+
+export const clearCart = async ({ itemType } = {}) => {
+  const normalizedItemType = itemType ? resolveItemType(itemType) : null;
+
+  if (normalizedItemType === CART_ITEM_TYPE.DIGITAL) {
+    const response = await tryRequestsSequentially([
+      () => api.post('/api/cart/digital/clear'),
+      () => api.delete('/api/cart/digital/clear'),
+      () => api.delete('/api/cart/digital'),
+    ]);
+    return normalizeCartResponse(response.data, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
+  }
+
+  if (normalizedItemType === CART_ITEM_TYPE.PHYSICAL) {
+    const response = await tryRequestsSequentially([
+      () => api.post('/api/cart/clear'),
+      () => api.delete('/api/cart/clear'),
+      () => api.delete('/api/cart'),
+    ]);
+    return normalizeCartResponse(response.data);
+  }
+
+  // Unknown cart type: clear both sides so the session is fully reset.
+  const [physicalResult, digitalResult] = await Promise.allSettled([
+    tryRequestsSequentially([
+      () => api.delete('/api/cart/clear'),
+      () => api.delete('/api/cart'),
+    ]),
+    tryRequestsSequentially([
+      () => api.delete('/api/cart/digital/clear'),
+      () => api.delete('/api/cart/digital'),
+    ]),
+  ]);
+
+  if (physicalResult.status === 'fulfilled') {
+    return normalizeCartResponse(physicalResult.value.data);
+  }
+  if (digitalResult.status === 'fulfilled') {
+    return normalizeCartResponse(digitalResult.value.data, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
+  }
+  throw physicalResult.reason || digitalResult.reason;
+};
+
+/** Remove every line item when bulk-clear endpoints are unavailable. */
+const emptyCartByRemovingItems = async (itemType) => {
+  const normalizedItemType = resolveItemType(itemType);
+  let cartPayload;
+  try {
+    cartPayload = normalizedItemType === CART_ITEM_TYPE.DIGITAL
+      ? await fetchDigitalCart()
+      : await fetchPhysicalCart();
+  } catch {
+    return;
+  }
+
+  const items = Array.isArray(cartPayload?.items) ? cartPayload.items : [];
+  for (const item of items) {
+    const productId = item?.productId;
+    if (!productId) continue;
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await removeCartItem({
+        cartItemId: item.id,
+        productId,
+        variantId: item.variantId,
+        itemType: normalizedItemType,
+      });
+    } catch {
+      // Keep removing remaining items even if one delete fails.
+    }
+  }
+};
+
+/** Clear one cart type via API, then verify by deleting any remaining lines. */
+export const clearCartThoroughly = async ({ itemType } = {}) => {
+  const normalizedItemType = itemType ? resolveItemType(itemType) : null;
+
+  if (normalizedItemType) {
+    try {
+      await clearCart({ itemType: normalizedItemType });
+    } catch {
+      // Fall through to per-item removal.
+    }
+    await emptyCartByRemovingItems(normalizedItemType);
+    return normalizeCartResponse({});
+  }
+
+  await Promise.allSettled([
+    clearCartThoroughly({ itemType: CART_ITEM_TYPE.DIGITAL }),
+    clearCartThoroughly({ itemType: CART_ITEM_TYPE.PHYSICAL }),
+  ]);
+  return normalizeCartResponse({});
+};
+
+/** Clear digital and physical carts (used when switching product types). */
+export const clearAllCarts = async () => clearCartThoroughly();
 
 export const applyCartCoupon = async ({ code } = {}) => {
   const couponCode = String(code || '').trim();
@@ -451,3 +742,18 @@ export const applyCartCoupon = async ({ code } = {}) => {
   const res = await api.post('/api/cart/apply-coupon', { code: couponCode });
   return normalizeCartResponse(res.data);
 };
+
+/** Never throws on cart type conflict — returns `{ ok, conflict, error?, cart? }`. */
+export const addToCartSafe = async (params) => {
+  try {
+    const cart = await addToCart(params);
+    return { ok: true, cart };
+  } catch (error) {
+    if (isCartTypeConflictError(error)) {
+      return { ok: false, conflict: true, error: markCartTypeConflictError(error) };
+    }
+    throw error;
+  }
+};
+
+export { isCartTypeConflictError };
