@@ -235,7 +235,13 @@ export default function ShoppingCart() {
             ) : null}
 
             <div className="flex gap-[8px]">
-              <button type="button" onClick={handleClearCart} className="flex-1 border border-[#dc2626] text-[#dc2626] rounded-[4px] py-[10px] font-['Poppins'] text-[13px]">Clear Cart</button>
+              <button
+                type="button"
+                onClick={handleClearCart}
+                className="flex-1 border border-[#dc2626] text-[#dc2626] rounded-[4px] py-[10px] font-['Poppins'] text-[13px] cursor-pointer hover:bg-[#fef2f2] active:bg-[#fee2e2] transition-colors"
+              >
+                Clear Cart
+              </button>
               <Link to={checkoutPath} className="flex-1 bg-[#0e1c47] text-white text-center rounded-[4px] py-[10px] font-['Poppins'] text-[13px]">
                 {isDigitalCart ? 'Digital checkout' : 'Checkout'}
               </Link>

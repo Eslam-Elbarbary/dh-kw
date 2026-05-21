@@ -644,12 +644,17 @@ export const clearCart = async ({ itemType } = {}) => {
   const normalizedItemType = itemType ? resolveItemType(itemType) : null;
 
   if (normalizedItemType === CART_ITEM_TYPE.DIGITAL) {
-    const response = await tryRequestsSequentially([
-      () => api.post('/api/cart/digital/clear'),
-      () => api.delete('/api/cart/digital/clear'),
-      () => api.delete('/api/cart/digital'),
-    ]);
-    return normalizeCartResponse(response.data, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
+    try {
+      const response = await tryRequestsSequentially([
+        () => api.delete('/api/cart/digital/clear'),
+        () => api.post('/api/cart/digital/clear'),
+      ]);
+      return normalizeCartResponse(response.data, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
+    } catch {
+      // Never DELETE /api/cart/digital — the router treats "digital" as a product id.
+      await emptyCartByRemovingItems(CART_ITEM_TYPE.DIGITAL);
+      return normalizeCartResponse({}, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
+    }
   }
 
   if (normalizedItemType === CART_ITEM_TYPE.PHYSICAL) {
@@ -669,7 +674,7 @@ export const clearCart = async ({ itemType } = {}) => {
     ]),
     tryRequestsSequentially([
       () => api.delete('/api/cart/digital/clear'),
-      () => api.delete('/api/cart/digital'),
+      () => api.post('/api/cart/digital/clear'),
     ]),
   ]);
 
@@ -696,16 +701,24 @@ const emptyCartByRemovingItems = async (itemType) => {
 
   const items = Array.isArray(cartPayload?.items) ? cartPayload.items : [];
   for (const item of items) {
-    const productId = item?.productId;
+    const productId = item?.productId
+      ?? item?.digital_product_id
+      ?? item?.digitalProductId
+      ?? item?.digital_product?.id
+      ?? item?.digitalProduct?.id;
     if (!productId) continue;
     try {
       // eslint-disable-next-line no-await-in-loop
-      await removeCartItem({
-        cartItemId: item.id,
-        productId,
-        variantId: item.variantId,
-        itemType: normalizedItemType,
-      });
+      if (normalizedItemType === CART_ITEM_TYPE.DIGITAL) {
+        await removeDigitalCartItem({ digitalProductId: productId });
+      } else {
+        await removeCartItem({
+          cartItemId: item.id,
+          productId,
+          variantId: item.variantId,
+          itemType: normalizedItemType,
+        });
+      }
     } catch {
       // Keep removing remaining items even if one delete fails.
     }

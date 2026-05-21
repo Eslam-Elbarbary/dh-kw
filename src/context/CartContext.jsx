@@ -12,7 +12,7 @@ import {
   addToCartSafe,
   applyCartCoupon as applyCartCouponRequest,
   clearAllCarts as clearAllCartsRequest,
-  clearCart as clearCartRequest,
+  clearCartThoroughly as clearCartRequest,
   getCart,
   removeCartItem as removeCartItemRequest,
   updateCartItemQuantity as updateCartItemQuantityRequest,
