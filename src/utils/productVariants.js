@@ -123,8 +123,8 @@ export function getSelectedVariantId(variantGroups, selectedVariants, productVar
   const variants = Array.isArray(productVariants) ? productVariants : toArray(productVariants);
   const selectedIds = variantGroups
     .map((group) => {
-      const selectedValue = selectedVariants[group.name] || group.values[0]?.value;
-      const selectedOption = group.values.find((item) => item.value === selectedValue);
+      const selectedValue = selectedVariants[group.name] || group.values?.[0]?.value;
+      const selectedOption = (group.values || []).find((item) => item.value === selectedValue);
       return selectedOption?.variantId;
     })
     .filter((value) => value !== null && value !== undefined && value !== '');

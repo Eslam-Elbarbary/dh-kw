@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getCategories, getProducts, toggleFavoriteProduct } from '../services/catalog.service';
+import { getDigitalProducts } from '../services/digitalProducts.service';
 import { useCountry } from '../context/CountryContext';
 import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
 import { useCart } from '../context/useCart';
@@ -54,6 +55,29 @@ const imgCheckVector = checkIcon;
 const imgFilterHorizontal = filterHorizontalIcon;
 const imgFilterHorizontalElements = filterHorizontalIcon;
 
+const mapDigitalToSearchProduct = (item) => ({
+  id: item.id,
+  name: item.name,
+  brand: item.merchantName || item.companyName || 'Digital product',
+  vendorName: item.merchantName || item.companyName || 'Digital product',
+  vendorId: null,
+  category: 'Digital products',
+  categoryId: null,
+  tag: 'Digital',
+  originalPrice: item.priceFormatted,
+  salePrice: item.priceFormatted,
+  priceValue: item.price,
+  image: item.image,
+  images: item.image ? [item.image] : [],
+  badges: [],
+  popularity: 0,
+  rating: 0,
+  ratingCount: 0,
+  isFavorite: false,
+  isDigital: true,
+  isAvailable: item.isAvailable,
+});
+
 export default function SearchResults() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -66,6 +90,7 @@ export default function SearchResults() {
     : selectedCountryId;
   const preselectedCategoryId = params.get('category_id');
   const preselectedVendorId = params.get('vendor_id');
+  const searchQuery = (params.get('q') || '').trim();
 
   const [showFilter, setShowFilter] = useState(true); // Visible by default on desktop
   const [selectedCategory, setSelectedCategory] = useState('All Categories'); // Show all by default
@@ -232,18 +257,29 @@ export default function SearchResults() {
         setLoadingProducts(true);
         setProductsError('');
 
-        const [productsList, categoriesList] = await Promise.all([
+        const [productsList, digitalResult, categoriesList] = await Promise.all([
           getProducts({
             countryId,
-            perPage: 100,
+            perPage: 50,
             page: 1,
             categoryId: preselectedCategoryId || undefined,
             vendorId: preselectedVendorId || undefined,
+            search: searchQuery || undefined,
           }),
+          searchQuery
+            ? getDigitalProducts({
+                countryId,
+                perPage: 50,
+                page: 1,
+                search: searchQuery,
+              })
+            : Promise.resolve({ items: [] }),
           getCategories(),
         ]);
 
-        setAllProducts(productsList);
+        const physicalProducts = Array.isArray(productsList) ? productsList : [];
+        const digitalProducts = (digitalResult?.items || []).map(mapDigitalToSearchProduct);
+        setAllProducts([...physicalProducts, ...digitalProducts]);
         setCategories(categoriesList);
       } catch (error) {
         setProductsError(error?.response?.data?.message || 'Failed to load products.');
@@ -254,7 +290,7 @@ export default function SearchResults() {
     };
 
     loadCatalog();
-  }, [countryId, preselectedCategoryId, preselectedVendorId]);
+  }, [countryId, preselectedCategoryId, preselectedVendorId, searchQuery]);
 
   useEffect(() => {
     if (!preselectedCategoryId || categories.length === 0) return;
@@ -363,7 +399,7 @@ export default function SearchResults() {
   // Reset to page 1 when filters or items per page change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedPriceRange, selectedBrands, selectedTags, minPrice, maxPrice, sortBy, itemsPerPage]);
+  }, [selectedCategory, selectedPriceRange, selectedBrands, selectedTags, minPrice, maxPrice, sortBy, itemsPerPage, searchQuery]);
 
   // Grid columns based on view
   const getGridColumns = () => {
@@ -406,7 +442,7 @@ export default function SearchResults() {
               </div>
             </div>
             <span className="font-['Poppins'] font-normal leading-[20px] text-[#eea137] text-[14px]" data-node-id="35:2534">
-              search Results
+              {searchQuery ? `Search results for "${searchQuery}"` : 'search Results'}
             </span>
           </div>
 
@@ -572,7 +608,7 @@ export default function SearchResults() {
               {/* Results Count */}
               <div className="mb-[16px] sm:mb-[20px] space-y-[10px]">
                 <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">
-                  Showing {startIndex + 1}-{Math.min(endIndex, sortedProducts.length)} of {sortedProducts.length} products
+                  Showing {startIndex + 1}-{Math.min(endIndex, sortedProducts.length)} of {sortedProducts.length} {searchQuery ? 'results' : 'products'}
                 </p>
                 {compareToast ? (
                   <p
@@ -599,7 +635,11 @@ export default function SearchResults() {
               ) : paginatedProducts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-[60px]">
                   <p className="font-['Poppins'] font-semibold text-[#191c1f] dark:text-white text-[18px] mb-[8px]">No products found</p>
-                  <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">Try adjusting your filters</p>
+                  <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">
+                    {searchQuery
+                      ? `No results found for "${searchQuery}". Try a different search term.`
+                      : 'Try adjusting your filters'}
+                  </p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-[20.366px] w-full">
@@ -615,8 +655,8 @@ export default function SearchResults() {
                         {paginatedProducts.slice(rowStart, rowStart + productsPerRow).map((product, idx) => {
                       return (
                         <Link
-                          key={product.id}
-                          to={`/product/${product.id}`}
+                          key={`${product.isDigital ? 'digital' : 'physical'}-${product.id}`}
+                          to={product.isDigital ? `/digital-product/${product.id}` : `/product/${product.id}`}
                           className={`group bg-white dark:bg-[#1e293b] border-[#e4e7e9] dark:border-[#334155] border-[0.849px] border-solid flex flex-col gap-[6.789px] items-start overflow-hidden p-[13.578px] rounded-[3.394px] w-full sm:w-[calc(50%-10.183px)] md:w-[calc(33.333%-13.577px)] ${getGridColumns()} hover:shadow-lg transition-all cursor-pointer`}
                           data-name="Product"
                           data-node-id={rowStart === 0 && idx === 0 ? "35:3856" : undefined}
@@ -635,23 +675,31 @@ export default function SearchResults() {
                               </p>
                             )}
 
-                            <ProductCardQuickActions
-                              variantChoiceRequired={productNeedsVariantPick(product)}
-                              onVariantChoiceView={() => setVariantPickModal({ product, intent: 'details' })}
-                              onVariantChoiceCart={() => setVariantPickModal({ product, intent: 'cart' })}
-                              isFavorite={Boolean(product.isFavorite)}
-                              inCompare={isProductInCompare(product.id)}
-                              favoriteBusy={favoriteBusyId === product.id}
-                              cartBusy={cartBusyId === product.id || (variantPickSubmitting && variantPickModal?.product?.id === product.id)}
-                              onToggleFavorite={(e) => handleToggleFavorite(e, product.id)}
-                              onAddToCompare={(e) => handleAddToCompare(e, product.id)}
-                              onAddToCart={(e) => handleAddToCartCard(e, product.id)}
-                            />
+                            {product.isDigital ? (
+                              <div className="absolute left-[13.15px] top-[13.15px]">
+                                <span className="font-['Poppins'] font-semibold text-[10px] uppercase tracking-wide bg-[#0e1c47] text-white px-[8px] py-[4px] rounded-[3px]">
+                                  Digital
+                                </span>
+                              </div>
+                            ) : (
+                              <ProductCardQuickActions
+                                variantChoiceRequired={productNeedsVariantPick(product)}
+                                onVariantChoiceView={() => setVariantPickModal({ product, intent: 'details' })}
+                                onVariantChoiceCart={() => setVariantPickModal({ product, intent: 'cart' })}
+                                isFavorite={Boolean(product.isFavorite)}
+                                inCompare={isProductInCompare(product.id)}
+                                favoriteBusy={favoriteBusyId === product.id}
+                                cartBusy={cartBusyId === product.id || (variantPickSubmitting && variantPickModal?.product?.id === product.id)}
+                                onToggleFavorite={(e) => handleToggleFavorite(e, product.id)}
+                                onAddToCompare={(e) => handleAddToCompare(e, product.id)}
+                                onAddToCart={(e) => handleAddToCartCard(e, product.id)}
+                              />
+                            )}
 
                             {/* Badges */}
-                            {product.badges.length > 0 && (
+                            {(product.badges || []).length > 0 && (
                               <div className="absolute flex flex-col gap-[6.789px] items-start left-[13.15px] top-[13.15px]" data-name="Badge" data-node-id="35:3864">
-                                {product.badges.map((badge, badgeIdx) => (
+                                {(product.badges || []).map((badge, badgeIdx) => (
                                   <div
                                     key={badgeIdx}
                                     className={`flex items-start px-[8.486px] py-[4.243px] rounded-[3.394px] ${
@@ -964,7 +1012,7 @@ export default function SearchResults() {
                           const nodeIds = [
                             [4254, 4258], [4263, 4267], [4271, 4274], [4279, 4282], [4286, 4289], [4294, 4298], [4302]
                           ];
-                          const nodeId = rowIdx === 6 && brandIdx === 0 ? 4302 : nodeIds[rowIdx][brandIdx];
+                          const nodeId = nodeIds[rowIdx]?.[brandIdx] ?? (4254 + rowIdx * 4 + brandIdx);
                           
                           return (
                             <label

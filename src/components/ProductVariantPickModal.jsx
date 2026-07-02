@@ -45,7 +45,7 @@ export function ProductVariantPickModal({
       setResolvedProduct(nextProduct);
       const initial = {};
       buildVariantGroups(nextProduct).forEach((g) => {
-        if (g.values[0]?.value) initial[g.name] = g.values[0].value;
+        if (g.values?.[0]?.value) initial[g.name] = g.values[0].value;
       });
       setSelectedVariants(initial);
     };
@@ -180,10 +180,10 @@ export function ProductVariantPickModal({
                   <label className="block font-['Poppins'] font-semibold text-[#191c1f] dark:text-white text-[13px] mb-[8px]">
                     {group.name}
                   </label>
-                  {group.values.length <= 6 ? (
+                  {(group.values || []).length <= 6 ? (
                     <div className="flex flex-wrap gap-[8px]">
-                      {group.values.map((value) => {
-                        const current = selectedVariants[group.name] || group.values[0]?.value;
+                      {(group.values || []).map((value) => {
+                        const current = selectedVariants[group.name] || group.values?.[0]?.value;
                         const isSelected = current === value.value;
                         return (
                           <button
@@ -203,11 +203,11 @@ export function ProductVariantPickModal({
                     </div>
                   ) : (
                     <select
-                      value={selectedVariants[group.name] || group.values[0]?.value || ''}
+                      value={selectedVariants[group.name] || group.values?.[0]?.value || ''}
                       onChange={(e) => setSelectedVariants((prev) => ({ ...prev, [group.name]: e.target.value }))}
                       className="w-full border border-[#d0d7de] rounded-[6px] px-[12px] py-[10px] font-['Poppins'] text-[13px] focus:outline-none focus:border-[#0e1c47] bg-white dark:bg-[#0f172a] dark:text-white dark:border-[#475569]"
                     >
-                      {group.values.map((value) => (
+                      {(group.values || []).map((value) => (
                         <option key={`${group.name}-${value.value}`} value={value.value}>
                           {value.value}
                         </option>

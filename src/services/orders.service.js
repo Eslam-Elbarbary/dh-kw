@@ -1,4 +1,6 @@
 import api from './api';
+import { resolveCountryId } from './catalog.service';
+import { normalizeCountryHeader } from './address.service';
 
 const PAYMENT_RETURN_NOTIFY_ENDPOINT =
   import.meta.env.VITE_PAYMENT_RETURN_NOTIFY_ENDPOINT || '/api/payments/notify-return';
@@ -11,6 +13,44 @@ const toNumber = (value, fallback = 0) => {
 const toBoolean = (value) => Boolean(value);
 const toTrimmedString = (value) => String(value ?? '').trim();
 const toArray = (value) => (Array.isArray(value) ? value : []);
+
+const resolveOrderCountryHeaders = ({ countryCode, countryId } = {}) => {
+  const resolvedCountryId = Number(countryId) || resolveCountryId(1);
+  let resolvedCountryCode = normalizeCountryHeader(countryCode);
+
+  if (!resolvedCountryCode) {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      resolvedCountryCode = normalizeCountryHeader(
+        user?.country_code
+        ?? user?.countryCode
+        ?? user?.country?.code
+        ?? '',
+      );
+    } catch {
+      resolvedCountryCode = '';
+    }
+  }
+
+  const headers = {};
+  if (resolvedCountryCode) headers['X-Country'] = resolvedCountryCode;
+  if (Number.isFinite(resolvedCountryId) && resolvedCountryId > 0) {
+    headers['X-Country-Id'] = String(resolvedCountryId);
+  }
+  return headers;
+};
+
+const withOrderCountryHeaders = (countryOptions = {}, config = {}) => {
+  const headers = resolveOrderCountryHeaders(countryOptions);
+  if (!Object.keys(headers).length) return config;
+  return {
+    ...config,
+    headers: {
+      ...(config.headers || {}),
+      ...headers,
+    },
+  };
+};
 
 const extractOrderList = (payload) => {
   const candidates = [
@@ -120,14 +160,27 @@ export const getOrderDetails = async ({ orderId } = {}) => {
 
 export const createOrder = async ({
   addressId,
+  stateId,
+  cityId,
+  town,
+  street,
+  flatNum,
+  phone,
   couponId = null,
   useWallet = false,
   usePoints = false,
   notes = '',
+  countryCode,
+  countryId,
 } = {}) => {
   const normalizedAddressId = toTrimmedString(addressId);
   if (!normalizedAddressId) {
     throw new Error('Address id is required.');
+  }
+
+  const countryHeaders = resolveOrderCountryHeaders({ countryCode, countryId });
+  if (!countryHeaders['X-Country']) {
+    throw new Error('Country header is required.');
   }
 
   const payload = {
@@ -137,8 +190,21 @@ export const createOrder = async ({
     use_points: toBoolean(usePoints),
     notes: toTrimmedString(notes),
   };
+  const normalizedStateId = toTrimmedString(stateId);
+  const normalizedCityId = toTrimmedString(cityId);
+  const normalizedTown = toTrimmedString(town);
+  const normalizedStreet = toTrimmedString(street);
+  const normalizedFlatNum = toTrimmedString(flatNum);
+  const normalizedPhone = toTrimmedString(phone);
+  if (normalizedStateId) payload.state_id = toNumber(normalizedStateId, normalizedStateId);
+  if (normalizedCityId) payload.city_id = toNumber(normalizedCityId, normalizedCityId);
+  if (normalizedTown) payload.town = normalizedTown;
+  if (normalizedStreet) payload.street = normalizedStreet;
+  if (normalizedFlatNum) payload.flat_num = normalizedFlatNum;
+  if (normalizedPhone) payload.phone = normalizedPhone;
+
   try {
-    const res = await api.post('/api/orders', payload);
+    const res = await api.post('/api/orders', payload, withOrderCountryHeaders({ countryCode, countryId }));
     return res.data;
   } catch (error) {
     if (error?.response?.status !== 422) {
@@ -152,20 +218,58 @@ export const createOrder = async ({
       use_points: toBoolean(usePoints) ? 1 : 0,
       notes: toTrimmedString(notes) || null,
     };
-    const res = await api.post('/api/orders', fallbackPayload);
+    if (normalizedStateId) fallbackPayload.state_id = Number(normalizedStateId);
+    if (normalizedCityId) fallbackPayload.city_id = Number(normalizedCityId);
+    if (normalizedTown) fallbackPayload.town = normalizedTown;
+    if (normalizedStreet) fallbackPayload.street = normalizedStreet;
+    if (normalizedFlatNum) fallbackPayload.flat_num = normalizedFlatNum;
+    if (normalizedPhone) fallbackPayload.phone = normalizedPhone;
+    const res = await api.post(
+      '/api/orders',
+      fallbackPayload,
+      withOrderCountryHeaders({ countryCode, countryId }),
+    );
     return res.data;
   }
 };
 
-export const calculateOrderShipping = async ({ addressId } = {}) => {
+export const calculateOrderShipping = async ({
+  addressId,
+  stateId,
+  cityId,
+  town,
+  street,
+  flatNum,
+  phone,
+  countryCode,
+  countryId,
+} = {}) => {
   const normalizedAddressId = toTrimmedString(addressId);
   if (!normalizedAddressId) {
     throw new Error('Address id is required.');
   }
 
-  const res = await api.post('/api/orders/calculate-shipping', {
+  const body = {
     address_id: toNumber(normalizedAddressId, normalizedAddressId),
-  });
+  };
+  const normalizedStateId = toTrimmedString(stateId);
+  const normalizedCityId = toTrimmedString(cityId);
+  const normalizedTown = toTrimmedString(town);
+  const normalizedStreet = toTrimmedString(street);
+  const normalizedFlatNum = toTrimmedString(flatNum);
+  const normalizedPhone = toTrimmedString(phone);
+  if (normalizedStateId) body.state_id = toNumber(normalizedStateId, normalizedStateId);
+  if (normalizedCityId) body.city_id = toNumber(normalizedCityId, normalizedCityId);
+  if (normalizedTown) body.town = normalizedTown;
+  if (normalizedStreet) body.street = normalizedStreet;
+  if (normalizedFlatNum) body.flat_num = normalizedFlatNum;
+  if (normalizedPhone) body.phone = normalizedPhone;
+
+  const res = await api.post(
+    '/api/orders/calculate-shipping',
+    body,
+    withOrderCountryHeaders({ countryCode, countryId }),
+  );
   return res.data;
 };
 
@@ -235,30 +339,43 @@ export const navigateToPaymentGateway = (paymentUrl, preOpenedTab = null) => {
   return true;
 };
 
-export const payOrder = async ({ orderId, paymentMethod = 'sadad' } = {}) => {
+export const payOrder = async ({
+  orderId,
+  paymentMethod = 'sadad',
+  countryCode,
+  countryId,
+} = {}) => {
   const normalizedOrderId = toTrimmedString(orderId);
   if (!normalizedOrderId) {
     throw new Error('Order id is required.');
   }
 
   const normalizedPaymentMethod = toTrimmedString(paymentMethod) || 'sadad';
+  const resolvedCountryId = Number(countryId) || resolveCountryId(1);
   const returnBase = `${window.location.origin}/payment`;
   const qs = `orderId=${encodeURIComponent(normalizedOrderId)}&scope=store&paymentMethod=${encodeURIComponent(normalizedPaymentMethod)}`;
   const successUrl = `${returnBase}/success?${qs}`;
   const failedUrl = `${returnBase}/failed?${qs}`;
   const logicUrl = `${returnBase}/logic?${qs}`;
 
-  const res = await api.post(`/api/orders/${encodeURIComponent(normalizedOrderId)}/pay`, {
-    payment_method: normalizedPaymentMethod,
-    success_url: successUrl,
-    failed_url: failedUrl,
-    return_url: logicUrl,
-    callback_url: logicUrl,
-    successUrl,
-    failedUrl,
-    returnUrl: logicUrl,
-    callbackUrl: logicUrl,
-  });
+  const res = await api.post(
+    `/api/orders/${encodeURIComponent(normalizedOrderId)}/pay`,
+    {
+      payment_method: normalizedPaymentMethod,
+      ...(Number.isFinite(resolvedCountryId) && resolvedCountryId > 0
+        ? { country_id: resolvedCountryId }
+        : {}),
+      success_url: successUrl,
+      failed_url: failedUrl,
+      return_url: logicUrl,
+      callback_url: logicUrl,
+      successUrl,
+      failedUrl,
+      returnUrl: logicUrl,
+      callbackUrl: logicUrl,
+    },
+    withOrderCountryHeaders({ countryCode, countryId }),
+  );
   return res.data;
 };
 

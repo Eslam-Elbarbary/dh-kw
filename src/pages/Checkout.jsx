@@ -10,7 +10,13 @@ import {
   createAddress,
   deleteAddress,
   getAddresses,
+  matchRegionId,
   parseSavedAddressLine,
+  resolveAddressRegionIds,
+  resolveDeliveryFlatNum,
+  resolveDeliveryPhone,
+  resolveDeliveryStreet,
+  resolveDeliveryTown,
   sanitizeStreetForForm,
 } from '../services/address.service';
 import { useCountry } from '../context/CountryContext';
@@ -153,6 +159,7 @@ export default function Checkout() {
   const [cityDetailsError, setCityDetailsError] = useState('');
   /** Zone rate from GET /api/shipping/cities/:id; null = none / not loaded */
   const [cityZoneShippingCost, setCityZoneShippingCost] = useState(null);
+  const [pendingCityMatch, setPendingCityMatch] = useState('');
 
   useEffect(() => {
     if (!loadingCart && isDigitalCart && cart.items.length > 0) {
@@ -208,6 +215,66 @@ export default function Checkout() {
   ]);
 
   const countryCodeForApi = activeCountry?.code || shippingCountryCode;
+
+  const selectedSavedAddress = useMemo(
+    () => savedAddresses.find(
+      (item) => String(item.backendId ?? item.id) === String(selectedSavedAddressId),
+    ) || null,
+    [savedAddresses, selectedSavedAddressId],
+  );
+
+  const resolvedAddressRegions = useMemo(
+    () => resolveAddressRegionIds({
+      address: selectedSavedAddress,
+      shippingStates,
+      shippingCities,
+      stateId: selectedShippingStateId,
+      cityId: selectedShippingCityId,
+      town,
+    }),
+    [
+      selectedSavedAddress,
+      shippingStates,
+      shippingCities,
+      selectedShippingStateId,
+      selectedShippingCityId,
+      town,
+    ],
+  );
+
+  const resolvedDeliveryTown = useMemo(
+    () => resolveDeliveryTown({
+      town,
+      cityName: selectedCityName,
+      address: selectedSavedAddress,
+    }),
+    [town, selectedCityName, selectedSavedAddress],
+  );
+
+  const resolvedDeliveryStreet = useMemo(
+    () => resolveDeliveryStreet({
+      street,
+      address: selectedSavedAddress,
+    }),
+    [street, selectedSavedAddress],
+  );
+
+  const resolvedDeliveryFlatNum = useMemo(
+    () => resolveDeliveryFlatNum({
+      flatNum,
+      address: selectedSavedAddress,
+      addressType,
+    }),
+    [flatNum, selectedSavedAddress, addressType],
+  );
+
+  const resolvedDeliveryPhone = useMemo(
+    () => resolveDeliveryPhone({
+      phone: contactPhone,
+      address: selectedSavedAddress,
+    }),
+    [contactPhone, selectedSavedAddress],
+  );
 
   const toProfessionalAddressError = (error, fallbackMessage) => {
     const status = error?.response?.status;
@@ -382,11 +449,41 @@ export default function Checkout() {
   }, [shippingCountryCode, selectedShippingCityId]);
 
   useEffect(() => {
+    if (!pendingCityMatch || !shippingCities.length) return;
+    const cityId = matchRegionId(shippingCities, pendingCityMatch);
+    if (cityId) {
+      setSelectedShippingCityId(cityId);
+      setPendingCityMatch('');
+    }
+  }, [pendingCityMatch, shippingCities]);
+
+  useEffect(() => {
+    if (shippingStates.length === 1 && !selectedShippingStateId) {
+      setSelectedShippingStateId(String(shippingStates[0].id));
+    }
+  }, [shippingStates, selectedShippingStateId]);
+
+  useEffect(() => {
+    if (!selectedSavedAddress || !shippingStates.length) return;
+    if (selectedShippingStateId) return;
+    const parsed = parseSavedAddressLine(selectedSavedAddress.address || '');
+    const stateId = selectedSavedAddress.stateId
+      || matchRegionId(shippingStates, selectedSavedAddress.governorateLabel || parsed.governorate);
+    if (stateId) setSelectedShippingStateId(String(stateId));
+  }, [selectedSavedAddress, shippingStates, selectedShippingStateId]);
+
+  useEffect(() => {
     if (!selectedSavedAddressId && savedAddresses.length) {
       applySavedAddress(savedAddresses[0]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedAddresses, selectedSavedAddressId]);
+
+  useEffect(() => {
+    if (!selectedSavedAddress || !shippingStates.length) return;
+    applySavedAddress(selectedSavedAddress);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shippingStates.length]);
 
   useEffect(() => {
     const fullName = String(user?.name || '').trim();
@@ -493,7 +590,17 @@ export default function Checkout() {
       }
       try {
         setShippingLoading(true);
-        const quote = await calculateOrderShipping({ addressId: selectedSavedAddressId });
+        const quote = await calculateOrderShipping({
+          addressId: selectedSavedAddressId,
+          stateId: resolvedAddressRegions.stateId,
+          cityId: resolvedAddressRegions.cityId,
+          town: resolvedDeliveryTown,
+          street: resolvedDeliveryStreet,
+          flatNum: resolvedDeliveryFlatNum,
+          phone: resolvedDeliveryPhone,
+          countryCode: countryCodeForApi,
+          countryId: activeCountryId,
+        });
         setShippingQuote(normalizeShippingQuote(quote));
       } catch (error) {
         const status = error?.response?.status;
@@ -522,6 +629,14 @@ export default function Checkout() {
     cart.summary?.shipping,
     cart.summary?.discount,
     cart.summary?.total,
+    countryCodeForApi,
+    activeCountryId,
+    resolvedAddressRegions.stateId,
+    resolvedAddressRegions.cityId,
+    resolvedDeliveryTown,
+    resolvedDeliveryStreet,
+    resolvedDeliveryFlatNum,
+    resolvedDeliveryPhone,
   ]);
 
   const handleLocationSelect = useCallback(async (lat, lng) => {
@@ -568,11 +683,13 @@ export default function Checkout() {
   const applySavedAddress = (item) => {
     if (!item) return;
     const parsed = parseSavedAddressLine(item.address || '');
+    const stateId = item.stateId || matchRegionId(shippingStates, item.governorateLabel || parsed.governorate);
     setSelectedSavedAddressId(item.backendId ?? item.id ?? null);
     setAddressType(normalizeAddressType(item.name || item.title || 'house'));
     setContactPhone(item.phone || '');
-    setSelectedShippingStateId(item.stateId ? String(item.stateId) : '');
+    setSelectedShippingStateId(stateId ? String(stateId) : '');
     setSelectedShippingCityId(item.cityId ? String(item.cityId) : '');
+    setPendingCityMatch(item.cityId ? '' : (item.town || item.areaLabel || parsed.area || ''));
     setTown(item.town || item.areaLabel || parsed.area || '');
     setStreet(
       sanitizeStreetForForm(
@@ -654,6 +771,27 @@ export default function Checkout() {
       setCheckoutError('Please provide a contact phone number.');
       return;
     }
+    if (!countryCodeForApi) {
+      setCheckoutError('Please select your store country from the site header first.');
+      return;
+    }
+    const { stateId: resolvedStateId, cityId: resolvedCityId } = resolvedAddressRegions;
+    if (shippingStates.length > 0 && !resolvedStateId) {
+      setCheckoutError('Please select a governorate for your delivery address, then save it again before checkout.');
+      return;
+    }
+    if (!resolvedDeliveryTown) {
+      setCheckoutError('Please enter your district / area before checkout.');
+      return;
+    }
+    if (!resolvedDeliveryStreet) {
+      setCheckoutError('Please enter your street details before checkout.');
+      return;
+    }
+    if (!resolvedDeliveryFlatNum) {
+      setCheckoutError('Please enter your apartment / unit number before checkout.');
+      return;
+    }
 
     const paymentTab = openPaymentGatewayPlaceholderTab();
 
@@ -672,10 +810,18 @@ export default function Checkout() {
 
       const orderResponse = await createOrder({
         addressId: numericAddressId,
+        stateId: resolvedStateId,
+        cityId: resolvedCityId,
+        town: resolvedDeliveryTown,
+        street: resolvedDeliveryStreet,
+        flatNum: resolvedDeliveryFlatNum,
+        phone: resolvedDeliveryPhone,
         couponId: latestCart?.coupon?.id ?? cart?.coupon?.id ?? null,
         useWallet,
         usePoints,
         notes: orderNotes,
+        countryCode: countryCodeForApi,
+        countryId: activeCountryId,
       });
       const orderId = extractOrderIdFromCreateResponse(orderResponse);
       if (!orderId) {
@@ -691,6 +837,8 @@ export default function Checkout() {
         const payResponse = await payOrder({
           orderId,
           paymentMethod: mapPaymentMethodToApi(paymentMethod),
+          countryCode: countryCodeForApi,
+          countryId: activeCountryId,
         });
         const paymentUrl = extractOrderPaymentUrl(payResponse);
         await loadCart({ force: true }).catch(() => {});

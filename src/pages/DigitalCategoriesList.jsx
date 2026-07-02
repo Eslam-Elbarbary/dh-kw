@@ -7,12 +7,14 @@ import { useCountry } from '../context/CountryContext';
 import arrowDownIcon from '../assets/ArrowRight.svg';
 
 const imgArrow = arrowDownIcon;
+const INITIAL_VISIBLE_CATEGORIES = 3;
 
 export default function DigitalCategoriesList() {
   const { countryId } = useCountry();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,6 +37,17 @@ export default function DigitalCategoriesList() {
       cancelled = true;
     };
   }, [countryId]);
+
+  useEffect(() => {
+    setShowAll(false);
+  }, [countryId]);
+
+  const visibleCategories = useMemo(
+    () => (showAll ? categories : categories.slice(0, INITIAL_VISIBLE_CATEGORIES)),
+    [categories, showAll],
+  );
+
+  const hasMoreCategories = categories.length > INITIAL_VISIBLE_CATEGORIES;
 
   return (
     <div className="bg-[#f8fafc] dark:bg-[#0f172a] min-h-screen transition-colors duration-300">
@@ -77,7 +90,7 @@ export default function DigitalCategoriesList() {
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[20px] md:gap-[24px]">
-            {categories.map((cat) => (
+            {visibleCategories.map((cat) => (
               <Link
                 key={cat.id}
                 to={`/digital-category/${cat.id}`}
@@ -122,14 +135,17 @@ export default function DigitalCategoriesList() {
           </div>
         )}
 
-        <div className="mt-[40px] flex flex-wrap justify-center gap-[12px]">
-          <Link
-            to="/digital-products"
-            className="font-['Poppins'] font-semibold text-[14px] px-[22px] py-[11px] rounded-[10px] bg-[#eea137] text-[#0e1c47] hover:bg-[#d8902f] transition-colors"
-          >
-            All digital products
-          </Link>
-        </div>
+        {!loading && !error && hasMoreCategories && !showAll ? (
+          <div className="mt-[40px] flex flex-wrap justify-center gap-[12px]">
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              className="font-['Poppins'] font-semibold text-[14px] px-[22px] py-[11px] rounded-[10px] bg-[#eea137] text-[#0e1c47] hover:bg-[#d8902f] transition-colors"
+            >
+              All digital categories
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -177,13 +177,17 @@ export const getDigitalProducts = async ({
   countryId = resolveCountryId(1),
   page = 1,
   perPage = 15,
+  search,
 } = {}) => {
+  const params = {
+    country_id: countryId,
+    page,
+    per_page: perPage,
+  };
+  if (search) params.search = String(search).trim();
+
   const res = await api.get('/api/digital-products', {
-    params: {
-      country_id: countryId,
-      page,
-      per_page: perPage,
-    },
+    params,
   });
 
   const { list, meta } = extractDigitalListAndMeta(res.data, page, perPage);

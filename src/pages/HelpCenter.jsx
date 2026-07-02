@@ -1,8 +1,9 @@
 // Help Center page - professional design matching site's visual identity
 // Maintains colors, fonts, styles, and icons from the site
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getSettings } from '../services/settings.service';
 
 // Icon Assets (from existing components)
 // Import assets
@@ -19,11 +20,33 @@ const imgArrowRight = arrowRightIcon;
 export default function HelpCenter() {
   const [openFaq, setOpenFaq] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadSettings = async () => {
+      try {
+        const data = await getSettings();
+        if (!cancelled) setSettings(data);
+      } catch {
+        if (!cancelled) setSettings(null);
+      }
+    };
+    loadSettings();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const contactPhone = settings?.contactPhone || '';
+  const contactPhoneDisplay = contactPhone || '+965 XXX XXXX';
+  const contactPhoneHref = contactPhone ? `tel:${contactPhone.replace(/\s/g, '')}` : undefined;
 
   const faqCategories = [
     {
       id: 1,
       title: "Orders & Shipping",
+      path: "/track-order",
       icon: imgTruck,
       description: "Track orders, shipping info, and delivery",
       color: "bg-[#0e1c47]"
@@ -31,6 +54,7 @@ export default function HelpCenter() {
     {
       id: 2,
       title: "Returns & Refunds",
+      path: "/returns",
       icon: imgArrowRight,
       description: "Return policies and refund process",
       color: "bg-[#eea137]"
@@ -38,6 +62,7 @@ export default function HelpCenter() {
     {
       id: 3,
       title: "Payment & Billing",
+      path: "/faqs",
       icon: imgPhone,
       description: "Payment methods and billing questions",
       color: "bg-[#0e1c47]"
@@ -45,6 +70,7 @@ export default function HelpCenter() {
     {
       id: 4,
       title: "Account & Profile",
+      path: "/my-profile",
       icon: imgPhone,
       description: "Account settings and profile management",
       color: "bg-[#eea137]"
@@ -52,6 +78,7 @@ export default function HelpCenter() {
     {
       id: 5,
       title: "Products & Services",
+      path: "/search",
       icon: imgTruck,
       description: "Product information and services",
       color: "bg-[#0e1c47]"
@@ -59,6 +86,7 @@ export default function HelpCenter() {
     {
       id: 6,
       title: "Technical Support",
+      path: "/my-tickets",
       icon: imgArrowRight,
       description: "Technical issues and troubleshooting",
       color: "bg-[#eea137]"
@@ -172,8 +200,8 @@ export default function HelpCenter() {
             {faqCategories.map((category) => (
               <Link
                 key={category.id}
-                to="#"
-                className="bg-white border border-[#e6e6e6] border-solid rounded-[4px] p-[20px] sm:p-[24px] hover:shadow-lg transition-all cursor-pointer group"
+                to={category.path}
+                className="bg-white border border-[#e6e6e6] border-solid rounded-[4px] p-[20px] sm:p-[24px] hover:shadow-lg hover:border-[#eea137] transition-all cursor-pointer group"
               >
                 <div className={`${category.color} w-[56px] h-[56px] rounded-full flex items-center justify-center mb-[16px] group-hover:scale-110 transition-transform`}>
                   <img 
@@ -267,11 +295,11 @@ export default function HelpCenter() {
               <span>Track Order</span>
             </Link>
             <a
-              href="tel:+965XXXXXXX"
+              href={contactPhoneHref}
               className="bg-[#eea137] text-white font-['Poppins'] font-semibold px-[24px] sm:px-[32px] py-[12px] sm:py-[14px] rounded-[4px] hover:bg-[#d8902f] transition-colors flex items-center gap-[8px]"
             >
               <img alt="" className="w-[20px] h-[20px] filter brightness-0 invert" src={imgPhone} onError={(e) => e.target.style.display = 'none'} />
-              <span>Call Us: +965 XXX XXXX</span>
+              <span>Call Us: {contactPhoneDisplay}</span>
             </a>
             <Link
               to="/my-tickets"

@@ -5,6 +5,7 @@ import {
   deleteAddress,
   formatAddressPreview,
   getAddresses,
+  matchRegionId,
   parseSavedAddressLine,
   sanitizeStreetForForm,
 } from '../services/address.service';
@@ -19,13 +20,6 @@ const inputClass =
 
 const selectClass =
   'w-full border border-[#e6e6e6] border-solid rounded-[4px] px-[14px] py-[12px] font-[\'Poppins\'] font-normal text-[14px] text-[#0e1c47] bg-white focus:outline-none focus:border-[#eea137] transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
-
-function matchRegionId(list, label) {
-  const target = String(label || '').trim().toLowerCase();
-  if (!target || !list?.length) return '';
-  const found = list.find((row) => String(row.name || '').trim().toLowerCase() === target);
-  return found ? String(found.id) : '';
-}
 
 const emptyForm = (phoneFallback = '') => ({
   name: 'Home',

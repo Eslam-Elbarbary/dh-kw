@@ -211,10 +211,12 @@ export const getProducts = async ({
   page = 1,
   categoryId,
   vendorId,
+  search,
 } = {}) => {
   const params = { country_id: countryId, per_page: perPage, page };
   if (categoryId) params.category_id = categoryId;
   if (vendorId) params.vendor_id = vendorId;
+  if (search) params.search = String(search).trim();
 
   const res = await api.get('/api/products', {
     params,

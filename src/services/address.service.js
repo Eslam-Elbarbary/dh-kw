@@ -115,6 +115,113 @@ export const buildSavedAddressLine = ({ name, street, stateName, cityName }) => 
   return `[${typeLabel}] ${streetLine}${regionSuffix}`;
 };
 
+/** Match a governorate/area label to a shipping region row id. */
+export function matchRegionId(list, label) {
+  const target = String(label || '').trim().toLowerCase();
+  if (!target || !list?.length) return '';
+
+  const normalize = (value) =>
+    String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s*governorate\s*$/i, '')
+      .trim();
+
+  const normalizedTarget = normalize(target);
+
+  const exact = list.find((row) => String(row.name || '').trim().toLowerCase() === target);
+  if (exact) return String(exact.id);
+
+  const normalized = list.find((row) => normalize(row.name) === normalizedTarget);
+  if (normalized) return String(normalized.id);
+
+  const partial = list.find((row) => {
+    const name = normalize(row.name);
+    return name && (name.includes(normalizedTarget) || normalizedTarget.includes(name));
+  });
+  return partial ? String(partial.id) : '';
+}
+
+export function resolveAddressRegionIds({
+  address,
+  shippingStates = [],
+  shippingCities = [],
+  stateId = '',
+  cityId = '',
+  town = '',
+} = {}) {
+  const parsed = address ? parseSavedAddressLine(address.address || '') : { governorate: '', area: '' };
+  const governorateLabel = address?.governorateLabel || parsed.governorate || '';
+  const areaLabel = address?.areaLabel || parsed.area || town || '';
+
+  let resolvedStateId = String(stateId || address?.stateId || '').trim();
+  if (!resolvedStateId && governorateLabel) {
+    resolvedStateId = matchRegionId(shippingStates, governorateLabel);
+  }
+  if (!resolvedStateId && shippingStates.length === 1) {
+    resolvedStateId = String(shippingStates[0].id);
+  }
+
+  let resolvedCityId = String(cityId || address?.cityId || '').trim();
+  if (!resolvedCityId && areaLabel) {
+    resolvedCityId = matchRegionId(shippingCities, areaLabel);
+  }
+  if (!resolvedCityId && shippingCities.length === 1) {
+    resolvedCityId = String(shippingCities[0].id);
+  }
+
+  return { stateId: resolvedStateId, cityId: resolvedCityId };
+};
+
+export function resolveDeliveryTown({
+  town = '',
+  cityName = '',
+  address = null,
+} = {}) {
+  const parsed = address ? parseSavedAddressLine(address.address || '') : { area: '' };
+  return String(
+    town
+    || cityName
+    || address?.town
+    || address?.areaLabel
+    || parsed.area
+    || '',
+  ).trim();
+};
+
+export function resolveDeliveryStreet({
+  street = '',
+  address = null,
+} = {}) {
+  const parsed = address ? parseSavedAddressLine(address.address || '') : { street: '' };
+  const governorate = address?.governorateLabel || parsed.governorate || '';
+  const area = address?.areaLabel || parsed.area || '';
+  return sanitizeStreetForForm(
+    street || address?.street || parsed.street || '',
+    governorate,
+    area,
+  );
+};
+
+export function resolveDeliveryFlatNum({
+  flatNum = '',
+  address = null,
+  addressType = 'house',
+} = {}) {
+  const value = String(flatNum || address?.flatNum || '').trim();
+  if (value) return value;
+  const type = String(addressType || address?.name || '').trim().toLowerCase();
+  if (type === 'house' || type === 'home') return '0';
+  return '';
+};
+
+export function resolveDeliveryPhone({
+  phone = '',
+  address = null,
+} = {}) {
+  return String(phone || address?.phone || '').trim();
+};
+
 const extractAddressList = (payload) => {
   const candidates = [
     payload?.data?.addresses,
