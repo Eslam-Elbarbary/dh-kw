@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/useCart';
@@ -15,7 +15,7 @@ import {
   openPaymentGatewayPlaceholderTab,
   payDigitalOrder,
 } from '../services/digitalOrders.service';
-import { getCountries } from '../services/meta.service';
+import { formatMoney as formatCurrency } from '../utils/formatMoney';
 import arrowDownIcon from '../assets/ArrowRight.svg';
 
 const imgArrowDown = arrowDownIcon;
@@ -36,38 +36,17 @@ const extractCreatedDigitalOrderId = (payload) => {
 export default function DigitalCheckout() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { countryId } = useCountry();
+  const { countryId, countryCode } = useCountry();
   const { cart, loadingCart, loadCart, isDigitalCart } = useCart();
 
-  const [countries, setCountries] = useState([]);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [profileGate, setProfileGate] = useState(null);
   const [successInfo, setSuccessInfo] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('sadad');
 
-  const selectedCountryCode = useMemo(
-    () => countries.find((c) => String(c.id) === String(countryId))?.code || '',
-    [countries, countryId],
-  );
-
   const closeProfileGate = useCallback(() => setProfileGate(null), []);
   const closeSuccess = useCallback(() => setSuccessInfo(null), []);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const list = await getCountries();
-        if (!cancelled) setCountries(Array.isArray(list) ? list : []);
-      } catch {
-        if (!cancelled) setCountries([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -95,7 +74,7 @@ export default function DigitalCheckout() {
     };
   }, [profileGate, successInfo, closeProfileGate, closeSuccess]);
 
-  const formatMoney = (value) => `$${Number(value || 0).toFixed(2)}`;
+  const formatMoney = (value, currency = cart?.currency) => formatCurrency(value, currency);
 
   const handlePlaceOrder = async () => {
     if (!cart.items.length) {
@@ -121,7 +100,7 @@ export default function DigitalCheckout() {
 
       const data = await createDigitalOrderFromCart({
         countryId,
-        countryCode: selectedCountryCode,
+        countryCode,
       });
       const orderId = extractCreatedDigitalOrderId(data);
       if (!orderId) {
@@ -133,6 +112,8 @@ export default function DigitalCheckout() {
         const payResponse = await payDigitalOrder({
           orderId,
           paymentMethod,
+          countryCode,
+          countryId,
         });
         const paymentUrl = extractDigitalOrderPaymentUrl(payResponse);
         await loadCart({ force: true }).catch(() => {});
@@ -253,14 +234,14 @@ export default function DigitalCheckout() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-['Poppins'] font-medium text-[14px] line-clamp-2">{item.name}</p>
-                      <p className="font-['Poppins'] text-[13px] text-[#666]">Qty: {item.quantity} × {formatMoney(item.unitPrice)}</p>
+                      <p className="font-['Poppins'] text-[13px] text-[#666]">Qty: {item.quantity} × {formatMoney(item.unitPrice, item.currencyCode || item.currency)}</p>
                       {item.serials?.length > 0 ? (
                         <p className="font-['Poppins'] text-[12px] text-[#059669] mt-[4px]">
                           {item.serials.length} code(s) reserved for this line
                         </p>
                       ) : null}
                     </div>
-                    <p className="font-['Poppins'] font-semibold text-[14px] shrink-0">{formatMoney(item.subtotal)}</p>
+                    <p className="font-['Poppins'] font-semibold text-[14px] shrink-0">{formatMoney(item.subtotal, item.currencyCode || item.currency)}</p>
                   </li>
                 ))}
               </ul>

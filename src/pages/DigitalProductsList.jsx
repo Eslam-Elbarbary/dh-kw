@@ -46,7 +46,7 @@ function DigitalProductCard({ item }) {
 }
 
 export default function DigitalProductsList() {
-  const { countryId } = useCountry();
+  const { countryId, countryCode, countryCurrencyCode } = useCountry();
   const [searchParams, setSearchParams] = useSearchParams();
   const page = Math.max(1, Number(searchParams.get('page')) || 1);
 
@@ -68,7 +68,13 @@ export default function DigitalProductsList() {
       setLoading(true);
       setError('');
       try {
-        const res = await getDigitalProducts({ countryId, page, perPage: PER_PAGE });
+        const res = await getDigitalProducts({
+          countryId,
+          countryCode,
+          fallbackCurrencyCode: countryCurrencyCode,
+          page,
+          perPage: PER_PAGE,
+        });
         if (cancelled) return;
         setItems(res.items);
         setMeta(res.meta);
@@ -84,7 +90,7 @@ export default function DigitalProductsList() {
     return () => {
       cancelled = true;
     };
-  }, [countryId, page]);
+  }, [countryId, countryCode, countryCurrencyCode, page]);
 
   const goToPage = (next) => {
     const target = Math.max(1, next);

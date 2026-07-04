@@ -10,7 +10,7 @@ const imgArrow = arrowDownIcon;
 const INITIAL_VISIBLE_CATEGORIES = 3;
 
 export default function DigitalCategoriesList() {
-  const { countryId } = useCountry();
+  const { countryId, countryCode } = useCountry();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -22,7 +22,7 @@ export default function DigitalCategoriesList() {
       setLoading(true);
       setError('');
       try {
-        const list = await getDigitalCategories({ countryId });
+        const list = await getDigitalCategories({ countryId, countryCode });
         if (!cancelled) setCategories(list);
       } catch (e) {
         if (!cancelled) {
@@ -36,7 +36,7 @@ export default function DigitalCategoriesList() {
     return () => {
       cancelled = true;
     };
-  }, [countryId]);
+  }, [countryId, countryCode]);
 
   useEffect(() => {
     setShowAll(false);

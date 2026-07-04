@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCountry } from '../context/CountryContext';
 import {
   extractDigitalOrderDeliveryItems,
   getDigitalOrderById,
@@ -47,6 +48,7 @@ const statusPill = (label, variant) => {
 export default function DigitalOrderDetail() {
   const { id } = useParams();
   const { isAuthenticated } = useAuth();
+  const { countryId, countryCode } = useCountry();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -115,7 +117,7 @@ export default function DigitalOrderDetail() {
     setPaying(true);
     const paymentTab = openPaymentGatewayPlaceholderTab();
     try {
-      const result = await payDigitalOrder({ orderId: order.id });
+      const result = await payDigitalOrder({ orderId: order.id, countryCode, countryId });
       const ok = launchDigitalOrderPayment({ payload: result, preOpenedTab: paymentTab });
       if (!ok) {
         paymentTab?.close();

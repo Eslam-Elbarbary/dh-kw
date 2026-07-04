@@ -1,6 +1,7 @@
 import api from './api';
 import { navigateToPaymentGateway, openPaymentGatewayPlaceholderTab } from './orders.service';
 import { resolveCountryId } from './catalog.service';
+import { normalizeCountryHeader } from '../utils/countryHeaders';
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 
@@ -315,38 +316,44 @@ export const extractDigitalOrderPaymentUrl = (payload) => {
   return /^https?:\/\//i.test(s) ? s : '';
 };
 
-export const payDigitalOrder = async ({ orderId, paymentMethod = 'sadad' } = {}) => {
+export const payDigitalOrder = async ({ orderId, paymentMethod = 'sadad', countryCode, countryId } = {}) => {
   const id = String(orderId ?? '').trim();
   if (!id) throw new Error('Digital order id is required.');
   const method = String(paymentMethod || '').trim() || 'sadad';
-  const storedUserRaw = localStorage.getItem('user');
-  let userCountryCode = '';
-  try {
-    const user = storedUserRaw ? JSON.parse(storedUserRaw) : null;
-    userCountryCode = String(
-      user?.country_code
-      ?? user?.countryCode
-      ?? user?.country?.code
-      ?? '',
-    ).trim().toLowerCase();
-  } catch {
-    userCountryCode = '';
+
+  let resolvedCountryCode = normalizeCountryHeader(countryCode);
+  if (!resolvedCountryCode) {
+    const storedUserRaw = localStorage.getItem('user');
+    try {
+      const user = storedUserRaw ? JSON.parse(storedUserRaw) : null;
+      resolvedCountryCode = normalizeCountryHeader(
+        user?.country_code
+        ?? user?.countryCode
+        ?? user?.country?.code
+        ?? '',
+      );
+    } catch {
+      resolvedCountryCode = '';
+    }
   }
-  const countryId = resolveCountryId(1);
+
+  const resolvedCountryId = Number.isFinite(Number(countryId)) && Number(countryId) > 0
+    ? Number(countryId)
+    : resolveCountryId(1);
   const returnBase = `${window.location.origin}/payment`;
   const qs = `orderId=${encodeURIComponent(id)}&scope=digital&paymentMethod=${encodeURIComponent(method)}`;
   const successUrl = `${returnBase}/success?${qs}`;
   const failedUrl = `${returnBase}/failed?${qs}`;
   const logicUrl = `${returnBase}/logic?${qs}`;
   const headers = {
-    ...(userCountryCode ? { 'X-Country': userCountryCode } : {}),
-    ...(countryId ? { 'X-Country-Id': String(countryId) } : {}),
+    ...(resolvedCountryCode ? { 'X-Country': resolvedCountryCode } : {}),
+    ...(resolvedCountryId ? { 'X-Country-Id': String(resolvedCountryId) } : {}),
   };
   const res = await api.post(
     `/api/digital-orders/${encodeURIComponent(id)}/pay`,
     {
       payment_method: method,
-      country_id: countryId,
+      country_id: resolvedCountryId,
       success_url: successUrl,
       failed_url: failedUrl,
       return_url: logicUrl,

@@ -1,4 +1,5 @@
 import api from './api';
+import { productMatchesSearch } from '../utils/productSearch';
 import { collectProductVariants, productHasVariantsFlag } from '../utils/productVariants';
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
@@ -205,7 +206,7 @@ export const getSliders = async () => {
   }));
 };
 
-export const getProducts = async ({
+const fetchProductsPage = async ({
   countryId = resolveCountryId(1),
   perPage = 15,
   page = 1,
@@ -218,18 +219,61 @@ export const getProducts = async ({
   if (vendorId) params.vendor_id = vendorId;
   if (search) params.search = String(search).trim();
 
-  const res = await api.get('/api/products', {
-    params,
-  });
-
+  const res = await api.get('/api/products', { params });
   const payload = res.data;
   const list = payload?.data?.products
     || payload?.data?.data
     || payload?.data
     || payload?.products
     || [];
+  const meta = payload?.meta || payload?.data?.meta || {};
 
-  return toArray(list).map(normalizeProduct);
+  return {
+    items: toArray(list).map(normalizeProduct),
+    meta: {
+      currentPage: Number(meta.current_page ?? page) || page,
+      lastPage: Number(meta.last_page ?? 1) || 1,
+    },
+  };
+};
+
+export const getProducts = async (options = {}) => {
+  const { items } = await fetchProductsPage(options);
+  return items;
+};
+
+/** Physical catalog search — backend `search` misses partial terms, so load pages and filter locally. */
+export const searchPhysicalProducts = async ({
+  countryId = resolveCountryId(1),
+  search,
+  categoryId,
+  vendorId,
+  perPage = 100,
+} = {}) => {
+  const query = String(search || '').trim();
+  if (!query) {
+    return getProducts({ countryId, perPage, page: 1, categoryId, vendorId });
+  }
+
+  const all = [];
+  let page = 1;
+  let lastPage = 1;
+
+  do {
+    // eslint-disable-next-line no-await-in-loop
+    const { items, meta } = await fetchProductsPage({
+      countryId,
+      perPage,
+      page,
+      categoryId,
+      vendorId,
+    });
+    all.push(...items);
+    lastPage = meta.lastPage;
+    page += 1;
+  } while (page <= lastPage);
+
+  return all.filter((product) => productMatchesSearch(product, query));
 };
 
 export const getProduct = async ({ id, countryId = resolveCountryId(1) }) => {

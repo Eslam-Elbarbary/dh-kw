@@ -51,7 +51,7 @@ function ProductTile({ item }) {
 
 export default function DigitalCategoryDetail() {
   const { id } = useParams();
-  const { countryId } = useCountry();
+  const { countryId, countryCode, countryCurrencyCode } = useCountry();
   const [category, setCategory] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +68,12 @@ export default function DigitalCategoryDetail() {
       setLoading(true);
       setError('');
       try {
-        const res = await getDigitalCategory({ id, countryId });
+        const res = await getDigitalCategory({
+          id,
+          countryId,
+          countryCode,
+          fallbackCurrencyCode: countryCurrencyCode,
+        });
         if (cancelled) return;
         if (!res.category?.id) {
           setError('Category not found.');
@@ -90,7 +95,7 @@ export default function DigitalCategoryDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id, countryId]);
+  }, [id, countryId, countryCode, countryCurrencyCode]);
 
   return (
     <div className="bg-[#f8fafc] dark:bg-[#0f172a] min-h-screen transition-colors duration-300">

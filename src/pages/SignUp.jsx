@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { registerRequest, resendVerificationCodeRequest } from '../services/auth.service';
 import { getCountries } from '../services/meta.service';
-import { combineDialAndNationalPhone, PENDING_VERIFICATION_DIAL_KEY } from '../utils/phoneE164';
+import { formatPhoneForVerificationApi, PENDING_VERIFICATION_DIAL_KEY } from '../utils/phoneE164';
 
 // Import assets
 import flagIcon from '../assets/Layer 1.svg';
@@ -44,7 +44,6 @@ export default function SignUp() {
   const [countryId, setCountryId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -75,7 +74,6 @@ export default function SignUp() {
 
   const handleSignUp = async () => {
     setError('');
-    setSuccess('');
 
     if (!firstName.trim() || !lastName.trim() || !phone.trim() || !email.trim() || !password.trim() || !passwordConfirmation.trim() || !countryId) {
       setError('Please fill all required fields.');
@@ -94,8 +92,9 @@ export default function SignUp() {
 
     try {
       setLoading(true);
-      const registeredPhone = combineDialAndNationalPhone(selectedCountry?.dialCode, phone);
-      await registerRequest({
+      const dialCode = selectedCountry?.dialCode || '';
+      const registeredPhone = formatPhoneForVerificationApi(phone, dialCode);
+      const registerResult = await registerRequest({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: registeredPhone,
@@ -106,17 +105,21 @@ export default function SignUp() {
       });
       localStorage.setItem('selectedCountryId', String(countryId));
       localStorage.setItem('countryManuallySelected', '1');
-      const dialCode = selectedCountry?.dialCode || '';
-      localStorage.setItem('pendingVerificationPhone', registeredPhone);
+      const storedPhone = registerResult?.data?.user?.phone || registeredPhone;
+      localStorage.setItem('pendingVerificationPhone', storedPhone);
       if (dialCode) {
         localStorage.setItem(PENDING_VERIFICATION_DIAL_KEY, dialCode);
       } else {
         localStorage.removeItem(PENDING_VERIFICATION_DIAL_KEY);
       }
       localStorage.removeItem('pendingVerificationEmail');
-      sessionStorage.setItem('postSignupPendingPhone', registeredPhone);
-      await resendVerificationCodeRequest({ phone: registeredPhone, dialCode });
-      setSuccess('Account created successfully. You can verify your phone now or do it later from sign in.');
+      try {
+        await resendVerificationCodeRequest({ phone: storedPhone, dialCode });
+      } catch {
+        // Register already dispatches verification; continue even if resend fails (e.g. SMS provider).
+      }
+      sessionStorage.setItem('justSignedUp', '1');
+      navigate('/verification', { replace: true });
     } catch (err) {
       const message = err?.response?.data?.message || 'Sign up failed. Please try again.';
       setError(message);
@@ -341,9 +344,6 @@ export default function SignUp() {
           {error ? (
             <div className="text-[#8e0909] text-[14px] font-['Poppins'] w-full">{error}</div>
           ) : null}
-          {success ? (
-            <div className="text-[#00a651] text-[14px] font-['Poppins'] w-full">{success}</div>
-          ) : null}
           <button
             type="button"
             onClick={handleSignUp}
@@ -358,18 +358,9 @@ export default function SignUp() {
               </p>
             </div>
           </button>
-          {success ? (
-            <button
-              type="button"
-              onClick={() => navigate('/verification')}
-              className="bg-white dark:bg-[#0f172a] border border-[#0e1c47] dark:border-[#334155] text-[#0e1c47] dark:text-[#93c5fd] content-stretch cursor-pointer flex h-[50px] items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:bg-[#f7f9fc] dark:hover:bg-[#334155] transition-colors"
-            >
-              Verify phone now
-            </button>
-          ) : null}
           <Link to="/sign-in" className="content-stretch flex items-center justify-center p-[16px] relative rounded-[4px] shrink-0 w-full hover:opacity-80 transition-opacity">
             <div className="capitalize flex flex-col font-['Poppins'] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[#0e1c47] dark:text-[#93c5fd] text-[16px] tracking-[-0.16px] whitespace-nowrap">
-              <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-solid leading-[1.2] underline">{success ? 'Verify later? Continue to sign in' : 'Already have an account? Sign in'}</p>
+              <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-solid leading-[1.2] underline">Already have an account? Sign in</p>
             </div>
           </Link>
         </div>

@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { useAuth } from './AuthContext';
 import { resolveCountryId } from '../services/catalog.service';
+import { getCountries } from '../services/meta.service';
 
 const STORAGE_KEY = 'selectedCountryId';
 const MANUAL_KEY = 'countryManuallySelected';
@@ -17,6 +18,7 @@ const CountryContext = createContext(null);
 export function CountryProvider({ children }) {
   const { user, isAuthLoading } = useAuth();
   const [countryId, setCountryIdState] = useState(() => resolveCountryId(1));
+  const [countries, setCountries] = useState([]);
 
   const applyCountryId = useCallback((id, { manual = false } = {}) => {
     const parsed = Number(id);
@@ -63,9 +65,32 @@ export function CountryProvider({ children }) {
     [applyCountryId],
   );
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await getCountries();
+        if (!cancelled) setCountries(Array.isArray(list) ? list : []);
+      } catch {
+        if (!cancelled) setCountries([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const activeCountry = useMemo(
+    () => countries.find((c) => String(c.id) === String(countryId)) || null,
+    [countries, countryId],
+  );
+
+  const countryCode = activeCountry?.code || '';
+  const countryCurrencyCode = activeCountry?.currencyCode || '';
+
   const value = useMemo(
-    () => ({ countryId, setCountryId }),
-    [countryId, setCountryId],
+    () => ({ countryId, countryCode, countryCurrencyCode, countries, setCountryId }),
+    [countryId, countryCode, countryCurrencyCode, countries, setCountryId],
   );
 
   return (

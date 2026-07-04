@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { getCategories, getProducts, toggleFavoriteProduct } from '../services/catalog.service';
-import { getDigitalProducts } from '../services/digitalProducts.service';
+import { getCategories, getProducts, searchPhysicalProducts, toggleFavoriteProduct } from '../services/catalog.service';
+import { searchDigitalProducts } from '../services/digitalProducts.service';
 import { useCountry } from '../context/CountryContext';
 import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
 import { useCart } from '../context/useCart';
@@ -13,7 +13,7 @@ import { ProductVariantPickModal } from '../components/ProductVariantPickModal';
 import { productNeedsVariantPick } from '../utils/productVariants';
 import { shouldShowInlineCartError } from '../utils/cartErrors';
 import { isCartAddConflict } from '../utils/cartAdd';
-import { CART_ITEM_TYPE } from '../services/cart.service';
+import { productMatchesSearch } from '../utils/productSearch';
 
 // Import assets
 import productImage1 from '../assets/2c2703028e858e93057b03391653381259c5700c.png';
@@ -76,6 +76,9 @@ const mapDigitalToSearchProduct = (item) => ({
   isFavorite: false,
   isDigital: true,
   isAvailable: item.isAvailable,
+  description: item.description || '',
+  howToUse: item.howToUse || '',
+  companyName: item.companyName || '',
 });
 
 export default function SearchResults() {
@@ -83,14 +86,18 @@ export default function SearchResults() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const params = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const { countryId: selectedCountryId } = useCountry();
+  const { countryId: selectedCountryId, countries, countryCurrencyCode } = useCountry();
   const urlCountryId = Number(params.get('country_id'));
   const countryId = Number.isFinite(urlCountryId) && urlCountryId > 0
     ? urlCountryId
     : selectedCountryId;
+  const activeCountry = countries.find((c) => String(c.id) === String(countryId));
+  const countryCode = activeCountry?.code || '';
+  const resolvedCurrencyCode = activeCountry?.currencyCode || countryCurrencyCode || '';
   const preselectedCategoryId = params.get('category_id');
   const preselectedVendorId = params.get('vendor_id');
   const searchQuery = (params.get('q') || '').trim();
+  const hasSearchCriteria = Boolean(searchQuery || preselectedCategoryId || preselectedVendorId);
 
   const [showFilter, setShowFilter] = useState(true); // Visible by default on desktop
   const [selectedCategory, setSelectedCategory] = useState('All Categories'); // Show all by default
@@ -253,33 +260,52 @@ export default function SearchResults() {
 
   useEffect(() => {
     const loadCatalog = async () => {
+      if (!hasSearchCriteria) {
+        setAllProducts([]);
+        setProductsError('');
+        setLoadingProducts(false);
+        try {
+          const categoriesList = await getCategories();
+          setCategories(categoriesList);
+        } catch {
+          setCategories([]);
+        }
+        return;
+      }
+
       try {
         setLoadingProducts(true);
         setProductsError('');
 
-        const [productsList, digitalResult, categoriesList] = await Promise.all([
-          getProducts({
-            countryId,
-            perPage: 50,
-            page: 1,
-            categoryId: preselectedCategoryId || undefined,
-            vendorId: preselectedVendorId || undefined,
-            search: searchQuery || undefined,
-          }),
+        const [productsList, digitalProducts, categoriesList] = await Promise.all([
           searchQuery
-            ? getDigitalProducts({
+            ? searchPhysicalProducts({
+                countryId,
+                search: searchQuery,
+                categoryId: preselectedCategoryId || undefined,
+                vendorId: preselectedVendorId || undefined,
+              })
+            : getProducts({
                 countryId,
                 perPage: 50,
                 page: 1,
+                categoryId: preselectedCategoryId || undefined,
+                vendorId: preselectedVendorId || undefined,
+              }),
+          searchQuery
+            ? searchDigitalProducts({
+                countryId,
+                countryCode,
+                fallbackCurrencyCode: resolvedCurrencyCode,
                 search: searchQuery,
               })
-            : Promise.resolve({ items: [] }),
+            : Promise.resolve([]),
           getCategories(),
         ]);
 
         const physicalProducts = Array.isArray(productsList) ? productsList : [];
-        const digitalProducts = (digitalResult?.items || []).map(mapDigitalToSearchProduct);
-        setAllProducts([...physicalProducts, ...digitalProducts]);
+        const digitalItems = (Array.isArray(digitalProducts) ? digitalProducts : []).map(mapDigitalToSearchProduct);
+        setAllProducts([...physicalProducts, ...digitalItems]);
         setCategories(categoriesList);
       } catch (error) {
         setProductsError(error?.response?.data?.message || 'Failed to load products.');
@@ -290,7 +316,7 @@ export default function SearchResults() {
     };
 
     loadCatalog();
-  }, [countryId, preselectedCategoryId, preselectedVendorId, searchQuery]);
+  }, [countryId, countryCode, resolvedCurrencyCode, preselectedCategoryId, preselectedVendorId, searchQuery, hasSearchCriteria]);
 
   useEffect(() => {
     if (!preselectedCategoryId || categories.length === 0) return;
@@ -307,6 +333,10 @@ export default function SearchResults() {
   // Filter products based on selected filters
   const getFilteredProducts = () => {
     let filtered = [...allProducts];
+
+    if (searchQuery) {
+      filtered = filtered.filter((product) => productMatchesSearch(product, searchQuery));
+    }
 
     // Filter by category
     if (selectedCategory && selectedCategory !== 'All Categories' && selectedCategory !== 'All') {
@@ -442,7 +472,7 @@ export default function SearchResults() {
               </div>
             </div>
             <span className="font-['Poppins'] font-normal leading-[20px] text-[#eea137] text-[14px]" data-node-id="35:2534">
-              {searchQuery ? `Search results for "${searchQuery}"` : 'search Results'}
+              {searchQuery ? `Search results for "${searchQuery}"` : preselectedCategoryId ? 'Category results' : 'Search'}
             </span>
           </div>
 
@@ -607,9 +637,11 @@ export default function SearchResults() {
             <div className={`flex-1 w-full lg:w-auto`}>
               {/* Results Count */}
               <div className="mb-[16px] sm:mb-[20px] space-y-[10px]">
-                <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">
-                  Showing {startIndex + 1}-{Math.min(endIndex, sortedProducts.length)} of {sortedProducts.length} {searchQuery ? 'results' : 'products'}
-                </p>
+                {hasSearchCriteria && sortedProducts.length > 0 ? (
+                  <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">
+                    Showing {startIndex + 1}-{Math.min(endIndex, sortedProducts.length)} of {sortedProducts.length} {searchQuery ? 'results' : 'products'}
+                  </p>
+                ) : null}
                 {compareToast ? (
                   <p
                     className="font-['Poppins'] text-[13px] sm:text-[14px] text-[#92400e] dark:text-[#fde68a] bg-[#fffbeb] dark:bg-[#422006]/50 border border-[#fde68a] dark:border-[#854d0e] rounded-[6px] px-[14px] py-[10px]"
@@ -634,11 +666,15 @@ export default function SearchResults() {
                 </div>
               ) : paginatedProducts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-[60px]">
-                  <p className="font-['Poppins'] font-semibold text-[#191c1f] dark:text-white text-[18px] mb-[8px]">No products found</p>
-                  <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px]">
-                    {searchQuery
-                      ? `No results found for "${searchQuery}". Try a different search term.`
-                      : 'Try adjusting your filters'}
+                  <p className="font-['Poppins'] font-semibold text-[#191c1f] dark:text-white text-[18px] mb-[8px]">
+                    {!hasSearchCriteria ? 'Enter a search term' : 'No products found'}
+                  </p>
+                  <p className="font-['Poppins'] font-normal text-[#666] dark:text-[#9ca3af] text-[14px] text-center max-w-[420px]">
+                    {!hasSearchCriteria
+                      ? 'Type a product name in the search box above, or pick a category and search to browse products.'
+                      : searchQuery
+                        ? `No results found for "${searchQuery}". Try a different search term.`
+                        : 'Try adjusting your filters'}
                   </p>
                 </div>
               ) : (

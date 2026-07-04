@@ -8,6 +8,7 @@ import React, {
 import { useLocation } from 'react-router-dom';
 import CartTypeConflictModal from '../components/CartTypeConflictModal';
 import { CART_ITEM_TYPE } from '../constants/cart';
+import { useCountry } from './CountryContext';
 import {
   addToCartSafe,
   applyCartCoupon as applyCartCouponRequest,
@@ -74,6 +75,7 @@ const withRecalculatedSummary = (cartState) => {
 
 export function CartProvider({ children }) {
   const location = useLocation();
+  const { countryCode } = useCountry();
   const [cart, setCart] = useState(EMPTY_CART);
   const [loadingCart, setLoadingCart] = useState(false);
   const [cartError, setCartError] = useState('');
@@ -121,7 +123,7 @@ export function CartProvider({ children }) {
     try {
       setLoadingCart(true);
       setCartError('');
-      const payload = await getCart();
+      const payload = await getCart({ countryCode });
       const nextCart = ensureCartShape(payload);
       setCart(nextCart.items.length ? nextCart : EMPTY_CART);
       return nextCart;
@@ -137,7 +139,7 @@ export function CartProvider({ children }) {
     } finally {
       setLoadingCart(false);
     }
-  }, []);
+  }, [countryCode]);
 
   useEffect(() => {
     loadCart().catch(() => {
@@ -155,7 +157,7 @@ export function CartProvider({ children }) {
   }, [cartTypeConflict]);
 
   const runAddToCart = useCallback(async (params) => {
-    const safeResult = await addToCartSafe(params);
+    const safeResult = await addToCartSafe({ ...params, countryCode });
     if (safeResult.conflict) {
       return { ok: false, conflict: true, error: safeResult.error };
     }
@@ -168,7 +170,7 @@ export function CartProvider({ children }) {
 
     const refreshedCart = ensureCartShape(await loadCart({ force: true }));
     return { ok: Boolean(refreshedCart.items.length), cart: refreshedCart };
-  }, [loadCart]);
+  }, [loadCart, countryCode]);
 
   const addToCart = useCallback(async (params = {}) => {
     try {
@@ -211,7 +213,7 @@ export function CartProvider({ children }) {
       setCartError('');
       setCartTypeConflict((prev) => (prev ? { ...prev, actionError: '' } : prev));
 
-      await clearAllCartsRequest();
+      await clearAllCartsRequest({ countryCode });
       setCart(EMPTY_CART);
 
       const result = await runAddToCart(addParams);
@@ -241,7 +243,7 @@ export function CartProvider({ children }) {
     } finally {
       setClearingConflictCart(false);
     }
-  }, [runAddToCart, scheduleCartTypeConflict]);
+  }, [runAddToCart, scheduleCartTypeConflict, countryCode]);
 
   const updateCartItemQuantity = useCallback(async ({
     cartItemId,
@@ -258,6 +260,7 @@ export function CartProvider({ children }) {
       quantity,
       variantId,
       itemType: resolvedItemType,
+      countryCode,
     });
     const normalizedUpdate = ensureCartShape(updatedPayload);
     if (hasUsableItemsPayload(normalizedUpdate)) {
@@ -279,7 +282,7 @@ export function CartProvider({ children }) {
     });
     setCart(optimistic);
     return optimistic;
-  }, [cart]);
+  }, [cart, countryCode]);
 
   const removeCartItem = useCallback(async ({
     cartItemId,
@@ -294,6 +297,7 @@ export function CartProvider({ children }) {
       productId,
       variantId,
       itemType: resolvedItemType,
+      countryCode,
     });
     const normalizedRemove = ensureCartShape(removedPayload);
     if (hasUsableItemsPayload(normalizedRemove)) {
@@ -313,21 +317,21 @@ export function CartProvider({ children }) {
     });
     setCart(optimistic.items.length ? optimistic : EMPTY_CART);
     return optimistic;
-  }, [cart]);
+  }, [cart, countryCode]);
 
   const clearCart = useCallback(async () => {
-    const payload = await clearCartRequest({ itemType: cart.itemType });
+    const payload = await clearCartRequest({ itemType: cart.itemType, countryCode });
     const nextCart = ensureCartShape(payload);
     setCart(nextCart.items.length ? nextCart : EMPTY_CART);
     return nextCart;
-  }, [cart.itemType]);
+  }, [cart.itemType, countryCode]);
 
   const applyCartCoupon = useCallback(async ({ code }) => {
-    const payload = await applyCartCouponRequest({ code });
+    const payload = await applyCartCouponRequest({ code, countryCode });
     const nextCart = ensureCartShape(payload);
     setCart(nextCart);
     return nextCart;
-  }, []);
+  }, [countryCode]);
 
   const cartItemsCount = useMemo(
     () => (Array.isArray(cart.items) ? cart.items : []).reduce(

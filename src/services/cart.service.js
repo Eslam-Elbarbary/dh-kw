@@ -1,6 +1,7 @@
 import api from './api';
 import { CART_ITEM_TYPE } from '../constants/cart';
 import { isCartTypeConflictError, markCartTypeConflictError } from '../utils/cartErrors';
+import { withCountryHeader } from '../utils/countryHeaders';
 
 export { CART_ITEM_TYPE };
 
@@ -127,7 +128,8 @@ const normalizeCartItem = (item, fallbackItemType = CART_ITEM_TYPE.PHYSICAL) => 
     quantity,
     unitPrice,
     subtotal,
-    currency: item?.currency || product?.currency || 'USD',
+    currency: item?.currency_code || item?.currency || product?.currency_code || product?.currency || 'USD',
+    currencyCode: item?.currency_code || product?.currency_code || item?.currency || product?.currency || 'USD',
     companyName: isDigital ? (product?.company_name || product?.companyName || '') : '',
     serials: isDigital ? extractSerials(item) : [],
   };
@@ -231,6 +233,14 @@ const normalizeCartResponse = (payload, { defaultItemType = CART_ITEM_TYPE.PHYSI
     id: cartNode?.id ?? null,
     itemType: resolvedItemType,
     items,
+    currency: cartNode?.currency_code
+      ?? cartNode?.currencyCode
+      ?? cartNode?.currency
+      ?? payload?.data?.currency_code
+      ?? payload?.data?.currency
+      ?? items[0]?.currencyCode
+      ?? items[0]?.currency
+      ?? 'USD',
     summary: {
       subtotal,
       shipping,
@@ -311,28 +321,29 @@ const buildDigitalCartProductUrl = (digitalProductId) => (
 
 const resolveItemType = (itemType) => normalizeItemType(itemType, CART_ITEM_TYPE.PHYSICAL);
 
-const fetchPhysicalCart = async () => {
+const fetchPhysicalCart = async ({ countryCode } = {}) => {
   const res = await tryRequestsSequentially([
-    () => api.get('/api/cart'),
-    () => api.get('/api/cart/index'),
-    () => api.get('/api/cart/list'),
+    () => api.get('/api/cart', withCountryHeader(countryCode)),
+    () => api.get('/api/cart/index', withCountryHeader(countryCode)),
+    () => api.get('/api/cart/list', withCountryHeader(countryCode)),
   ]);
   return normalizeCartResponse(res.data, { defaultItemType: CART_ITEM_TYPE.PHYSICAL });
 };
 
-const fetchDigitalCart = async () => {
+const fetchDigitalCart = async ({ countryCode } = {}) => {
   const res = await tryRequestsSequentially([
-    () => api.get('/api/cart/digital'),
-    () => api.get('/api/cart/digital/index'),
-    () => api.get('/api/cart/digital/list'),
+    () => api.get('/api/cart', withCountryHeader(countryCode)),
+    () => api.get('/api/cart/digital', withCountryHeader(countryCode)),
+    () => api.get('/api/cart/digital/index', withCountryHeader(countryCode)),
+    () => api.get('/api/cart/digital/list', withCountryHeader(countryCode)),
   ]);
   return normalizeCartResponse(res.data, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
 };
 
-export const getCart = async () => {
+export const getCart = async ({ countryCode } = {}) => {
   const [physicalResult, digitalResult] = await Promise.allSettled([
-    fetchPhysicalCart(),
-    fetchDigitalCart(),
+    fetchPhysicalCart({ countryCode }),
+    fetchDigitalCart({ countryCode }),
   ]);
 
   const physical = physicalResult.status === 'fulfilled' ? physicalResult.value : null;
@@ -343,12 +354,12 @@ export const getCart = async () => {
   return digital || physical || normalizeCartResponse({});
 };
 
-export const addToCart = async ({ productId, quantity = 1, variantId, itemType } = {}) => {
+export const addToCart = async ({ productId, quantity = 1, variantId, itemType, countryCode } = {}) => {
   if (!productId) throw new Error('Product id is required.');
 
   const normalizedItemType = resolveItemType(itemType);
   if (normalizedItemType === CART_ITEM_TYPE.DIGITAL) {
-    return addDigitalToCart({ digitalProductId: productId, quantity });
+    return addDigitalToCart({ digitalProductId: productId, quantity, countryCode });
   }
 
   const normalizedProductId = String(productId).trim();
@@ -462,17 +473,18 @@ export const addToCart = async ({ productId, quantity = 1, variantId, itemType }
   return normalizeCartResponse(response.data);
 };
 
-export const addDigitalToCart = async ({ digitalProductId, quantity = 1 } = {}) => {
+export const addDigitalToCart = async ({ digitalProductId, quantity = 1, countryCode } = {}) => {
   const id = String(digitalProductId || '').trim();
   if (!id) throw new Error('Digital product id is required.');
   const normalizedQuantity = Math.max(1, toNumber(quantity, 1));
   const url = buildDigitalCartProductUrl(id);
+  const requestConfig = withCountryHeader(countryCode);
 
   const response = await tryRequestsSequentially([
-    () => api.post(url),
-    () => api.post(url, { quantity: normalizedQuantity }),
-    () => api.post(url, { qty: normalizedQuantity }),
-    () => postCartFormData(url, buildCartFormData({ quantity: normalizedQuantity, variantId: null, includeQtyAlias: true })),
+    () => api.post(url, undefined, requestConfig),
+    () => api.post(url, { quantity: normalizedQuantity }, requestConfig),
+    () => api.post(url, { qty: normalizedQuantity }, requestConfig),
+    () => api.post(url, buildCartFormData({ quantity: normalizedQuantity, variantId: null, includeQtyAlias: true }), requestConfig),
   ]);
 
   return normalizeCartResponse(response.data, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
@@ -484,10 +496,11 @@ export const updateCartItemQuantity = async ({
   quantity,
   variantId,
   itemType,
+  countryCode,
 } = {}) => {
   const normalizedItemType = resolveItemType(itemType);
   if (normalizedItemType === CART_ITEM_TYPE.DIGITAL) {
-    return updateDigitalCartItemQuantity({ digitalProductId: productId || cartItemId, quantity });
+    return updateDigitalCartItemQuantity({ digitalProductId: productId || cartItemId, quantity, countryCode });
   }
 
   const nextQuantity = Math.max(1, toNumber(quantity, 1));
@@ -576,26 +589,27 @@ export const updateCartItemQuantity = async ({
   return normalizeCartResponse(response.data);
 };
 
-export const updateDigitalCartItemQuantity = async ({ digitalProductId, quantity } = {}) => {
+export const updateDigitalCartItemQuantity = async ({ digitalProductId, quantity, countryCode } = {}) => {
   const id = String(digitalProductId || '').trim();
   if (!id) throw new Error('Digital product id is required.');
   const nextQuantity = Math.max(1, toNumber(quantity, 1));
   const url = buildDigitalCartProductUrl(id);
+  const requestConfig = withCountryHeader(countryCode);
 
   const response = await tryRequestsSequentially([
-    () => api.put(url, { quantity: nextQuantity }),
-    () => api.put(url, { qty: nextQuantity }),
-    () => api.post(url, { quantity: nextQuantity }),
-    () => api.post(url, { qty: nextQuantity }),
+    () => api.put(url, { quantity: nextQuantity }, requestConfig),
+    () => api.put(url, { qty: nextQuantity }, requestConfig),
+    () => api.post(url, { quantity: nextQuantity }, requestConfig),
+    () => api.post(url, { qty: nextQuantity }, requestConfig),
   ]);
 
   return normalizeCartResponse(response.data, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
 };
 
-export const removeCartItem = async ({ cartItemId, productId, variantId, itemType } = {}) => {
+export const removeCartItem = async ({ cartItemId, productId, variantId, itemType, countryCode } = {}) => {
   const normalizedItemType = resolveItemType(itemType);
   if (normalizedItemType === CART_ITEM_TYPE.DIGITAL) {
-    return removeDigitalCartItem({ digitalProductId: productId || cartItemId });
+    return removeDigitalCartItem({ digitalProductId: productId || cartItemId, countryCode });
   }
 
   const itemId = cartItemId || productId;
@@ -629,18 +643,19 @@ export const removeCartItem = async ({ cartItemId, productId, variantId, itemTyp
   return normalizeCartResponse(response.data);
 };
 
-export const removeDigitalCartItem = async ({ digitalProductId } = {}) => {
+export const removeDigitalCartItem = async ({ digitalProductId, countryCode } = {}) => {
   const id = String(digitalProductId || '').trim();
   if (!id) throw new Error('Digital product id is required.');
   const url = buildDigitalCartProductUrl(id);
+  const requestConfig = withCountryHeader(countryCode);
   const response = await tryRequestsSequentially([
-    () => api.delete(url),
-    () => api.delete('/api/cart/digital/remove-product', { data: { digital_product_id: id } }),
+    () => api.delete(url, requestConfig),
+    () => api.delete('/api/cart/digital/remove-product', withCountryHeader(countryCode, { data: { digital_product_id: id } })),
   ]);
   return normalizeCartResponse(response.data, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
 };
 
-export const clearCart = async ({ itemType } = {}) => {
+export const clearCart = async ({ itemType, countryCode } = {}) => {
   const normalizedItemType = itemType ? resolveItemType(itemType) : null;
 
   if (normalizedItemType === CART_ITEM_TYPE.DIGITAL) {
@@ -652,7 +667,7 @@ export const clearCart = async ({ itemType } = {}) => {
       return normalizeCartResponse(response.data, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
     } catch {
       // Never DELETE /api/cart/digital — the router treats "digital" as a product id.
-      await emptyCartByRemovingItems(CART_ITEM_TYPE.DIGITAL);
+      await emptyCartByRemovingItems(CART_ITEM_TYPE.DIGITAL, countryCode);
       return normalizeCartResponse({}, { defaultItemType: CART_ITEM_TYPE.DIGITAL });
     }
   }
@@ -688,13 +703,13 @@ export const clearCart = async ({ itemType } = {}) => {
 };
 
 /** Remove every line item when bulk-clear endpoints are unavailable. */
-const emptyCartByRemovingItems = async (itemType) => {
+const emptyCartByRemovingItems = async (itemType, countryCode) => {
   const normalizedItemType = resolveItemType(itemType);
   let cartPayload;
   try {
     cartPayload = normalizedItemType === CART_ITEM_TYPE.DIGITAL
-      ? await fetchDigitalCart()
-      : await fetchPhysicalCart();
+      ? await fetchDigitalCart({ countryCode })
+      : await fetchPhysicalCart({ countryCode });
   } catch {
     return;
   }
@@ -710,13 +725,14 @@ const emptyCartByRemovingItems = async (itemType) => {
     try {
       // eslint-disable-next-line no-await-in-loop
       if (normalizedItemType === CART_ITEM_TYPE.DIGITAL) {
-        await removeDigitalCartItem({ digitalProductId: productId });
+        await removeDigitalCartItem({ digitalProductId: productId, countryCode });
       } else {
         await removeCartItem({
           cartItemId: item.id,
           productId,
           variantId: item.variantId,
           itemType: normalizedItemType,
+          countryCode,
         });
       }
     } catch {
@@ -726,33 +742,37 @@ const emptyCartByRemovingItems = async (itemType) => {
 };
 
 /** Clear one cart type via API, then verify by deleting any remaining lines. */
-export const clearCartThoroughly = async ({ itemType } = {}) => {
+export const clearCartThoroughly = async ({ itemType, countryCode } = {}) => {
   const normalizedItemType = itemType ? resolveItemType(itemType) : null;
 
   if (normalizedItemType) {
     try {
-      await clearCart({ itemType: normalizedItemType });
+      await clearCart({ itemType: normalizedItemType, countryCode });
     } catch {
       // Fall through to per-item removal.
     }
-    await emptyCartByRemovingItems(normalizedItemType);
+    await emptyCartByRemovingItems(normalizedItemType, countryCode);
     return normalizeCartResponse({});
   }
 
   await Promise.allSettled([
-    clearCartThoroughly({ itemType: CART_ITEM_TYPE.DIGITAL }),
-    clearCartThoroughly({ itemType: CART_ITEM_TYPE.PHYSICAL }),
+    clearCartThoroughly({ itemType: CART_ITEM_TYPE.DIGITAL, countryCode }),
+    clearCartThoroughly({ itemType: CART_ITEM_TYPE.PHYSICAL, countryCode }),
   ]);
   return normalizeCartResponse({});
 };
 
 /** Clear digital and physical carts (used when switching product types). */
-export const clearAllCarts = async () => clearCartThoroughly();
+export const clearAllCarts = async ({ countryCode } = {}) => clearCartThoroughly({ countryCode });
 
-export const applyCartCoupon = async ({ code } = {}) => {
+export const applyCartCoupon = async ({ code, countryCode } = {}) => {
   const couponCode = String(code || '').trim();
   if (!couponCode) throw new Error('Coupon code is required.');
-  const res = await api.post('/api/cart/apply-coupon', { code: couponCode });
+  const res = await api.post(
+    '/api/cart/apply-coupon',
+    { code: couponCode },
+    withCountryHeader(countryCode),
+  );
   return normalizeCartResponse(res.data);
 };
 

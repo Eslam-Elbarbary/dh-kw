@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/useCart';
 import { CART_ITEM_TYPE } from '../services/cart.service';
+import { formatMoney as formatCurrency } from '../utils/formatMoney';
 import arrowDownIcon from '../assets/ArrowRight.svg';
 
 const imgArrowDown = arrowDownIcon;
@@ -29,7 +30,10 @@ export default function ShoppingCart() {
     [cart?.summary],
   );
 
-  const formatMoney = (value) => `$${Number(value || 0).toFixed(2)}`;
+  const formatMoney = (value, currency) => formatCurrency(
+    value,
+    currency || cart?.currency || (isDigitalCart ? cart?.items?.[0]?.currencyCode : 'USD'),
+  );
   const itemType = cart?.itemType || CART_ITEM_TYPE.PHYSICAL;
 
   const handleQuantityChange = async (item, delta) => {
@@ -166,8 +170,8 @@ export default function ShoppingCart() {
                       {item.companyName ? (
                         <p className="font-['Poppins'] text-[12px] text-[#64748b] mt-[2px]">{item.companyName}</p>
                       ) : null}
-                      <p className="font-['Poppins'] text-[13px] text-[#666] mt-[2px]">Unit: {formatMoney(item.unitPrice)}</p>
-                      <p className="font-['Poppins'] text-[13px] text-[#0e1c47] mt-[2px]">Sub-total: {formatMoney(item.subtotal)}</p>
+                      <p className="font-['Poppins'] text-[13px] text-[#666] mt-[2px]">Unit: {formatMoney(item.unitPrice, item.currencyCode || item.currency)}</p>
+                      <p className="font-['Poppins'] text-[13px] text-[#0e1c47] mt-[2px]">Sub-total: {formatMoney(item.subtotal, item.currencyCode || item.currency)}</p>
                       {isDigitalCart && item.serials?.length > 0 ? (
                         <p className="font-['Poppins'] text-[12px] text-[#059669] mt-[4px]">
                           {item.serials.length} code(s) linked to this line
@@ -216,7 +220,7 @@ export default function ShoppingCart() {
               {!isDigitalCart ? (
                 <div className="flex justify-between font-['Poppins'] text-[14px]"><span className="text-[#666]">Tax</span><span>{formatMoney(summary.tax)}</span></div>
               ) : null}
-              <div className="border-t pt-[8px] flex justify-between font-['Poppins'] font-semibold text-[16px]"><span>Total</span><span>{formatMoney(summary.total)} USD</span></div>
+              <div className="border-t pt-[8px] flex justify-between font-['Poppins'] font-semibold text-[16px]"><span>Total</span><span>{formatMoney(summary.total)} {isDigitalCart ? '' : 'USD'}</span></div>
             </div>
 
             {!isDigitalCart ? (

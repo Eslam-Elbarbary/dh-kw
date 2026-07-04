@@ -8,8 +8,8 @@ export function normalizePhoneForApi(phone) {
 }
 
 /**
- * Format for POST /api/auth/verify-phone and /api/auth/resend-verification-code.
- * API expects national digits (e.g. "01554774574"), not E.164 (+20…).
+ * National digits for auth APIs: register, verify-phone, resend-verification-code.
+ * Backend stores and looks up phones in this format (e.g. "01554774574"), not E.164 (+20…).
  */
 export function formatPhoneForVerificationApi(phone, dialCode) {
   const raw = normalizePhoneForApi(phone);

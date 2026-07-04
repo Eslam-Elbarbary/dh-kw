@@ -1,5 +1,8 @@
 import api from './api';
 import { resolveCountryId } from './catalog.service';
+import { formatMoney } from '../utils/formatMoney';
+import { normalizeCountryHeader, withCountryHeader } from '../utils/countryHeaders';
+import { productMatchesSearch } from '../utils/productSearch';
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 
@@ -127,7 +130,7 @@ const extractDigitalListAndMeta = (payload, page, perPage) => {
   };
 };
 
-export const normalizeDigitalProduct = (raw) => {
+export const normalizeDigitalProduct = (raw, { fallbackCurrencyCode } = {}) => {
   if (!raw || typeof raw !== 'object') {
     return {
       id: null,
@@ -138,8 +141,12 @@ export const normalizeDigitalProduct = (raw) => {
       howToUse: '',
       image: '',
       price: 0,
+      basePrice: 0,
       priceFormatted: '—',
       currency: '',
+      currencyCode: '',
+      countryId: null,
+      hasCountrySpecificPrice: false,
       isActive: true,
       isAvailable: true,
       companyName: '',
@@ -149,6 +156,15 @@ export const normalizeDigitalProduct = (raw) => {
   }
 
   const price = Number(raw.price ?? raw.cost_after_vat ?? raw.sale_price ?? 0) || 0;
+  const basePrice = Number(raw.base_price ?? price) || price;
+  const resolvedCurrencyCode = String(
+    raw.currency_code
+    || raw.currency
+    || fallbackCurrencyCode
+    || '',
+  ).trim();
+  const currencyCode = resolvedCurrencyCode;
+  const currency = String(raw.currency || raw.currency_code || fallbackCurrencyCode || '').trim();
 
   return {
     id: raw.id ?? raw.digital_product_id ?? null,
@@ -159,8 +175,13 @@ export const normalizeDigitalProduct = (raw) => {
     howToUse: raw.how_to_use || '',
     image: raw.image || raw.thumb_image || '',
     price,
-    priceFormatted: price > 0 ? `$${price.toFixed(2)}` : '—',
-    currency: raw.currency || '',
+    basePrice,
+    priceFormatted: price > 0 ? formatMoney(price, currencyCode || currency) : '—',
+    basePriceFormatted: basePrice > 0 ? formatMoney(basePrice, currencyCode || currency) : '—',
+    currency,
+    currencyCode,
+    countryId: raw.country_id ?? null,
+    hasCountrySpecificPrice: Boolean(raw.has_country_specific_price),
     isActive: Boolean(raw.is_active ?? true),
     isAvailable: Boolean(raw.is_available ?? true),
     companyName: raw.company_name || raw.merchant?.company_name || '',
@@ -175,9 +196,12 @@ export const normalizeDigitalProduct = (raw) => {
  */
 export const getDigitalProducts = async ({
   countryId = resolveCountryId(1),
+  countryCode,
+  categoryId,
   page = 1,
   perPage = 15,
   search,
+  fallbackCurrencyCode,
 } = {}) => {
   const params = {
     country_id: countryId,
@@ -185,23 +209,101 @@ export const getDigitalProducts = async ({
     per_page: perPage,
   };
   if (search) params.search = String(search).trim();
+  if (categoryId != null && String(categoryId).trim()) {
+    params.category_id = String(categoryId).trim();
+  }
 
-  const res = await api.get('/api/digital-products', {
-    params,
-  });
+  const res = await api.get(
+    '/api/digital-products',
+    withCountryHeader(countryCode, { params }),
+  );
 
   const { list, meta } = extractDigitalListAndMeta(res.data, page, perPage);
 
+  const normalizeOptions = fallbackCurrencyCode ? { fallbackCurrencyCode } : undefined;
+
   return {
-    items: list.map(normalizeDigitalProduct).filter((p) => p.id != null),
+    items: list.map((item) => normalizeDigitalProduct(item, normalizeOptions)).filter((p) => p.id != null),
     meta,
   };
 };
 
-export const getDigitalProduct = async ({ id, countryId = resolveCountryId(1) }) => {
-  const res = await api.get(`/api/digital-products/${id}`, {
-    params: { country_id: countryId },
-  });
+/** Search digital catalog across all pages, with client-side match refinement. */
+export const searchDigitalProducts = async ({
+  countryId = resolveCountryId(1),
+  countryCode,
+  fallbackCurrencyCode,
+  search,
+  perPage = 100,
+} = {}) => {
+  const query = String(search || '').trim();
+  if (!query) return [];
+
+  let page = 1;
+  let lastPage = 1;
+  const items = [];
+
+  do {
+    // eslint-disable-next-line no-await-in-loop
+    const res = await getDigitalProducts({
+      countryId,
+      countryCode,
+      fallbackCurrencyCode,
+      search: query,
+      page,
+      perPage,
+    });
+    items.push(...res.items);
+    lastPage = res.meta?.lastPage || 1;
+    page += 1;
+  } while (page <= lastPage);
+
+  return items.filter((product) => productMatchesSearch(product, query));
+};
+
+/** Load every page of digital products for a category (country-priced via X-Country). */
+export const getDigitalProductsForCategory = async ({
+  categoryId,
+  countryId = resolveCountryId(1),
+  countryCode,
+  fallbackCurrencyCode,
+  perPage = 100,
+} = {}) => {
+  const id = String(categoryId ?? '').trim();
+  if (!id) return [];
+
+  let page = 1;
+  let lastPage = 1;
+  const items = [];
+
+  do {
+    // eslint-disable-next-line no-await-in-loop
+    const res = await getDigitalProducts({
+      categoryId: id,
+      countryId,
+      countryCode,
+      page,
+      perPage,
+      fallbackCurrencyCode,
+    });
+    items.push(...res.items);
+    lastPage = res.meta?.lastPage || 1;
+    page += 1;
+  } while (page <= lastPage);
+
+  return items;
+};
+
+export const getDigitalProduct = async ({
+  id,
+  countryId = resolveCountryId(1),
+  countryCode,
+  fallbackCurrencyCode,
+} = {}) => {
+  const res = await api.get(
+    `/api/digital-products/${id}`,
+    withCountryHeader(countryCode, { params: { country_id: countryId } }),
+  );
 
   const payload = res.data;
   const item = payload?.data?.digital_product
@@ -210,7 +312,7 @@ export const getDigitalProduct = async ({ id, countryId = resolveCountryId(1) })
     ?? payload?.digital_product
     ?? payload;
 
-  return normalizeDigitalProduct(item);
+  return normalizeDigitalProduct(item, fallbackCurrencyCode ? { fallbackCurrencyCode } : undefined);
 };
 
 export const normalizeDigitalCategory = (raw) => {
@@ -241,10 +343,11 @@ export const normalizeDigitalCategory = (raw) => {
 /**
  * @returns {Promise<ReturnType<typeof normalizeDigitalCategory>[]>}
  */
-export const getDigitalCategories = async ({ countryId = resolveCountryId(1) } = {}) => {
-  const res = await api.get('/api/digital-categories', {
-    params: { country_id: countryId },
-  });
+export const getDigitalCategories = async ({ countryId = resolveCountryId(1), countryCode } = {}) => {
+  const res = await api.get(
+    '/api/digital-categories',
+    withCountryHeader(countryCode, { params: { country_id: countryId } }),
+  );
   const payload = res.data;
   const root = payload?.data ?? payload;
   const list = Array.isArray(root)
@@ -263,10 +366,17 @@ export const getDigitalCategories = async ({ countryId = resolveCountryId(1) } =
 /**
  * @returns {Promise<{ category: ReturnType<typeof normalizeDigitalCategory>, products: ReturnType<typeof normalizeDigitalProduct>[] }>}
  */
-export const getDigitalCategory = async ({ id, countryId = resolveCountryId(1) }) => {
-  const res = await api.get(`/api/digital-categories/${id}`, {
-    params: { country_id: countryId },
-  });
+export const getDigitalCategory = async ({
+  id,
+  countryId = resolveCountryId(1),
+  countryCode,
+  fallbackCurrencyCode,
+  includeProducts = true,
+} = {}) => {
+  const res = await api.get(
+    `/api/digital-categories/${id}`,
+    withCountryHeader(countryCode, { params: { country_id: countryId } }),
+  );
   const payload = res.data;
   const raw = payload?.data?.digital_category
     ?? payload?.data?.category
@@ -274,9 +384,30 @@ export const getDigitalCategory = async ({ id, countryId = resolveCountryId(1) }
     ?? payload?.digital_category
     ?? payload;
 
-  const productRows = toArray(raw?.products ?? raw?.digital_products);
-  const products = productRows.map(normalizeDigitalProduct).filter((p) => p.id != null);
-  const category = normalizeDigitalCategory({ ...raw, products: undefined, products_count: products.length });
+  const normalizeOptions = fallbackCurrencyCode ? { fallbackCurrencyCode } : undefined;
+  let products = [];
+
+  if (includeProducts) {
+    products = await getDigitalProductsForCategory({
+      categoryId: id,
+      countryId,
+      countryCode,
+      fallbackCurrencyCode,
+    });
+  }
+
+  if (!products.length) {
+    const productRows = toArray(raw?.products ?? raw?.digital_products);
+    products = productRows
+      .map((item) => normalizeDigitalProduct(item, normalizeOptions))
+      .filter((p) => p.id != null);
+  }
+
+  const category = normalizeDigitalCategory({
+    ...raw,
+    products: undefined,
+    products_count: products.length,
+  });
 
   return { category, products };
 };
@@ -357,11 +488,6 @@ export const formatDigitalOrderErrorMessage = (raw) => {
  * Create a digital order from the current digital cart (POST /api/digital-orders/checkout).
  */
 export const createDigitalOrderFromCart = async ({ countryCode, countryId } = {}) => {
-  const normalizeCountryHeader = (code) => {
-    const raw = String(code || '').trim();
-    return raw ? raw.toLowerCase() : '';
-  };
-
   const resolvedCountryId = Number(countryId);
   const resolvedCountryCode = normalizeCountryHeader(countryCode);
   const headers = {};
@@ -385,11 +511,6 @@ export const createDigitalOrder = async ({ digitalProductId, countryCode, countr
   if (!Number.isFinite(id) || id < 1) {
     throw new Error('Invalid digital product.');
   }
-  const normalizeCountryHeader = (countryCode) => {
-    const raw = String(countryCode || '').trim();
-    if (!raw) return '';
-    return raw.toLowerCase();
-  };
 
   const resolvedCountryId = Number(countryId);
   const resolvedCountryCode = normalizeCountryHeader(countryCode);

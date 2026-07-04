@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { loginRequest } from '../services/auth.service';
 
@@ -11,23 +11,7 @@ export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [pendingVerificationPhone, setPendingVerificationPhone] = useState('');
-  const [hidePendingNotice, setHidePendingNotice] = useState(false);
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-
-  useEffect(() => {
-    const pendingFromSignup = sessionStorage.getItem('postSignupPendingPhone');
-    if (pendingFromSignup) {
-      const normalized = String(pendingFromSignup).trim();
-      setPendingVerificationPhone(normalized);
-      sessionStorage.removeItem('postSignupPendingPhone');
-      return;
-    }
-    const pendingStored = localStorage.getItem('pendingVerificationPhone');
-    if (pendingStored) {
-      setPendingVerificationPhone(String(pendingStored).trim());
-    }
-  }, []);
 
   const getReadableError = (err) => {
     const responseData = err?.response?.data;
@@ -128,12 +112,6 @@ export default function SignIn() {
     } catch (err) {
       const message = getReadableError(err);
       setError(message);
-      if (isUnverifiedAccountError(message)) {
-        const storedPhone = localStorage.getItem('pendingVerificationPhone');
-        if (storedPhone) {
-          setPendingVerificationPhone(String(storedPhone).trim());
-        }
-      }
     } finally {
       setLoading(false);
     }
@@ -224,30 +202,6 @@ export default function SignIn() {
           </div>
         </div>
         <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full" data-name="cta" data-node-id="35:4731">
-          {pendingVerificationPhone && !hidePendingNotice ? (
-            <div className="w-full bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#334155] rounded-[8px] px-[12px] py-[10px] font-['Poppins'] text-[13px] text-[#334155] dark:text-[#cbd5e1] leading-[1.45] flex items-start justify-between gap-[10px]">
-              <div>
-                <p>
-                  Phone verification pending for <span className="font-semibold text-[#0f172a] dark:text-white">{pendingVerificationPhone}</span>.
-                </p>
-                <button
-                  type="button"
-                  onClick={goToPhoneVerification}
-                  className="mt-[4px] text-[#0e1c47] dark:text-[#93c5fd] font-semibold underline hover:opacity-80 transition-opacity"
-                >
-                  Verify now
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => setHidePendingNotice(true)}
-                className="text-[#94a3b8] hover:text-[#64748b] transition-colors leading-none pt-[2px]"
-                aria-label="Dismiss verification reminder"
-              >
-                ×
-              </button>
-            </div>
-          ) : null}
           <Link to="/forgot-password" className="text-[#0e1c47] dark:text-[#93c5fd] font-['Poppins'] text-[14px] underline w-full text-right">
             Forgot password?
           </Link>
@@ -258,7 +212,7 @@ export default function SignIn() {
             <button
               type="button"
               onClick={goToPhoneVerification}
-              className="w-full bg-[#eef4ff] dark:bg-[#1e3a5f] border border-[#bfdbfe] dark:border-[#334155] text-[#0e1c47] dark:text-[#93c5fd] rounded-[6px] px-[12px] py-[10px] text-left font-['Poppins'] text-[13px] hover:bg-[#e6efff] dark:hover:bg-[#1e40af] transition-colors"
+              className="w-full bg-[#eef4ff] dark:bg-[#1e3a5f] border border-[#bfdbfe] dark:border-[#334155] text-[#0e1c47] dark:text-[#93c5fd] rounded-[6px] px-[12px] py-[10px] text-left font-['Poppins'] text-[13px] hover:bg-[#e6efff] dark:hover:bg-[#1e40af] transition-colors cursor-pointer"
             >
               Verify your phone now
             </button>
@@ -266,7 +220,7 @@ export default function SignIn() {
           <button
             type="button"
             onClick={goToPhoneVerification}
-            className="w-full border border-[#e2e8f0] dark:border-[#334155] bg-white dark:bg-[#0f172a] text-[#0e1c47] dark:text-[#93c5fd] rounded-[6px] px-[12px] py-[12px] font-['Poppins'] text-[14px] font-medium hover:bg-[#f8fafc] dark:hover:bg-[#1e293b] transition-colors"
+            className="w-full border border-[#e2e8f0] dark:border-[#334155] bg-white dark:bg-[#0f172a] text-[#0e1c47] dark:text-[#93c5fd] rounded-[6px] px-[12px] py-[12px] font-['Poppins'] text-[14px] font-medium hover:bg-[#f8fafc] dark:hover:bg-[#1e293b] transition-colors cursor-pointer"
           >
             Verify your phone (SMS code)
           </button>

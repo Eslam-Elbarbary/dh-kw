@@ -10,9 +10,6 @@ import { normalizePhoneForApi, PENDING_VERIFICATION_DIAL_KEY } from '../utils/ph
 
 const RESEND_SECONDS = 30;
 
-const fieldInput =
-  'border border-[#d7dbe0] dark:border-[#334155] bg-white dark:bg-[#0f172a] dark:text-white border-solid flex h-[52px] items-center p-[12px] rounded-[6px] font-[\'Poppins\'] font-normal text-[#111827] text-[16px] w-full placeholder:text-[#9ca3af] dark:placeholder:text-[#64748b] focus:outline-none focus:border-[#0e1c47] dark:focus:border-[#eea137] focus:ring-2 focus:ring-[#0e1c47]/10 dark:focus:ring-[#eea137]/20 transition-colors';
-
 function maskPhoneDisplay(phone) {
   const normalized = normalizePhoneForApi(phone);
   if (!normalized) return '';
@@ -37,12 +34,13 @@ export default function VerificationCode() {
   const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const pendingPhone = useMemo(() => {
+  const [resendCooldown, setResendCooldown] = useState(() => (
+    sessionStorage.getItem('justSignedUp') === '1' ? RESEND_SECONDS : 0
+  ));
+  const phone = useMemo(() => {
     const raw = localStorage.getItem('pendingVerificationPhone');
     return raw ? normalizePhoneForApi(raw) : '';
   }, []);
-  const [phone, setPhone] = useState(pendingPhone);
   const verificationDialCode = useMemo(
     () => localStorage.getItem(PENDING_VERIFICATION_DIAL_KEY) || '',
     [],
@@ -50,7 +48,6 @@ export default function VerificationCode() {
   const inputRefs = useRef([]);
   const alertRef = useRef(null);
   const phoneHint = maskPhoneDisplay(phone);
-  const shouldAutofocusCode = Boolean(normalizePhoneForApi(phone));
 
   const handleCodeInput = (index, value) => {
     const cleanedValue = value.replace(/\D/g, '');
@@ -89,9 +86,9 @@ export default function VerificationCode() {
     setError('');
     setSuccess('');
 
-    const normalizedPhone = normalizePhoneForApi(phone);
+    const normalizedPhone = phone;
     if (!normalizedPhone) {
-      setError('Please enter your phone number to verify.');
+      setError('No phone number on file. Please sign up or sign in again.');
       return;
     }
 
@@ -159,9 +156,9 @@ export default function VerificationCode() {
     setError('');
     setSuccess('');
 
-    const normalizedPhone = normalizePhoneForApi(phone);
+    const normalizedPhone = phone;
     if (!normalizedPhone) {
-      setError('Please enter your phone number to resend the code.');
+      setError('No phone number on file. Please sign up or sign in again.');
       return;
     }
 
@@ -188,6 +185,12 @@ export default function VerificationCode() {
       setResending(false);
     }
   };
+
+  useEffect(() => {
+    if (sessionStorage.getItem('justSignedUp') === '1') {
+      sessionStorage.removeItem('justSignedUp');
+    }
+  }, []);
 
   useEffect(() => {
     if (resendCooldown <= 0) return undefined;
@@ -219,38 +222,15 @@ export default function VerificationCode() {
               </h1>
             </div>
             <p className="font-['Poppins'] font-normal text-[#121212] dark:text-[#cbd5e1] text-[15px] sm:text-[16px] leading-[1.45]">
-              Enter the 6-digit code we sent to your phone by SMS.
+              {phoneHint
+                ? (
+                  <>
+                    Enter the 6-digit code we sent by SMS to{' '}
+                    <span className="font-semibold text-[#0e1c47] dark:text-[#93c5fd] tabular-nums">{phoneHint}</span>.
+                  </>
+                )
+                : 'Enter the 6-digit code we sent to your phone by SMS.'}
             </p>
-          </div>
-
-          <div className="flex flex-col gap-[8px] w-full">
-            <label htmlFor="verification-phone" className="font-['Poppins'] font-semibold text-[#121212] dark:text-[#e5e7eb] text-[18px]">
-              Phone Number
-            </label>
-            <p className="font-['Poppins'] text-[12px] text-[#666] dark:text-[#94a3b8] -mt-[2px] leading-[1.4]">
-              Use the same number you registered with (e.g. 01554774574 or +96550123456).
-            </p>
-            <div className="relative w-full">
-              <span className="pointer-events-none absolute left-[12px] top-1/2 -translate-y-1/2 text-[#9ca3af] dark:text-[#64748b]">
-                <PhoneIcon className="size-[18px]" />
-              </span>
-              <input
-                id="verification-phone"
-                type="tel"
-                inputMode="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                autoComplete="tel"
-                autoFocus={!shouldAutofocusCode}
-                className={`${fieldInput} pl-[40px] tabular-nums`}
-                placeholder="01554774574"
-              />
-            </div>
-            {phoneHint ? (
-              <p className="font-['Poppins'] text-[13px] text-[#0e1c47] dark:text-[#93c5fd]">
-                Code sent to <span className="font-semibold">{phoneHint}</span>
-              </p>
-            ) : null}
           </div>
 
           <div className="flex flex-col gap-[8px] w-full">
@@ -268,7 +248,7 @@ export default function VerificationCode() {
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={1}
-                  autoFocus={shouldAutofocusCode && index === 0}
+                  autoFocus={index === 0 && Boolean(phone)}
                   aria-label={`Digit ${index + 1} of 6`}
                   value={digit}
                   onChange={(e) => handleCodeInput(index, e.target.value)}

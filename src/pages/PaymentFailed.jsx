@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useCountry } from '../context/CountryContext';
 import { extractOrderPaymentUrl, navigateToPaymentGateway, openPaymentGatewayPlaceholderTab, payOrder } from '../services/orders.service';
 import { extractDigitalOrderPaymentUrl, payDigitalOrder } from '../services/digitalOrders.service';
 
 export default function PaymentFailed() {
   const [searchParams] = useSearchParams();
+  const { countryId, countryCode } = useCountry();
   const orderId = searchParams.get('orderId') || '';
   const scope = searchParams.get('scope') || 'store';
   const paymentMethod = searchParams.get('paymentMethod') || 'sadad';
@@ -26,7 +28,7 @@ export default function PaymentFailed() {
       const paymentTab = openPaymentGatewayPlaceholderTab();
       try {
         if (scope === 'digital') {
-          const result = await payDigitalOrder({ orderId, paymentMethod });
+          const result = await payDigitalOrder({ orderId, paymentMethod, countryCode, countryId });
           const paymentUrl = extractDigitalOrderPaymentUrl(result);
           if (!paymentUrl) throw new Error('No redirect url returned by payment gateway.');
           navigateToPaymentGateway(paymentUrl, paymentTab);
@@ -47,7 +49,7 @@ export default function PaymentFailed() {
     };
 
     autoRetry();
-  }, [orderId, paymentMethod, retryStorageKey, scope]);
+  }, [orderId, paymentMethod, retryStorageKey, scope, countryCode, countryId]);
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4">

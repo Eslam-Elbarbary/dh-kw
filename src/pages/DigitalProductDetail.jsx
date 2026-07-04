@@ -1,6 +1,6 @@
 // Single digital product (API) — separate from physical /product/:id flow.
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   createDigitalOrder,
@@ -8,7 +8,6 @@ import {
   getDigitalProduct,
   parseDigitalOrderProfileGate,
 } from '../services/digitalProducts.service';
-import { getCountries } from '../services/meta.service';
 import { useCountry } from '../context/CountryContext';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/useCart';
@@ -35,9 +34,8 @@ export default function DigitalProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { countryId } = useCountry();
+  const { countryId, countryCode, countryCurrencyCode } = useCountry();
   const { addToCart, cartItemsCount } = useCart();
-  const [countries, setCountries] = useState([]);
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -51,25 +49,6 @@ export default function DigitalProductDetail() {
 
   const closeProfileGate = useCallback(() => setProfileGate(null), []);
   const closeSuccess = useCallback(() => setSuccessInfo(null), []);
-  const selectedCountryCode = useMemo(
-    () => countries.find((c) => String(c.id) === String(countryId))?.code || '',
-    [countries, countryId],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const list = await getCountries();
-        if (!cancelled) setCountries(Array.isArray(list) ? list : []);
-      } catch {
-        if (!cancelled) setCountries([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,7 +61,12 @@ export default function DigitalProductDetail() {
       setLoading(true);
       setError('');
       try {
-        const item = await getDigitalProduct({ id, countryId });
+        const item = await getDigitalProduct({
+          id,
+          countryId,
+          countryCode,
+          fallbackCurrencyCode: countryCurrencyCode,
+        });
         if (cancelled) return;
         if (!item?.id) {
           setError('Digital product not found.');
@@ -102,7 +86,7 @@ export default function DigitalProductDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id, countryId]);
+  }, [id, countryId, countryCode, countryCurrencyCode]);
 
   useEffect(() => {
     if (!profileGate && !successInfo) return undefined;
@@ -168,7 +152,7 @@ export default function DigitalProductDetail() {
       const data = await createDigitalOrder({
         digitalProductId: product.id,
         countryId,
-        countryCode: selectedCountryCode,
+        countryCode,
       });
       const orderId = extractCreatedDigitalOrderId(data);
       setSuccessInfo({
@@ -376,6 +360,11 @@ export default function DigitalProductDetail() {
               <p className="font-['Poppins'] font-bold text-[#00a651] dark:text-[#4ade80] text-[22px] sm:text-[26px]">
                 {product.priceFormatted}
               </p>
+              {product.hasCountrySpecificPrice && product.basePrice > product.price ? (
+                <p className="font-['Poppins'] text-[14px] text-[#94a3b8] line-through">
+                  {product.basePriceFormatted}
+                </p>
+              ) : null}
 
               <div className="rounded-[8px] border border-[#bfdbfe] dark:border-[#1e3a5f] bg-[#eff6ff] dark:bg-[#172554]/50 px-[16px] py-[14px]">
                 <p className="font-['Poppins'] font-semibold text-[14px] text-[#1e3a8a] dark:text-[#93c5fd] mb-[6px]">

@@ -71,6 +71,7 @@ export const getCountries = async () => {
       name: country?.name || country?.title || country?.country_name || `Country ${country?.id ?? ''}`,
       /** ISO 3166-1 alpha-2 from API (e.g. KW, EG); used for shipping X-Country header */
       code: String(country?.code || country?.iso_code || country?.iso2 || '').trim().toUpperCase() || null,
+      currencyCode: String(country?.currency_code || country?.currencyCode || country?.currency || '').trim().toUpperCase() || null,
       dialCode: normalizeDialCode(country),
       flagUrl: normalizeFlagUrl(country),
     }))

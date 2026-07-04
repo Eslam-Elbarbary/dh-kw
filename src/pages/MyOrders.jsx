@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCountry } from '../context/CountryContext';
 import {
   getMyOrders,
   cancelOrder,
@@ -126,6 +127,7 @@ const formatRefundServerAlert = (rawMessage) => {
 
 export default function MyOrders() {
   const { isAuthenticated } = useAuth();
+  const { countryId, countryCode } = useCountry();
   const [searchParams, setSearchParams] = useSearchParams();
   const orderScope = searchParams.get('tab') === 'digital' ? 'digital' : 'store';
 
@@ -327,7 +329,7 @@ export default function MyOrders() {
     try {
       setActionBanner(null);
       setActionLoadingByOrderId((prev) => ({ ...prev, [orderId]: true }));
-      const result = await payDigitalOrder({ orderId });
+      const result = await payDigitalOrder({ orderId, countryCode, countryId });
       const paymentUrl = extractDigitalOrderPaymentUrl(result);
       if (paymentUrl) {
         navigateToPaymentGateway(paymentUrl, paymentTab);

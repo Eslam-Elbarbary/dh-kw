@@ -526,13 +526,18 @@ export default function Header() {
           <form 
             onSubmit={(e) => {
               e.preventDefault();
+              const trimmed = searchTerm.trim();
+              const hasCategory = selectedCategoryId && selectedCategoryId !== 'all';
+              if (!trimmed && !hasCategory) {
+                return;
+              }
               const query = new URLSearchParams();
               query.set('country_id', String(countryId));
-              if (selectedCategoryId && selectedCategoryId !== 'all') {
+              if (hasCategory) {
                 query.set('category_id', String(selectedCategoryId));
               }
-              if (searchTerm.trim()) {
-                query.set('q', searchTerm.trim());
+              if (trimmed) {
+                query.set('q', trimmed);
               }
               navigate(`/search?${query.toString()}`);
             }}
