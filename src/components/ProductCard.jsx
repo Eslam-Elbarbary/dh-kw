@@ -89,7 +89,7 @@ export function ProductCard({
           {product.brand}
         </p>
         <div className="flex font-['Poppins'] font-semibold gap-[3.394px] items-start leading-[16.972px] text-[12px]" data-name="Price">
-          {product.originalPrice ? (
+          {product.showStrike && product.originalPrice ? (
             <p className="line-through text-[#929fa5]">{product.originalPrice}</p>
           ) : null}
           <p className="text-[#00a651]">{product.salePrice || product.price}</p>

@@ -281,12 +281,14 @@ export default function SearchResults() {
           searchQuery
             ? searchPhysicalProducts({
                 countryId,
+                countryCode,
                 search: searchQuery,
                 categoryId: preselectedCategoryId || undefined,
                 vendorId: preselectedVendorId || undefined,
               })
             : getProducts({
                 countryId,
+                countryCode,
                 perPage: 50,
                 page: 1,
                 categoryId: preselectedCategoryId || undefined,
@@ -766,9 +768,11 @@ export default function SearchResults() {
                               {product.brand}
                             </p>
                             <div className="flex font-['Poppins'] font-semibold gap-[3.394px] items-start leading-[16.972px] text-[12px]" data-name="Price" data-node-id="35:3861">
-                              <p className="line-through text-[#929fa5]" data-node-id="35:3862">
-                                {product.originalPrice}
-                              </p>
+                              {product.showStrike && product.originalPrice ? (
+                                <p className="line-through text-[#929fa5]" data-node-id="35:3862">
+                                  {product.originalPrice}
+                                </p>
+                              ) : null}
                               <p className="text-[#00a651]" data-node-id="35:3863">
                                 {product.salePrice}
                               </p>

@@ -302,7 +302,7 @@ export default function Home() {
   const [digitalCategories, setDigitalCategories] = React.useState([]);
   const [sliders, setSliders] = React.useState([]);
   const [loadingHomeData, setLoadingHomeData] = React.useState(true);
-  const { countryId } = useCountry();
+  const { countryId, countryCode } = useCountry();
 
   React.useEffect(() => {
     const loadHomeData = async () => {
@@ -310,8 +310,8 @@ export default function Home() {
         setLoadingHomeData(true);
         const [categoriesList, slidersList, digitalCats] = await Promise.all([
           getTopLevelCategories(),
-          getSliders(),
-          getDigitalCategories({ countryId }).catch(() => []),
+          getSliders({ countryCode }),
+          getDigitalCategories({ countryId, countryCode }).catch(() => []),
         ]);
 
         setApiCategories(categoriesList);
@@ -327,7 +327,7 @@ export default function Home() {
     };
 
     loadHomeData();
-  }, [countryId]);
+  }, [countryId, countryCode]);
 
   const productCategories = React.useMemo(() => {
     const physical = apiCategories.map((category) => ({

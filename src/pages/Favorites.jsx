@@ -23,7 +23,7 @@ const FAVORITE_CARD_WIDTH =
 export default function Favorites() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { countryId } = useCountry();
+  const { countryId, countryCode } = useCountry();
   const [favoriteProducts, setFavoriteProducts] = useState([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
   const [favoritesError, setFavoritesError] = useState('');
@@ -68,7 +68,7 @@ export default function Favorites() {
       try {
         setLoadingFavorites(true);
         setFavoritesError('');
-        const productsList = await getFavoriteList({ countryId, perPage: 50, page: 1 });
+        const productsList = await getFavoriteList({ countryId, countryCode, perPage: 50, page: 1 });
         setFavoriteProducts(productsList);
       } catch (error) {
         setFavoritesError(error?.response?.data?.message || 'Failed to load favorites.');
@@ -79,7 +79,7 @@ export default function Favorites() {
     };
 
     loadFavorites();
-  }, [countryId]);
+  }, [countryId, countryCode]);
 
   const handleToggleFavorite = async (event, productId) => {
     event.preventDefault();

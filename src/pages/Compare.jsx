@@ -28,8 +28,8 @@ const parseIdsParam = (value) => {
 };
 
 const buildRowModel = (p) => {
-  const origNum = Number(String(p.originalPrice || '').replace(/[^0-9.]/g, '')) || 0;
-  const showStrike = origNum > 0 && origNum > p.priceValue + 0.001;
+  const showStrike = Boolean(p.showStrike && (Number(p.listPrice ?? 0) > Number(p.priceValue ?? 0)));
+  const strikePrice = Number(p.listPrice ?? 0) || 0;
   return {
     id: p.id,
     name: p.name,
@@ -41,7 +41,7 @@ const buildRowModel = (p) => {
     ratingCount: Number(p.ratingCount ?? 0),
     priceValue: Number(p.priceValue ?? 0),
     showStrike,
-    strikePrice: origNum,
+    strikePrice,
     image: p.image || '',
     tag: p.tag || '',
     variantsCount: Array.isArray(p.variants) ? p.variants.length : 0,
@@ -87,7 +87,7 @@ const SPEC_ROWS = [
 ];
 
 export default function Compare() {
-  const { countryId } = useCountry();
+  const { countryId, countryCode } = useCountry();
   const [searchParams, setSearchParams] = useSearchParams();
   const idsParam = searchParams.get('ids') || '';
 
@@ -170,7 +170,7 @@ export default function Compare() {
       setLoadError('');
 
       const settled = await Promise.allSettled(
-        compareIds.map((id) => getProduct({ id, countryId })),
+        compareIds.map((id) => getProduct({ id, countryId, countryCode })),
       );
 
       if (cancelled) return;
@@ -213,7 +213,7 @@ export default function Compare() {
     return () => {
       cancelled = true;
     };
-  }, [compareIdsKey, countryId]);
+  }, [compareIdsKey, countryId, countryCode]);
 
   const removeItem = (id) => {
     setCompareIds((prev) => prev.filter((x) => String(x) !== String(id)));

@@ -137,7 +137,7 @@ export default function ProductDetail() {
   const [relatedCartBusyId, setRelatedCartBusyId] = useState(null);
   const [relatedVariantModal, setRelatedVariantModal] = useState(null);
   const [relatedVariantPickSubmitting, setRelatedVariantPickSubmitting] = useState(false);
-  const { countryId } = useCountry();
+  const { countryId, countryCode } = useCountry();
 
   useEffect(() => {
     const syncCompareIds = () => setCompareIds(getCompareIds());
@@ -159,9 +159,10 @@ export default function ProductDetail() {
       try {
         setLoadingProduct(true);
         setProductError('');
-        const singleProduct = await getProduct({ id, countryId });
+        const singleProduct = await getProduct({ id, countryId, countryCode });
         const relatedParams = {
           countryId,
+          countryCode,
           perPage: 10,
           page: 1,
           categoryId: singleProduct?.categoryId || undefined,
@@ -187,6 +188,8 @@ export default function ProductDetail() {
               brand: item.brand,
               price: item.salePrice,
               salePrice: item.salePrice,
+              originalPrice: item.originalPrice,
+              showStrike: Boolean(item.showStrike),
               image: item.image || '',
               badges: Array.isArray(item.badges) ? item.badges : [],
               isFavorite: Boolean(item.isFavorite),
@@ -204,7 +207,7 @@ export default function ProductDetail() {
     };
 
     loadProduct();
-  }, [id, countryId]);
+  }, [id, countryId, countryCode]);
 
   const thumbnails = productData?.images?.length
     ? productData.images
@@ -225,6 +228,31 @@ export default function ProductDetail() {
     () => getSelectedVariantId(variantGroups, selectedVariants, productData?.variants),
     [selectedVariants, variantGroups, productData?.variants],
   );
+
+  const displayPricing = useMemo(() => {
+    const variants = Array.isArray(productData?.variants) ? productData.variants : [];
+    const selected = selectedVariantId != null
+      ? variants.find((variant) => {
+        const vid = variant?.id ?? variant?.variant_id ?? variant?.product_variant_id;
+        return String(vid) === String(selectedVariantId);
+      })
+      : null;
+
+    if (selected && (selected.salePrice || selected.priceValue != null)) {
+      return {
+        salePrice: selected.salePrice || productData?.salePrice || '$0',
+        originalPrice: selected.originalPrice || '',
+        showStrike: Boolean(selected.showStrike && selected.originalPrice),
+      };
+    }
+
+    return {
+      salePrice: productData?.salePrice || '$0',
+      originalPrice: productData?.originalPrice || '',
+      showStrike: Boolean(productData?.showStrike && productData?.originalPrice),
+    };
+  }, [productData, selectedVariantId]);
+
   const additionalInfo = useMemo(() => {
     const entries = [];
     if (productData?.sku) entries.push({ label: 'SKU', value: productData.sku });
@@ -667,13 +695,15 @@ export default function ProductDetail() {
 
               {/* Pricing */}
               <div className="flex gap-[12px] items-center mb-[24px]">
-                <span className="font-['Poppins'] font-semibold line-through text-[#929fa5] text-[20px]">
-                  {productData?.originalPrice || '$0'}
-                </span>
+                {displayPricing.showStrike ? (
+                  <span className="font-['Poppins'] font-semibold line-through text-[#929fa5] text-[20px]">
+                    {displayPricing.originalPrice}
+                  </span>
+                ) : null}
                 <span className="font-['Poppins'] font-semibold text-[#ff9500] text-[28px]">
-                  {productData?.salePrice || '$0'}
+                  {displayPricing.salePrice}
                 </span>
-                {discountLabel ? (
+                {discountLabel && displayPricing.showStrike ? (
                   <span className="bg-[#fc0] px-[8px] py-[4px] rounded-[4px] font-['Poppins'] font-semibold text-[#191c1f] text-[12px]">
                     {discountLabel}
                   </span>

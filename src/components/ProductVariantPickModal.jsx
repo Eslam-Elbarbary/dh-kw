@@ -18,7 +18,7 @@ export function ProductVariantPickModal({
   onConfirm,
   isSubmitting = false,
 }) {
-  const { countryId } = useCountry();
+  const { countryId, countryCode } = useCountry();
   const [selectedVariants, setSelectedVariants] = useState({});
   const [localError, setLocalError] = useState('');
   const [resolvedProduct, setResolvedProduct] = useState(null);
@@ -66,7 +66,7 @@ export function ProductVariantPickModal({
 
     (async () => {
       try {
-        const full = await getProduct({ id: product.id, countryId });
+        const full = await getProduct({ id: product.id, countryId, countryCode });
         if (!cancelled) applyProduct(full);
       } catch {
         if (!cancelled) applyProduct(product);
@@ -76,12 +76,24 @@ export function ProductVariantPickModal({
     })();
 
     return () => { cancelled = true; };
-  }, [open, product?.id, countryId, intent]);
+  }, [open, product?.id, countryId, countryCode, intent]);
 
   const resolvedVariantId = useMemo(
     () => getSelectedVariantId(variantGroups, selectedVariants, displayProduct?.variants),
     [variantGroups, selectedVariants, displayProduct?.variants],
   );
+
+  const modalDisplayPrice = useMemo(() => {
+    const variants = Array.isArray(displayProduct?.variants) ? displayProduct.variants : [];
+    const selected = resolvedVariantId != null
+      ? variants.find((variant) => {
+        const vid = variant?.id ?? variant?.variant_id ?? variant?.product_variant_id;
+        return String(vid) === String(resolvedVariantId);
+      })
+      : null;
+    if (selected?.salePrice) return selected.salePrice;
+    return displayProduct?.salePrice || displayProduct?.price || '';
+  }, [displayProduct, resolvedVariantId]);
 
   if (!open || !product) return null;
 
@@ -161,9 +173,9 @@ export function ProductVariantPickModal({
               {displayProduct?.brand ? (
                 <p className="mt-[4px] font-['Poppins'] text-[12px] text-[#666] dark:text-[#9ca3af]">{displayProduct.brand}</p>
               ) : null}
-              {displayProduct?.salePrice || displayProduct?.price ? (
+              {modalDisplayPrice ? (
                 <p className="mt-[6px] font-['Poppins'] font-semibold text-[14px] text-[#00a651]">
-                  {displayProduct.salePrice || displayProduct.price}
+                  {modalDisplayPrice}
                 </p>
               ) : null}
             </div>

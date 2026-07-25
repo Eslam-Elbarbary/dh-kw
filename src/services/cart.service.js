@@ -83,15 +83,15 @@ const normalizeCartItem = (item, fallbackItemType = CART_ITEM_TYPE.PHYSICAL) => 
     : (item?.product || item?.item || item?.variant?.product || {});
 
   const unitPrice = toNumber(
-    item?.price
+    item?.final_price
+      ?? item?.price
       ?? item?.unit_price
       ?? item?.unitPrice
       ?? item?.sale_price
-      ?? item?.final_price
+      ?? product?.final_price
       ?? product?.price
       ?? product?.cost_after_vat
       ?? product?.sale_price
-      ?? product?.final_price
       ?? 0,
   );
   const quantity = Math.max(1, toNumber(item?.quantity ?? item?.qty ?? 1, 1));
@@ -305,7 +305,7 @@ const buildCartFormData = ({
   return formData;
 };
 
-const postCartFormData = (url, formDataPayload) => api.post(url, formDataPayload);
+const postCartFormData = (url, formDataPayload, config) => api.post(url, formDataPayload, config);
 
 const buildPhysicalCartProductUrl = ({ productId, variantId } = {}) => {
   const baseUrl = `/api/cart/${encodeURIComponent(productId)}`;
@@ -385,12 +385,13 @@ export const addToCart = async ({ productId, quantity = 1, variantId, itemType, 
     productId: normalizedProductId,
     variantId: normalizedVariantId,
   });
+  const requestConfig = withCountryHeader(countryCode);
 
   const variantAttempts = normalizedVariantId
     ? [
-      () => api.post(cartByProductUrlWithVariant),
-      () => api.post(cartByProductUrlWithVariant, { quantity: normalizedQuantity }),
-      () => api.post(cartByProductUrlWithVariant, variantPayload),
+      () => api.post(cartByProductUrlWithVariant, undefined, requestConfig),
+      () => api.post(cartByProductUrlWithVariant, { quantity: normalizedQuantity }, requestConfig),
+      () => api.post(cartByProductUrlWithVariant, variantPayload, requestConfig),
       () => postCartFormData(
         cartByProductUrlWithVariant,
         buildCartFormData({
@@ -398,6 +399,7 @@ export const addToCart = async ({ productId, quantity = 1, variantId, itemType, 
           variantId: normalizedVariantId,
           includeQtyAlias: true,
         }),
+        requestConfig,
       ),
       () => postCartFormData(
         cartByProductUrl,
@@ -407,15 +409,16 @@ export const addToCart = async ({ productId, quantity = 1, variantId, itemType, 
           includeQtyAlias: true,
           includeCompatibilityVariantKeys: true,
         }),
+        requestConfig,
       ),
-      () => api.post(cartByProductUrl, variantPayload),
-      () => api.post('/api/cart/add-product', variantPayload),
+      () => api.post(cartByProductUrl, variantPayload, requestConfig),
+      () => api.post('/api/cart/add-product', variantPayload, requestConfig),
     ]
     : [];
 
   const simpleAttempts = [
-    () => api.post(cartByProductUrl),
-    () => api.post(cartByProductUrl, simplePayload),
+    () => api.post(cartByProductUrl, undefined, requestConfig),
+    () => api.post(cartByProductUrl, simplePayload, requestConfig),
     () => postCartFormData(
       cartByProductUrl,
       buildCartFormData({
@@ -423,8 +426,9 @@ export const addToCart = async ({ productId, quantity = 1, variantId, itemType, 
         variantId: null,
         includeQtyAlias: true,
       }),
+      requestConfig,
     ),
-    () => api.post('/api/cart/add-product', simplePayload),
+    () => api.post('/api/cart/add-product', simplePayload, requestConfig),
   ];
 
   const attempts = normalizedVariantId
@@ -526,12 +530,12 @@ export const updateCartItemQuantity = async ({
       variantId: resolvedVariantId,
     } : {}),
   };
-  const requestConfig = {
+  const requestConfig = withCountryHeader(countryCode, {
     headers: {
       'Content-Type': 'application/json',
       ...(resolvedVariantId ? { variant: resolvedVariantId } : {}),
     },
-  };
+  });
   const updateUrl = buildPhysicalCartProductUrl({ productId: resolvedProductId, variantId: resolvedVariantId });
   const updateUrlWithoutVariant = buildPhysicalCartProductUrl({ productId: resolvedProductId, variantId: null });
 
@@ -542,14 +546,14 @@ export const updateCartItemQuantity = async ({
     () => api.put(updateUrl, updatePayloadQtyAlias, requestConfig),
     () => api.put(updateUrlWithoutVariant, { quantity: nextQuantity }, requestConfig),
     () => api.put(updateUrlWithoutVariant, { qty: nextQuantity }, requestConfig),
-    () => api.put('/api/cart/update-quantity', { cart_item_id: itemId, quantity: nextQuantity }),
-    () => api.put('/api/cart/update-quantity', { cart_item_id: itemId, qty: nextQuantity }),
-    () => api.put('/api/cart/update-quantity', { item_id: itemId, quantity: nextQuantity }),
-    () => api.put('/api/cart/update-quantity', { id: itemId, quantity: nextQuantity }),
-    () => api.put('/api/cart/update-quantity', { product_id: resolvedProductId, quantity: nextQuantity }),
-    () => api.put('/api/cart/update-quantity', { product_id: resolvedProductId, qty: nextQuantity }),
-    () => api.post('/api/cart/update-quantity', { cart_item_id: itemId, quantity: nextQuantity }),
-    () => api.post('/api/cart/update-quantity', { product_id: resolvedProductId, quantity: nextQuantity }),
+    () => api.put('/api/cart/update-quantity', { cart_item_id: itemId, quantity: nextQuantity }, requestConfig),
+    () => api.put('/api/cart/update-quantity', { cart_item_id: itemId, qty: nextQuantity }, requestConfig),
+    () => api.put('/api/cart/update-quantity', { item_id: itemId, quantity: nextQuantity }, requestConfig),
+    () => api.put('/api/cart/update-quantity', { id: itemId, quantity: nextQuantity }, requestConfig),
+    () => api.put('/api/cart/update-quantity', { product_id: resolvedProductId, quantity: nextQuantity }, requestConfig),
+    () => api.put('/api/cart/update-quantity', { product_id: resolvedProductId, qty: nextQuantity }, requestConfig),
+    () => api.post('/api/cart/update-quantity', { cart_item_id: itemId, quantity: nextQuantity }, requestConfig),
+    () => api.post('/api/cart/update-quantity', { product_id: resolvedProductId, quantity: nextQuantity }, requestConfig),
     () => api.put(`/api/cart/${itemId}`, { quantity: nextQuantity }, requestConfig),
     () => api.put(`/api/cart/${itemId}`, { qty: nextQuantity }, requestConfig),
   ];

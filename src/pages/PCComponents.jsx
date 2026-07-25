@@ -46,7 +46,7 @@ const imgProduct5 = productImage5;
 export default function PCComponents() {
   const { addToCart } = useCart();
   const navigate = useNavigate();
-  const { countryId } = useCountry();
+  const { countryId, countryCode } = useCountry();
   const [showFilter, setShowFilter] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('Most Popular');
@@ -84,7 +84,7 @@ export default function PCComponents() {
         setLoadingProducts(true);
         setProductsError('');
         const [productsList, categoriesList] = await Promise.all([
-          getProducts({ countryId, perPage: 100, page: 1 }),
+          getProducts({ countryId, countryCode, perPage: 100, page: 1 }),
           getCategories(),
         ]);
 
@@ -106,7 +106,7 @@ export default function PCComponents() {
     };
 
     loadCatalogData();
-  }, [countryId]);
+  }, [countryId, countryCode]);
 
   useEffect(() => {
     const syncCompareIds = () => setCompareIds(getCompareIds());

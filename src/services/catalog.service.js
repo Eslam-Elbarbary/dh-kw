@@ -1,12 +1,84 @@
 import api from './api';
 import { productMatchesSearch } from '../utils/productSearch';
 import { collectProductVariants, productHasVariantsFlag } from '../utils/productVariants';
+import { normalizeCountryHeader, withCountryHeader } from '../utils/countryHeaders';
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 
 const toNumber = (value, fallback = null) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+/** Safe numeric money from number, numeric string, null, or missing. */
+const toMoneyNumber = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const formatUsd = (amount) => `$${Number(amount || 0).toLocaleString()}`;
+
+/**
+ * Backend price contract:
+ * - base_price: default before country override
+ * - price: country-specific (or default)
+ * - final_price: after product discount (customer-facing)
+ */
+const resolveDisplayPrices = (source) => {
+  const basePrice = toMoneyNumber(source?.base_price) ?? 0;
+  const listPrice = toMoneyNumber(source?.price)
+    ?? toMoneyNumber(source?.base_price)
+    ?? toMoneyNumber(source?.original_price)
+    ?? toMoneyNumber(source?.old_price)
+    ?? 0;
+
+  let finalPrice = toMoneyNumber(source?.final_price)
+    ?? toMoneyNumber(source?.sale_price);
+
+  // Legacy responses without final_price: keep previous discount computation as last resort.
+  if (finalPrice == null) {
+    const discountValue = Number(source?.discount ?? 0) || 0;
+    if (discountValue > 0 && listPrice > 0) {
+      const computed = source?.discount_type === 'percentage'
+        ? listPrice - (listPrice * discountValue) / 100
+        : listPrice - discountValue;
+      finalPrice = computed > 0 ? computed : listPrice;
+    } else {
+      finalPrice = listPrice
+        || toMoneyNumber(source?.price)
+        || toMoneyNumber(source?.base_price)
+        || 0;
+    }
+  }
+
+  const priceValue = Number(finalPrice) || 0;
+  const originalValue = Number(listPrice) || priceValue;
+  const showStrike = originalValue > 0 && priceValue < originalValue - 0.001;
+
+  return {
+    basePrice: Number(basePrice) || 0,
+    listPrice: originalValue,
+    priceValue,
+    showStrike,
+    originalPrice: showStrike ? formatUsd(originalValue) : '',
+    salePrice: formatUsd(priceValue),
+  };
+};
+
+const normalizeVariant = (variant) => {
+  if (!variant || typeof variant !== 'object') return variant;
+  const pricing = resolveDisplayPrices(variant);
+  return {
+    ...variant,
+    id: variant?.id ?? variant?.variant_id ?? variant?.product_variant_id ?? null,
+    basePrice: pricing.basePrice,
+    listPrice: pricing.listPrice,
+    priceValue: pricing.priceValue,
+    showStrike: pricing.showStrike,
+    originalPrice: pricing.originalPrice,
+    salePrice: pricing.salePrice,
+  };
 };
 
 export const resolveCountryId = (fallback = 1) => {
@@ -31,6 +103,23 @@ export const resolveCountryId = (fallback = 1) => {
   return fallback;
 };
 
+/** Prefer explicit code; fall back to profile country code (same pattern as orders). */
+export const resolveCountryCode = (countryCode) => {
+  const fromArg = normalizeCountryHeader(countryCode);
+  if (fromArg) return fromArg;
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    return normalizeCountryHeader(
+      user?.country_code
+      ?? user?.countryCode
+      ?? user?.country?.code
+      ?? '',
+    );
+  } catch {
+    return '';
+  }
+};
+
 const normalizeProduct = (product) => {
   const rawImages = toArray(product?.images)
     .map((item) => item?.image || item?.url || item?.path)
@@ -52,29 +141,7 @@ const normalizeProduct = (product) => {
       ?? 0
   ) || 0;
 
-  const basePrice = Number(
-    product?.price
-      ?? product?.final_price
-      ?? product?.original_price
-      ?? product?.old_price
-      ?? 0
-  ) || 0;
-  const discountValue = Number(product?.discount ?? 0) || 0;
-  const computedDiscountedPrice = product?.discount_type === 'percentage'
-    ? basePrice - (basePrice * discountValue) / 100
-    : basePrice - discountValue;
-  const priceValue = Number(
-    product?.sale_price
-      ?? (computedDiscountedPrice > 0 ? computedDiscountedPrice : basePrice)
-      ?? 0
-  ) || 0;
-
-  const originalValue = Number(
-    product?.original_price
-      ?? product?.old_price
-      ?? basePrice
-      ?? priceValue
-  ) || priceValue;
+  const pricing = resolveDisplayPrices(product);
 
   return {
     id: product?.id ?? product?.product_id ?? product?.pivot?.product_id ?? null,
@@ -90,9 +157,12 @@ const normalizeProduct = (product) => {
       image: item?.image || '',
     })),
     tag: product?.tag || product?.type || '',
-    originalPrice: `$${originalValue.toLocaleString()}`,
-    salePrice: `$${priceValue.toLocaleString()}`,
-    priceValue,
+    basePrice: pricing.basePrice,
+    listPrice: pricing.listPrice,
+    originalPrice: pricing.originalPrice,
+    salePrice: pricing.salePrice,
+    priceValue: pricing.priceValue,
+    showStrike: pricing.showStrike,
     image: uniqueImages[0] || '',
     images: uniqueImages,
     badges: [],
@@ -102,7 +172,7 @@ const normalizeProduct = (product) => {
     description: product?.description || '',
     sku: product?.sku || '',
     stock: Number(product?.stock ?? product?.quantity ?? 0),
-    variants: collectProductVariants(product),
+    variants: collectProductVariants(product).map(normalizeVariant),
     hasVariants: productHasVariantsFlag(product),
     discount: Number(product?.discount ?? 0) || 0,
     discountType: product?.discount_type || '',
@@ -193,8 +263,9 @@ export const getVendor = async ({ id }) => {
   };
 };
 
-export const getSliders = async () => {
-  const res = await api.get('/api/sliders');
+export const getSliders = async ({ countryCode } = {}) => {
+  const resolvedCountryCode = resolveCountryCode(countryCode);
+  const res = await api.get('/api/sliders', withCountryHeader(resolvedCountryCode));
   const payload = res.data;
   const list = payload?.data?.sliders || payload?.data || payload?.sliders || payload;
   return toArray(list).map((item) => ({
@@ -208,6 +279,7 @@ export const getSliders = async () => {
 
 const fetchProductsPage = async ({
   countryId = resolveCountryId(1),
+  countryCode,
   perPage = 15,
   page = 1,
   categoryId,
@@ -219,7 +291,8 @@ const fetchProductsPage = async ({
   if (vendorId) params.vendor_id = vendorId;
   if (search) params.search = String(search).trim();
 
-  const res = await api.get('/api/products', { params });
+  const resolvedCountryCode = resolveCountryCode(countryCode);
+  const res = await api.get('/api/products', withCountryHeader(resolvedCountryCode, { params }));
   const payload = res.data;
   const list = payload?.data?.products
     || payload?.data?.data
@@ -245,6 +318,7 @@ export const getProducts = async (options = {}) => {
 /** Physical catalog search — backend `search` misses partial terms, so load pages and filter locally. */
 export const searchPhysicalProducts = async ({
   countryId = resolveCountryId(1),
+  countryCode,
   search,
   categoryId,
   vendorId,
@@ -252,7 +326,7 @@ export const searchPhysicalProducts = async ({
 } = {}) => {
   const query = String(search || '').trim();
   if (!query) {
-    return getProducts({ countryId, perPage, page: 1, categoryId, vendorId });
+    return getProducts({ countryId, countryCode, perPage, page: 1, categoryId, vendorId });
   }
 
   const all = [];
@@ -263,6 +337,7 @@ export const searchPhysicalProducts = async ({
     // eslint-disable-next-line no-await-in-loop
     const { items, meta } = await fetchProductsPage({
       countryId,
+      countryCode,
       perPage,
       page,
       categoryId,
@@ -276,24 +351,37 @@ export const searchPhysicalProducts = async ({
   return all.filter((product) => productMatchesSearch(product, query));
 };
 
-export const getProduct = async ({ id, countryId = resolveCountryId(1) }) => {
-  const res = await api.get(`/api/products/${id}`, {
-    params: { country_id: countryId },
-  });
+export const getProduct = async ({ id, countryId = resolveCountryId(1), countryCode } = {}) => {
+  const resolvedCountryCode = resolveCountryCode(countryCode);
+  const res = await api.get(
+    `/api/products/${id}`,
+    withCountryHeader(resolvedCountryCode, {
+      params: { country_id: countryId },
+    }),
+  );
 
   const payload = res.data;
   const item = payload?.data?.product || payload?.data || payload?.product || payload;
   return normalizeProduct(item);
 };
 
-export const getFavoriteList = async ({ countryId = resolveCountryId(1), perPage = 50, page = 1 } = {}) => {
-  const res = await api.get('/api/favorite-list', {
-    params: {
-      country_id: countryId,
-      per_page: perPage,
-      page,
-    },
-  });
+export const getFavoriteList = async ({
+  countryId = resolveCountryId(1),
+  countryCode,
+  perPage = 50,
+  page = 1,
+} = {}) => {
+  const resolvedCountryCode = resolveCountryCode(countryCode);
+  const res = await api.get(
+    '/api/favorite-list',
+    withCountryHeader(resolvedCountryCode, {
+      params: {
+        country_id: countryId,
+        per_page: perPage,
+        page,
+      },
+    }),
+  );
 
   const payload = res.data;
   const list = payload?.data?.products
