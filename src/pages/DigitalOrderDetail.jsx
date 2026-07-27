@@ -12,6 +12,7 @@ import {
   payDigitalOrder,
 } from '../services/digitalOrders.service';
 import arrowDownIcon from '../assets/ArrowRight.svg';
+import { formatMoney as formatCurrency, resolveCurrencyFromSource } from '../utils/formatMoney';
 
 const imgArrowDown = arrowDownIcon;
 
@@ -28,12 +29,6 @@ const toItemPrice = (line) => {
   return Number.isFinite(value) ? value : 0;
 };
 
-const formatMoney = (n) => {
-  const x = Number(n);
-  if (!Number.isFinite(x)) return '—';
-  return `$${x.toFixed(2)}`;
-};
-
 const statusPill = (label, variant) => {
   const base = 'font-[\'Poppins\'] font-medium text-[12px] px-[12px] py-[4px] rounded-full';
   const styles =
@@ -48,7 +43,7 @@ const statusPill = (label, variant) => {
 export default function DigitalOrderDetail() {
   const { id } = useParams();
   const { isAuthenticated } = useAuth();
-  const { countryId, countryCode } = useCountry();
+  const { countryId, countryCode, countryCurrencyCode } = useCountry();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -57,6 +52,15 @@ export default function DigitalOrderDetail() {
   const [actionError, setActionError] = useState('');
   const [copiedKey, setCopiedKey] = useState(null);
   const [clipboardError, setClipboardError] = useState('');
+
+  const orderCurrency = useMemo(
+    () => resolveCurrencyFromSource(order, countryCurrencyCode),
+    [order, countryCurrencyCode],
+  );
+  const formatMoney = useCallback(
+    (value) => formatCurrency(value, orderCurrency, countryCurrencyCode),
+    [orderCurrency, countryCurrencyCode],
+  );
 
   const loadOrder = useCallback(async ({ silent = false } = {}) => {
     if (!isAuthenticated) {

@@ -128,8 +128,8 @@ const normalizeCartItem = (item, fallbackItemType = CART_ITEM_TYPE.PHYSICAL) => 
     quantity,
     unitPrice,
     subtotal,
-    currency: item?.currency_code || item?.currency || product?.currency_code || product?.currency || 'USD',
-    currencyCode: item?.currency_code || product?.currency_code || item?.currency || product?.currency || 'USD',
+    currency: item?.currency_code || item?.currency || product?.currency_code || product?.currency || '',
+    currencyCode: item?.currency_code || product?.currency_code || item?.currency || product?.currency || '',
     companyName: isDigital ? (product?.company_name || product?.companyName || '') : '',
     serials: isDigital ? extractSerials(item) : [],
   };
@@ -240,7 +240,7 @@ const normalizeCartResponse = (payload, { defaultItemType = CART_ITEM_TYPE.PHYSI
       ?? payload?.data?.currency
       ?? items[0]?.currencyCode
       ?? items[0]?.currency
-      ?? 'USD',
+      ?? '',
     summary: {
       subtotal,
       shipping,

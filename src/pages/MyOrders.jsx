@@ -18,6 +18,7 @@ import {
   isOrderRateable,
 } from '../services/orders.service';
 import { getMyDigitalOrders } from '../services/digitalOrders.service';
+import { formatMoney as formatCurrency } from '../utils/formatMoney';
 import {
   extractDigitalOrderPaymentUrl,
   openPaymentGatewayPlaceholderTab as openDigitalPaymentPlaceholderTab,
@@ -127,7 +128,7 @@ const formatRefundServerAlert = (rawMessage) => {
 
 export default function MyOrders() {
   const { isAuthenticated } = useAuth();
-  const { countryId, countryCode } = useCountry();
+  const { countryId, countryCode, countryCurrencyCode } = useCountry();
   const [searchParams, setSearchParams] = useSearchParams();
   const orderScope = searchParams.get('tab') === 'digital' ? 'digital' : 'store';
 
@@ -203,8 +204,12 @@ export default function MyOrders() {
       ?? (orderNode?.is_paid === true || orderNode?.paid === true ? 'Paid'
         : orderNode?.is_paid === false || orderNode?.paid === false ? 'Unpaid'
         : '');
+    const currency = orderNode?.currency_code
+      ?? orderNode?.currencyCode
+      ?? orderNode?.currency
+      ?? '';
 
-    return { id, status, total, date, items, paymentStatus: String(paymentStatus || '').trim() };
+    return { id, status, total, date, items, paymentStatus: String(paymentStatus || '').trim(), currency, currencyCode: currency };
   };
 
   const loadOrders = async () => {
@@ -874,7 +879,7 @@ export default function MyOrders() {
                                 </p>
                               ) : null}
                               <p className="font-['Poppins'] font-bold text-[18px] sm:text-[20px] text-[#0e1c47]">
-                                ${order.total.toFixed(2)}
+                                {formatCurrency(order.total, order.currencyCode || order.currency, countryCurrencyCode)}
                               </p>
                             </div>
                           </div>
@@ -1057,7 +1062,7 @@ export default function MyOrders() {
                               </p>
                             ) : null}
                             <p className="font-['Poppins'] font-bold text-[18px] sm:text-[20px] text-[#0e1c47]">
-                              ${order.total.toFixed(2)}
+                              {formatCurrency(order.total, order.currencyCode || order.currency, countryCurrencyCode)}
                             </p>
                           </div>
                         </div>

@@ -1,4 +1,5 @@
 import api from './api';
+import { resolveCurrencyFromSource } from '../utils/formatMoney';
 import { navigateToPaymentGateway, openPaymentGatewayPlaceholderTab } from './orders.service';
 import { resolveCountryId } from './catalog.service';
 import { normalizeCountryHeader } from '../utils/countryHeaders';
@@ -274,6 +275,8 @@ export const normalizeDigitalOrderListItem = (row) => {
     items: items.length,
     itemPreviews,
     notes: String(row.notes ?? '').trim(),
+    currency: resolveCurrencyFromSource(row),
+    currencyCode: resolveCurrencyFromSource(row),
   };
 };
 

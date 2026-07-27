@@ -5,6 +5,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getCategories, getProducts, toggleFavoriteProduct } from '../services/catalog.service';
 import { useCountry } from '../context/CountryContext';
+import { formatMoney } from '../utils/formatMoney';
 import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
 import { ProductCardQuickActions } from '../components/ProductCardQuickActions';
 import { ProductVariantPickModal } from '../components/ProductVariantPickModal';
@@ -46,7 +47,7 @@ const imgProduct5 = productImage5;
 export default function PCComponents() {
   const { addToCart } = useCart();
   const navigate = useNavigate();
-  const { countryId, countryCode } = useCountry();
+  const { countryId, countryCode, countryCurrencyCode } = useCountry();
   const [showFilter, setShowFilter] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('Most Popular');
@@ -91,7 +92,7 @@ export default function PCComponents() {
         const mappedProducts = productsList.map((product) => ({
           ...product,
           image: product.image || '',
-          price: product.salePrice || `$${product.priceValue?.toLocaleString?.() || 0}`,
+          price: product.salePrice || formatMoney(product.priceValue || 0, product.currencyCode || product.currency, countryCurrencyCode),
           badges: Array.isArray(product.badges) ? product.badges : [],
         })).filter((product) => Boolean(product.image));
 
@@ -338,8 +339,13 @@ export default function PCComponents() {
     id: product.id,
     name: product.name,
     price: product.priceValue || 0,
+    priceLabel: product.salePrice || formatMoney(product.priceValue || 0, product.currencyCode || product.currency, countryCurrencyCode),
+    currencyCode: product.currencyCode || product.currency || countryCurrencyCode,
     image: product.image || '',
   }));
+
+  const componentCurrency = pcComponents[0]?.currencyCode || countryCurrencyCode;
+  const displayMoney = (value) => formatMoney(value, componentCurrency, countryCurrencyCode);
 
   const totalPrice = pcComponents.reduce((sum, comp) => sum + comp.price, 0);
   const assemblyFee = 99;
@@ -375,8 +381,8 @@ export default function PCComponents() {
       setShowModal(false);
       setNotificationMessage(
         modalType === 'assemble'
-          ? `All components added to cart. Assembly service request has been noted. Total: $${(totalPrice + assemblyFee).toLocaleString()}`
-          : `All components added to cart! Total: $${totalPrice.toLocaleString()}`
+          ? `All components added to cart. Assembly service request has been noted. Total: ${displayMoney(totalPrice + assemblyFee)}`
+          : `All components added to cart! Total: ${displayMoney(totalPrice)}`
       );
       setShowNotification(true);
       setTimeout(() => setShowNotification(false), 5000);
@@ -969,7 +975,7 @@ export default function PCComponents() {
                               {comp.name}
                             </span>
                             <span className="font-['Poppins'] font-semibold text-[#0e1c47] dark:text-[#eea137] text-[14px]">
-                              ${comp.price.toLocaleString()}
+                              {comp.priceLabel}
                             </span>
                           </div>
                         ))}
@@ -978,7 +984,7 @@ export default function PCComponents() {
                             Assembly Service
                           </span>
                           <span className="font-['Poppins'] font-semibold text-[#0e1c47] dark:text-[#eea137] text-[14px]">
-                            ${assemblyFee.toLocaleString()}
+                            {displayMoney(assemblyFee)}
                           </span>
                         </div>
                       </div>
@@ -990,7 +996,7 @@ export default function PCComponents() {
                         Total:
                       </span>
                       <span className="font-['Poppins'] font-bold text-white text-[18px]">
-                        ${(totalPrice + assemblyFee).toLocaleString()}
+                        {displayMoney(totalPrice + assemblyFee)}
                       </span>
                     </div>
                   </>
@@ -1012,7 +1018,7 @@ export default function PCComponents() {
                               {comp.name}
                             </span>
                             <span className="font-['Poppins'] font-semibold text-[#0e1c47] dark:text-[#eea137] text-[14px]">
-                              ${comp.price.toLocaleString()}
+                              {comp.priceLabel}
                             </span>
                           </div>
                         ))}
@@ -1025,7 +1031,7 @@ export default function PCComponents() {
                         Total:
                       </span>
                       <span className="font-['Poppins'] font-bold text-white text-[18px]">
-                        ${totalPrice.toLocaleString()}
+                        {displayMoney(totalPrice)}
                       </span>
                     </div>
                   </>

@@ -2,6 +2,7 @@ import api from './api';
 import { productMatchesSearch } from '../utils/productSearch';
 import { collectProductVariants, productHasVariantsFlag } from '../utils/productVariants';
 import { normalizeCountryHeader, withCountryHeader } from '../utils/countryHeaders';
+import { formatMoney, resolveCurrencyFromSource } from '../utils/formatMoney';
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 
@@ -17,15 +18,14 @@ const toMoneyNumber = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const formatUsd = (amount) => `$${Number(amount || 0).toLocaleString()}`;
-
 /**
  * Backend price contract:
  * - base_price: default before country override
  * - price: country-specific (or default)
  * - final_price: after product discount (customer-facing)
  */
-const resolveDisplayPrices = (source) => {
+const resolveDisplayPrices = (source, currencyCode = '') => {
+  const code = resolveCurrencyFromSource(source, currencyCode);
   const basePrice = toMoneyNumber(source?.base_price) ?? 0;
   const listPrice = toMoneyNumber(source?.price)
     ?? toMoneyNumber(source?.base_price)
@@ -61,14 +61,16 @@ const resolveDisplayPrices = (source) => {
     listPrice: originalValue,
     priceValue,
     showStrike,
-    originalPrice: showStrike ? formatUsd(originalValue) : '',
-    salePrice: formatUsd(priceValue),
+    originalPrice: showStrike ? formatMoney(originalValue, code) : '',
+    salePrice: formatMoney(priceValue, code),
+    currency: code,
+    currencyCode: code,
   };
 };
 
-const normalizeVariant = (variant) => {
+const normalizeVariant = (variant, currencyCode = '') => {
   if (!variant || typeof variant !== 'object') return variant;
-  const pricing = resolveDisplayPrices(variant);
+  const pricing = resolveDisplayPrices(variant, currencyCode);
   return {
     ...variant,
     id: variant?.id ?? variant?.variant_id ?? variant?.product_variant_id ?? null,
@@ -78,6 +80,8 @@ const normalizeVariant = (variant) => {
     showStrike: pricing.showStrike,
     originalPrice: pricing.originalPrice,
     salePrice: pricing.salePrice,
+    currency: pricing.currency,
+    currencyCode: pricing.currencyCode,
   };
 };
 
@@ -141,7 +145,8 @@ const normalizeProduct = (product) => {
       ?? 0
   ) || 0;
 
-  const pricing = resolveDisplayPrices(product);
+  const currencyCode = resolveCurrencyFromSource(product);
+  const pricing = resolveDisplayPrices(product, currencyCode);
 
   return {
     id: product?.id ?? product?.product_id ?? product?.pivot?.product_id ?? null,
@@ -163,6 +168,8 @@ const normalizeProduct = (product) => {
     salePrice: pricing.salePrice,
     priceValue: pricing.priceValue,
     showStrike: pricing.showStrike,
+    currency: pricing.currency,
+    currencyCode: pricing.currencyCode,
     image: uniqueImages[0] || '',
     images: uniqueImages,
     badges: [],
@@ -172,7 +179,7 @@ const normalizeProduct = (product) => {
     description: product?.description || '',
     sku: product?.sku || '',
     stock: Number(product?.stock ?? product?.quantity ?? 0),
-    variants: collectProductVariants(product).map(normalizeVariant),
+    variants: collectProductVariants(product).map((variant) => normalizeVariant(variant, currencyCode)),
     hasVariants: productHasVariantsFlag(product),
     discount: Number(product?.discount ?? 0) || 0,
     discountType: product?.discount_type || '',

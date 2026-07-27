@@ -21,6 +21,7 @@ import {
 } from '../services/address.service';
 import { useCountry } from '../context/CountryContext';
 import { getCountries } from '../services/meta.service';
+import { formatMoney as formatCurrency } from '../utils/formatMoney';
 import { getShippingStates, getShippingCities, getShippingCityDetails } from '../services/shipping.service';
 import {
   calculateOrderShipping,
@@ -167,7 +168,7 @@ export default function Checkout() {
     }
   }, [loadingCart, isDigitalCart, cart.items.length, navigate]);
 
-  const { countryId: activeCountryId } = useCountry();
+  const { countryId: activeCountryId, countryCurrencyCode } = useCountry();
   const activeCountry = useMemo(
     () => countriesMeta.find((c) => String(c.id) === String(activeCountryId)),
     [countriesMeta, activeCountryId],
@@ -504,6 +505,20 @@ export default function Checkout() {
     };
   }, [cart.summary?.total]);
 
+  const checkoutCurrency = useMemo(
+    () => cart?.currency
+      || cart?.items?.[0]?.currencyCode
+      || cart?.items?.[0]?.currency
+      || countryCurrencyCode
+      || '',
+    [cart?.currency, cart?.items, countryCurrencyCode],
+  );
+
+  const formatMoney = useCallback(
+    (value) => formatCurrency(value, checkoutCurrency, countryCurrencyCode),
+    [checkoutCurrency, countryCurrencyCode],
+  );
+
   const orderSummaryPricing = useMemo(() => {
     const roundMoney = (value) => {
       const n = Number(value);
@@ -561,7 +576,7 @@ export default function Checkout() {
 
     totalAmount = roundMoney(Math.max(0, totalAmount));
 
-    const shippingText = shippingAmount <= 0 ? 'Free' : `$${shippingAmount.toFixed(2)}`;
+    const shippingText = shippingAmount <= 0 ? 'Free' : formatCurrency(shippingAmount, checkoutCurrency, countryCurrencyCode);
 
     return {
       loading: false,
@@ -580,6 +595,8 @@ export default function Checkout() {
     cart.summary?.shipping,
     shippingQuote,
     cityZoneShippingCost,
+    checkoutCurrency,
+    countryCurrencyCode,
   ]);
 
   useEffect(() => {
@@ -1150,7 +1167,7 @@ export default function Checkout() {
                       <p className="font-['Poppins'] text-[12px] text-[#0e1c47]">
                         <span className="font-medium">Shipping zone rate:</span>{' '}
                         {Number(cityZoneShippingCost) > 0 ? (
-                          <span className="font-semibold tabular-nums">${Number(cityZoneShippingCost).toFixed(2)}</span>
+                          <span className="font-semibold tabular-nums">{formatMoney(cityZoneShippingCost)}</span>
                         ) : (
                           <span className="font-semibold">Free</span>
                         )}
@@ -1433,7 +1450,7 @@ export default function Checkout() {
                       {item.name}
                     </p>
                     <p className="font-['Poppins'] font-medium text-[14px] text-[#333]">
-                      {item.quantity} x ${Number(item.unitPrice || 0).toFixed(2)}
+                      {item.quantity} x {formatMoney(item.unitPrice)}
                     </p>
                   </div>
                 </div>
@@ -1444,7 +1461,7 @@ export default function Checkout() {
             <div className="flex flex-col gap-[12px] w-full border-t border-[#e4e7e9] pt-[16px]">
               <div className="flex justify-between items-center w-full">
                 <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Sub-total</p>
-                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">${Number(cart.summary?.subtotal || 0).toFixed(2)}</p>
+                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">{formatMoney(cart.summary?.subtotal)}</p>
               </div>
               <div className="flex flex-col gap-[6px] w-full">
                 <div className="flex justify-between items-center w-full">
@@ -1462,12 +1479,12 @@ export default function Checkout() {
               <div className="flex justify-between items-center w-full">
                 <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Discount</p>
                 <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">
-                  ${Number(shippingQuote?.discount ?? cart.summary?.discount ?? 0).toFixed(2)}
+                  {formatMoney(shippingQuote?.discount ?? cart.summary?.discount ?? 0)}
                 </p>
               </div>
               <div className="flex justify-between items-center w-full">
                 <p className="font-['Poppins'] font-normal text-[14px] text-[#666]">Tax</p>
-                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">${Number(cart.summary?.tax || 0).toFixed(2)}</p>
+                <p className="font-['Poppins'] font-normal text-[14px] text-[#333]">{formatMoney(cart.summary?.tax)}</p>
               </div>
               <div className="flex justify-between items-center w-full border-t border-[#e4e7e9] pt-[12px] mt-[4px]">
                 <p className="font-['Poppins'] font-semibold text-[16px] sm:text-[18px] text-[#333]">Total</p>
@@ -1476,7 +1493,7 @@ export default function Checkout() {
                     'Calculating...'
                   ) : (
                     <>
-                      ${orderSummaryPricing.totalAmount.toFixed(2)} USD
+                      {formatMoney(orderSummaryPricing.totalAmount)}
                     </>
                   )}
                 </p>

@@ -19,6 +19,7 @@ import {
 } from '../services/ratings-reports.service';
 import { addCompareProductId, getCompareIds, MAX_COMPARE_ITEMS } from '../utils/compareStorage';
 import { buildVariantGroups, getSelectedVariantId, productNeedsVariantPick } from '../utils/productVariants';
+import { formatMoney } from '../utils/formatMoney';
 import { ProductCardQuickActions } from '../components/ProductCardQuickActions';
 import { ProductVariantPickModal } from '../components/ProductVariantPickModal';
 import { shouldShowInlineCartError } from '../utils/cartErrors';
@@ -137,7 +138,7 @@ export default function ProductDetail() {
   const [relatedCartBusyId, setRelatedCartBusyId] = useState(null);
   const [relatedVariantModal, setRelatedVariantModal] = useState(null);
   const [relatedVariantPickSubmitting, setRelatedVariantPickSubmitting] = useState(false);
-  const { countryId, countryCode } = useCountry();
+  const { countryId, countryCode, countryCurrencyCode } = useCountry();
 
   useEffect(() => {
     const syncCompareIds = () => setCompareIds(getCompareIds());
@@ -219,9 +220,10 @@ export default function ProductDetail() {
   const ratingCount = Number(productData?.ratingCount || 0);
   const discountLabel = useMemo(() => {
     if (!productData?.discount) return '';
+    const currency = productData?.currencyCode || productData?.currency || countryCurrencyCode || '';
     if (productData.discountType === 'percentage') return `${productData.discount}% OFF`;
-    return `$${productData.discount} OFF`;
-  }, [productData]);
+    return `${formatMoney(productData.discount, currency)} OFF`;
+  }, [productData, countryCurrencyCode]);
 
   const variantGroups = useMemo(() => buildVariantGroups(productData), [productData]);
   const selectedVariantId = useMemo(
@@ -239,19 +241,21 @@ export default function ProductDetail() {
       : null;
 
     if (selected && (selected.salePrice || selected.priceValue != null)) {
+      const currency = selected.currencyCode || selected.currency || productData?.currencyCode || productData?.currency || countryCurrencyCode || '';
       return {
-        salePrice: selected.salePrice || productData?.salePrice || '$0',
+        salePrice: selected.salePrice || productData?.salePrice || formatMoney(0, currency),
         originalPrice: selected.originalPrice || '',
         showStrike: Boolean(selected.showStrike && selected.originalPrice),
       };
     }
 
+    const currency = productData?.currencyCode || productData?.currency || countryCurrencyCode || '';
     return {
-      salePrice: productData?.salePrice || '$0',
+      salePrice: productData?.salePrice || formatMoney(0, currency),
       originalPrice: productData?.originalPrice || '',
       showStrike: Boolean(productData?.showStrike && productData?.originalPrice),
     };
-  }, [productData, selectedVariantId]);
+  }, [productData, selectedVariantId, countryCurrencyCode]);
 
   const additionalInfo = useMemo(() => {
     const entries = [];

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getOrderDetails } from '../services/orders.service';
-
-const formatMoney = (value) => `$${Number(value || 0).toFixed(2)}`;
+import { useCountry } from '../context/CountryContext';
+import { formatMoney as formatCurrency, resolveCurrencyFromSource } from '../utils/formatMoney';
 
 const formatDate = (value) => {
   if (!value) return '-';
@@ -42,6 +42,7 @@ const getOrderItems = (order) => {
 
 export default function StoreOrderDetail() {
   const { id } = useParams();
+  const { countryCurrencyCode } = useCountry();
   const [order, setOrder] = useState(null);
   const [draftItems, setDraftItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,6 +99,12 @@ export default function StoreOrderDetail() {
       setDraftItems([]);
     }
   }, [id]);
+
+  const orderCurrency = useMemo(
+    () => resolveCurrencyFromSource(order, countryCurrencyCode),
+    [order, countryCurrencyCode],
+  );
+  const formatMoney = (value) => formatCurrency(value, orderCurrency, countryCurrencyCode);
 
   const items = useMemo(() => {
     const fromApi = getOrderItems(order);

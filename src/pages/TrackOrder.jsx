@@ -4,6 +4,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getOrderDetails, isOrderRateable, isPaidOrderByApiFields, rateOrder } from '../services/orders.service';
+import { useCountry } from '../context/CountryContext';
+import { formatMoney as formatCurrency, resolveCurrencyFromSource } from '../utils/formatMoney';
 
 // Import assets
 import arrowDownIcon from '../assets/ArrowRight.svg';
@@ -21,7 +23,6 @@ const imgBoxIcon = packageIcon;
 const imgTruckIcon = truckIcon;
 const imgHandshakeIcon = handshakeIcon;
 
-const formatMoney = (value) => `$${Number(value || 0).toFixed(2)}`;
 const formatDate = (value) => {
   if (!value) return '-';
   const date = new Date(value);
@@ -109,6 +110,7 @@ const extractOrderItems = (order) => {
 export default function TrackOrder() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { countryCurrencyCode } = useCountry();
   const orderIdParamRaw = searchParams.get('orderId');
   const orderIdParam = orderIdParamRaw?.trim() ? orderIdParamRaw.trim() : '';
   const [loading, setLoading] = useState(() => Boolean(orderIdParam));
@@ -123,6 +125,15 @@ export default function TrackOrder() {
   const [rateModalComment, setRateModalComment] = useState('');
   const [rateModalError, setRateModalError] = useState('');
   const rateModalFocusRef = useRef(null);
+
+  const orderCurrency = useMemo(
+    () => resolveCurrencyFromSource(order, countryCurrencyCode),
+    [order, countryCurrencyCode],
+  );
+  const formatMoney = useCallback(
+    (value) => formatCurrency(value, orderCurrency, countryCurrencyCode),
+    [orderCurrency, countryCurrencyCode],
+  );
 
   const closeRateModal = useCallback(() => {
     setRateModalOpen(false);
@@ -240,7 +251,7 @@ export default function TrackOrder() {
         subtotal: formatMoney(subtotal),
       };
     });
-  }, [order, orderDraft]);
+  }, [order, orderDraft, formatMoney]);
 
   const handleOrderLookupSubmit = (e) => {
     e.preventDefault();

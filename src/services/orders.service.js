@@ -1,6 +1,7 @@
 import api from './api';
 import { resolveCountryId } from './catalog.service';
 import { normalizeCountryHeader } from './address.service';
+import { resolveCurrencyFromSource } from '../utils/formatMoney';
 
 const PAYMENT_RETURN_NOTIFY_ENDPOINT =
   import.meta.env.VITE_PAYMENT_RETURN_NOTIFY_ENDPOINT || '/api/payments/notify-return';
@@ -129,6 +130,8 @@ const normalizeOrder = (order) => {
     items: Number(itemsCount) || 0,
     image: firstImage,
     paymentStatus: inferPaymentStatusLabel(order),
+    currency: resolveCurrencyFromSource(order),
+    currencyCode: resolveCurrencyFromSource(order),
   };
 };
 

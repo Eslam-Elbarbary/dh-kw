@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getProduct } from '../services/catalog.service';
 import { useCountry } from '../context/CountryContext';
+import { formatMoney } from '../utils/formatMoney';
 import {
   clearCompareIds,
   getCompareIds,
@@ -40,6 +41,7 @@ const buildRowModel = (p) => {
     rating: Number(p.rating ?? 0),
     ratingCount: Number(p.ratingCount ?? 0),
     priceValue: Number(p.priceValue ?? 0),
+    currencyCode: p.currencyCode || p.currency || '',
     showStrike,
     strikePrice,
     image: p.image || '',
@@ -87,7 +89,7 @@ const SPEC_ROWS = [
 ];
 
 export default function Compare() {
-  const { countryId, countryCode } = useCountry();
+  const { countryId, countryCode, countryCurrencyCode } = useCountry();
   const [searchParams, setSearchParams] = useSearchParams();
   const idsParam = searchParams.get('ids') || '';
 
@@ -337,11 +339,11 @@ export default function Compare() {
                         </h3>
                         <div className="flex items-center justify-center gap-[10px] mb-[14px] flex-wrap">
                           <span className="font-['Poppins'] font-bold text-[17px] sm:text-[18px] text-[#0e1c47] dark:text-white">
-                            ${item.priceValue.toFixed(2)}
+                            {formatMoney(item.priceValue, item.currencyCode, countryCurrencyCode)}
                           </span>
                           {item.showStrike ? (
                             <span className="font-['Poppins'] font-normal text-[14px] text-[#9ca3af] line-through">
-                              ${item.strikePrice.toFixed(2)}
+                              {formatMoney(item.strikePrice, item.currencyCode, countryCurrencyCode)}
                             </span>
                           ) : null}
                         </div>
